@@ -16,7 +16,12 @@ class Neuron:
     
     def __call__(self, x:np.ndarray) -> float:
         assert len(x) == len(self.weights), f"Expected input size '{len(self.weights)}' but received '{len(x)}'"
-        return np.sum(x * self.weights) + self.bias
+        self.activation = np.sum(x * self.weights) + self.bias
+        return self.activation
+    
+    def update_weights(self, gradients:np.ndarray, bias_grad:float, lr:float):
+        self.weights = self.weights - lr * gradients
+        self.bias = self.bias - lr * bias_grad
 
 
 def init_weights(inputs, outputs, method) -> np.ndarray:

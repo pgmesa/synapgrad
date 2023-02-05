@@ -1,7 +1,21 @@
 
+from abc import ABC, abstractmethod
+from typing import Any
+
 import numpy as np
 
 epsilon = 1e-7
+
+
+class Loss(ABC):
+    
+    def __init__(self) -> None:
+        pass
+    
+    @abstractmethod
+    def __call__(self, y_pred:np.ndarray, y_true:np.ndarray) -> Any:
+        pass
+
 
 class BCELoss:
     
@@ -38,6 +52,8 @@ class CrossEntropyLoss:
         """ 1D vectors """
         return -np.sum(y_true * np.log(y_pred + epsilon))
 
+    def backward(self, ):
+        ...
 
 class SparseCrossEntropyLoss:
 

@@ -2,6 +2,7 @@ import time
 from abc import ABC, abstractmethod
 
 from .layers import Layer
+from .losses import Loss
 
 import pkbar
 import numpy as np
@@ -10,7 +11,7 @@ import matplotlib.pyplot as plt
 class Model(ABC):
     
     def __init__(self) -> None:
-        self.__train = False
+        self.layers = []
         
     def __call__(self, batch:np.ndarray) -> np.ndarray:
         outputs = []
@@ -20,21 +21,22 @@ class Model(ABC):
         
         return np.array(outputs)
     
-    def train(self, boolean:bool=True):
-        self.__train = boolean
-        
-    def eval(self):
-        self.__train = False
+    def add(self, layer:Layer):
+        self.layers.append(layer)
     
     def compile(self, optimizer_fn):
         self.optimizer = optimizer_fn
     
-    @abstractmethod
     def forward(self, x:np.ndarray) -> np.ndarray:
-        pass
+        for layer in self.layers:
+            x = layer(x)
+        return x
     
-    def backward(self, loss:float):
-        ...
+    def backward(self, loss:Loss):
+        return
+        grads = loss.backward()
+        for layer in self.layers[::-1]:
+            grads = layer.backward(grads)
         
 
 class Trainer:
@@ -52,7 +54,6 @@ class Trainer:
         
         for epoch in range(epochs):
             ############ TRAIN ############
-            self.model.train()
             if show_pbar:
                 kbar = pkbar.Kbar(target=len(train_loader), epoch=epoch, num_epochs=epochs, width=32, always_stateful=False)
             epoch_train_loss = 0; epoch_train_acc = 0
@@ -72,7 +73,7 @@ class Trainer:
                     train_accuracy = (labels == rounded_outputs).sum() / len(labels)
                 train_loss = np.mean(train_loss)
                 # ========= Clean, Update Gradients and Update Weights =========
-                self.model.backward(train_loss)
+                self.model.backward(criterion)
                 # optimizer.zero_grad()
                 # train_loss.backward()
                 # optimizer.step()
@@ -87,7 +88,6 @@ class Trainer:
             record_metrics(self.history, epoch_train_metrics)
             ########### Validation ##########
             if validation_loader is not None:
-                self.model.eval()
                 total_val_loss = 0; total_val_accuracy = 0
                 for i, data in enumerate(validation_loader):
                     inputs, labels = data
@@ -109,7 +109,7 @@ class Trainer:
                 # ==============================================================
             
             if not show_pbar:
-                string = f"EPOCH {epoch}/{epochs} loss: {train_loss} accuracy: {train_accuracy}"
+                string = f"EPOCH {epoch+1}/{epochs} loss: {train_loss} accuracy: {train_accuracy}"
                 if validation_loader is not None:
                     val_info = f" val_loss: {val_loss} val_accuracy: {val_accuracy}"
                     string += val_info 
@@ -139,7 +139,6 @@ class Trainer:
         # we can now evaluate the network on the test set
         print("[INFO] Testing network...")
         # set the model in evaluation mode
-        self.model.eval()
         # turn off autograd for testing evaluation
         y_test = []; X_test = []
         with torch.no_grad():
