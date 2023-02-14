@@ -17,9 +17,9 @@ class Layer(ABC):
         self.input = x
         pass
 
-    # @abstractmethod
-    # def backward(self, chained_grad) -> np.ndarray:
-    #     pass
+    @abstractmethod
+    def backward(self, chained_grad) -> np.ndarray:
+        pass
 
 class Dense(Layer):
     
@@ -39,6 +39,10 @@ class Dense(Layer):
         assert len(output) == self.output_size, f"CODE ERROR, ouput does not have the correct size {len(output)} != {self.output_size}"
         
         return output
+    
+    def backward(self, chained_grad:np.ndarray) -> np.ndarray:
+        assert len(chained_grad) == self.output_size
+        return chained_grad*...
         
     
 # class Conv2D(Layer):
@@ -101,16 +105,18 @@ class Softmax(Layer):
     
         return exp / np.sum(exp)
     
-    def backward(self, chained_grad):
-        s = self.input
-        jacobian_m = np.diag(s)
-
-        for i in range(len(jacobian_m)):
-            for j in range(len(jacobian_m)):
-                if i == j:
-                    jacobian_m[i][j] = s[i] * (1 - s[i])
-                else: 
-                    jacobian_m[i][j] = -s[i] * s[j]
-        return jacobian_m
+    def backward(self, z, chained_grad):
+        """Unvectorized computation of the gradient of softmax.
+        z: (T, 1) column array of input values.
+        Returns D (T, T) the Jacobian matrix of softmax(z) at the given z. D[i, j]
+        is DjSi - the partial derivative of Si w.r.t. input j.
+        """
+        Sz = self(z)
+        N = z.shape[0]
+        D = np.zeros((N, N))
+        for i in range(N):
+            for j in range(N):
+                D[i, j] = Sz[i, 0] * (np.float32(i == j) - Sz[j, 0])
+        return D
     
 ###########################################################

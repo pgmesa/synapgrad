@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 
 from .layers import Layer
 from .losses import Loss
+from .optimizers import Optimizer
 
 import pkbar
 import numpy as np
@@ -24,19 +25,11 @@ class Model(ABC):
     def add(self, layer:Layer):
         self.layers.append(layer)
     
-    def compile(self, optimizer_fn):
-        self.optimizer = optimizer_fn
     
     def forward(self, x:np.ndarray) -> np.ndarray:
         for layer in self.layers:
             x = layer(x)
         return x
-    
-    def backward(self, loss:Loss):
-        return
-        grads = loss.backward()
-        for layer in self.layers[::-1]:
-            grads = layer.backward(grads)
         
 
 class Trainer:
@@ -44,7 +37,7 @@ class Trainer:
     def __init__(self, model) -> None:
         self.model = model
     
-    def fit(self, train_loader, epochs, criterion, validation_split:float=None, validation_loader=None, show_pbar=True):
+    def fit(self, train_loader, epochs, criterion:Loss, optimizer:Optimizer, validation_split:float=None, validation_loader=None, show_pbar=True):
         self.history = {}
         
         def record_metrics(dictionary, metrics:list[tuple]):
@@ -72,11 +65,8 @@ class Trainer:
                     rounded_outputs = np.round(outputs)
                     train_accuracy = (labels == rounded_outputs).sum() / len(labels)
                 train_loss = np.mean(train_loss)
-                # ========= Clean, Update Gradients and Update Weights =========
-                self.model.backward(criterion)
-                # optimizer.zero_grad()
-                # train_loss.backward()
-                # optimizer.step()
+                # ========= Calculate gradients, Backpropagate error and Update Weights =========
+                optimizer.step(criterion.backward())
                 # ================= Update Train Metrics Info ==================
                 epoch_train_loss += train_loss; epoch_train_acc += train_accuracy
                 train_metrics = [("loss", train_loss), ("accuracy", train_accuracy)]
