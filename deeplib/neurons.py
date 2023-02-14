@@ -15,8 +15,9 @@ class Neuron:
         self.bias = 0
     
     def __call__(self, x:np.ndarray) -> float:
-        assert len(x) == len(self.weights), f"Expected input size '{len(self.weights)}' but received '{len(x)}'"
-        self.activation = np.sum(x * self.weights) + self.bias
+        assert x.shape[1] == len(self.weights), f"Expected input size '{len(self.weights)}' but received '{x.shape[1]}'"
+        self.x = x
+        self.activation = np.matmul(x, self.weights) + self.bias
         return self.activation
     
     def update_weights(self, gradients:np.ndarray, bias_grad:float, lr:float):

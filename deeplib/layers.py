@@ -24,6 +24,7 @@ class Layer(ABC):
 class Dense(Layer):
     
     def __init__(self, input_size:int, output_size:int, weight_init_method='he'):
+        super().__init__()
         self.input_size = input_size
         self.output_size = output_size
         self.neurons = []
@@ -33,17 +34,22 @@ class Dense(Layer):
         
     def __call__(self, x:np.ndarray) -> np.ndarray:
         super().__call__(x)
-        assert len(x) == self.input_size, f"Expected input size '{self.input_size}' but received '{len(x)}'"
+        assert x.shape[1] == self.input_size, f"Expected input size '{self.input_size}' but received '{x.shape[1]}'"
         
-        output = np.array([ neuron(x) for neuron in self.neurons ])
-        assert len(output) == self.output_size, f"CODE ERROR, ouput does not have the correct size {len(output)} != {self.output_size}"
+        output = np.array([ neuron(x) for neuron in self.neurons ]).transpose()
+        assert len(output[0]) == self.output_size, f"CODE ERROR, ouput does not have the correct size {len(output[0])} != {self.output_size}"
         
         return output
     
     def backward(self, chained_grad:np.ndarray) -> np.ndarray:
-        assert len(chained_grad) == self.output_size
-        return chained_grad*...
+        assert chained_grad.shape[1] == self.output_size
+        weights = np.array([n.weights for n in self.neurons])
+        # print("Weights", weights, weights.shape)
+        # print("chained weights", chained_grad.shape)
+        #print(chained_grad.shape, weights.shape)
+        gradients = np.matmul(chained_grad, weights)
         
+        return gradients # vector (1, input_size)
     
 # class Conv2D(Layer):
     
@@ -66,7 +72,7 @@ class Dense(Layer):
 #         super().__call__(x)
 #         ...
 
-################### Acivation Functions ###################
+################### Activation Functions ###################
 class Relu(Layer):
     
     def __init__(self) -> None:
@@ -77,9 +83,10 @@ class Relu(Layer):
         super().__call__(x)
         return np.maximum(0, x)
     
-    def backward(self, chained_grad):
-        ...
-        
+    def backward(self, chained_grad:np.ndarray) -> np.ndarray:
+        gradient = np.where(self.input <= 0, 0, chained_grad)
+        return gradient
+
 # class Sigmoid(Layer):
     
 #     def __call__(self, x:np.ndarray) -> np.ndarray:
@@ -102,21 +109,24 @@ class Softmax(Layer):
     def __call__(self, x:np.ndarray) -> np.ndarray:
         super().__call__(x)        
         exp = np.exp(x)
+        self.output = exp / np.sum(exp)
     
-        return exp / np.sum(exp)
+        return self.output
     
-    def backward(self, z, chained_grad):
+    def backward(self, chained_grad:np.ndarray) -> np.ndarray:
         """Unvectorized computation of the gradient of softmax.
         z: (T, 1) column array of input values.
         Returns D (T, T) the Jacobian matrix of softmax(z) at the given z. D[i, j]
         is DjSi - the partial derivative of Si w.r.t. input j.
         """
-        Sz = self(z)
-        N = z.shape[0]
-        D = np.zeros((N, N))
-        for i in range(N):
-            for j in range(N):
-                D[i, j] = Sz[i, 0] * (np.float32(i == j) - Sz[j, 0])
-        return D
+        jacobians = []
+        for sample, output in zip(self.input, self.output):
+            N = sample.shape[0]
+            D = np.zeros((N, N))
+            for i in range(N):
+                for j in range(N):
+                    D[i, j] = output[i] * (np.float32(i == j) - output[j])
+            jacobians.append(D)
+        return np.array(jacobians)
     
 ###########################################################

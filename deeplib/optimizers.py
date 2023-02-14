@@ -4,13 +4,14 @@ from abc import ABC, abstractmethod
 from .models import Model
 from .models import Layer
 
+import numpy as np
 
 class Optimizer(ABC):
     
-
-    def __init__(self, model:Model) -> None:
+    def __init__(self, model:Model, lr=0.001) -> None:
         super().__init__()
-        self.model = model
+        self.model = model 
+        self.lr = lr
         
     @abstractmethod
     def step(self, loss_gradient):
@@ -22,9 +23,18 @@ class GD(Optimizer):
     def step(self, loss_gradient):
         grads = loss_gradient
         for layer in self.model.layers[::-1]:
+            # print("previous gradient", grads)
+            # print(layer.__class__)
+            # print("Gradients", grads)
             layer:Layer
+            # Update weights
+            if layer.trainable:
+                for j, previous_layer_activation in enumerate(layer.input):
+                    for i, (neuron, neuron_grad) in enumerate(zip(layer.neurons, grads[j])):
+                        neuron_weight_gradients = previous_layer_activation * neuron_grad
+                        neuron.weights = neuron.weights - self.lr*neuron_weight_gradients
+            # Propagate error
             grads = layer.backward(grads)
-            # TODO: Actualizar pesos
         
     
 class SGD:

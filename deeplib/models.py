@@ -3,7 +3,6 @@ from abc import ABC, abstractmethod
 
 from .layers import Layer
 from .losses import Loss
-from .optimizers import Optimizer
 
 import pkbar
 import numpy as np
@@ -15,11 +14,7 @@ class Model(ABC):
         self.layers = []
         
     def __call__(self, batch:np.ndarray) -> np.ndarray:
-        outputs = []
-        for x in batch:
-            out = self.forward(x)
-            outputs.append(out)
-        
+        outputs = self.forward(batch)        
         return np.array(outputs)
     
     def add(self, layer:Layer):
@@ -37,7 +32,7 @@ class Trainer:
     def __init__(self, model) -> None:
         self.model = model
     
-    def fit(self, train_loader, epochs, criterion:Loss, optimizer:Optimizer, validation_split:float=None, validation_loader=None, show_pbar=True):
+    def fit(self, train_loader, epochs, criterion:Loss, optimizer, validation_split:float=None, validation_loader=None, show_pbar=True):
         self.history = {}
         
         def record_metrics(dictionary, metrics:list[tuple]):
