@@ -31,8 +31,11 @@ class GD(Optimizer):
             if layer.trainable:
                 for j, previous_layer_activation in enumerate(layer.input):
                     for i, (neuron, neuron_grad) in enumerate(zip(layer.neurons, grads[j])):
+                        # Update bias
+                        neuron.bias = neuron.bias - self.lr*neuron_grad
+                        # Update weights
                         neuron_weight_gradients = previous_layer_activation * neuron_grad
-                        neuron.weights = neuron.weights - self.lr*neuron_weight_gradients
+                        neuron.weights = neuron.weights - self.lr*neuron_weight_gradients       
             # Propagate error
             grads = layer.backward(grads)
         

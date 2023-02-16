@@ -49,7 +49,7 @@ class Dense(Layer):
         #print(chained_grad.shape, weights.shape)
         gradients = np.matmul(chained_grad, weights)
         
-        return gradients # vector (1, input_size)
+        return gradients # vector (batch_size, input_size)
     
 # class Conv2D(Layer):
     
@@ -107,26 +107,43 @@ class Softmax(Layer):
         self.trainable = False
     
     def __call__(self, x:np.ndarray) -> np.ndarray:
-        super().__call__(x)        
-        exp = np.exp(x)
-        self.output = exp / np.sum(exp)
+        super().__call__(x)
+        softmax = []     
+        for sample in x:
+            exp = np.exp(sample)
+            out = exp / np.sum(exp)
+            softmax.append(out)
     
+        self.output = np.array(softmax)
+
         return self.output
     
     def backward(self, chained_grad:np.ndarray) -> np.ndarray:
-        """Unvectorized computation of the gradient of softmax.
-        z: (T, 1) column array of input values.
-        Returns D (T, T) the Jacobian matrix of softmax(z) at the given z. D[i, j]
-        is DjSi - the partial derivative of Si w.r.t. input j.
+        """                        dy1   dy1
+                                  ----- ----- ...
+                                   dx1   dx2
+                        
+             d(y1,y2,y3,y4,y5)     dy2
+        J = ------------------- = -----  ...
+             d(x1,x2,x3,x4,x5)     dx1
+                                    
+                                   ...
+             
+                y1      1  0  0  0  0
+                y2      0  1  0  0  0
+        J =     y3  *  (0  0  1  0  0  - [y1 y2 y3 y4 y5])   
+                y4      0  0  0  1  0
+                y5      0  0  0  0  1
+                
+        J = softmax(x) - (I - softmax(x).T)
         """
-        jacobians = []
-        for sample, output in zip(self.input, self.output):
-            N = sample.shape[0]
-            D = np.zeros((N, N))
-            for i in range(N):
-                for j in range(N):
-                    D[i, j] = output[i] * (np.float32(i == j) - output[j])
-            jacobians.append(D)
-        return np.array(jacobians)
+        gradients = []
+        for sample, output, sample_grad in zip(self.input, self.output, chained_grad):
+            I = np.eye(sample.shape[0])
+            J = output  * (I - output.transpose())
+            grad = np.matmul(sample_grad, J)
+            gradients.append(grad)
+          
+        return np.array(gradients)
     
 ###########################################################

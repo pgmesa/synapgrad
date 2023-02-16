@@ -29,24 +29,35 @@ class MeanAbsoluteError(Loss):
     
     def __call__(self, y_pred:np.ndarray, y_true:np.ndarray) -> Any:
         super().__call__(y_pred, y_true)
-        return (y_pred - y_true)**2
+        loss = []
+        for pred, true in zip(y_pred, y_true):
+            l = (pred - true)**2 
+            loss.append(l)
+        
+        return np.array(loss)
     
     def backward(self):
-        return 2*(self.y_pred - self.y_true)
+        loss_gradient = []
+        for pred, true in zip(self.y_pred, self.y_true):
+            lg = 2*(pred - true)
+            loss_gradient.append(lg)
+
+        return np.array(loss_gradient)
+    
 
 
-class BCELoss(Loss):
+# class BCELoss(Loss):
     
-    def __init__(self) -> None:
-        pass
+#     def __init__(self) -> None:
+#         pass
     
-    def __call__(self, y_pred:np.ndarray, y_true:np.ndarray) -> float:
-        super().__call__(y_pred, y_true)
-        y_pred = np.clip(y_pred, epsilon, 1 - epsilon)
-        term_0 = (1-y_true) * np.log(1-y_pred + epsilon)
-        term_1 = y_true * np.log(y_pred + epsilon)
+#     def __call__(self, y_pred:np.ndarray, y_true:np.ndarray) -> float:
+#         super().__call__(y_pred, y_true)
+#         y_pred = np.clip(y_pred, epsilon, 1 - epsilon)
+#         term_0 = (1-y_true) * np.log(1-y_pred + epsilon)
+#         term_1 = y_true * np.log(y_pred + epsilon)
         
-        return -np.mean(term_0+term_1, axis=0)
+#         return -np.mean(term_0+term_1, axis=0)
     
     
 class CrossEntropyLoss(Loss):
@@ -56,21 +67,14 @@ class CrossEntropyLoss(Loss):
     
     def __call__(self, y_pred:np.ndarray, y_true:np.ndarray) -> np.ndarray:
         super().__call__(y_pred, y_true)
-        if len(y_pred.shape) > 1:
-            total_loss = []
-            for pred, true in zip(y_pred, y_true):
-                loss = self.loss(pred, true)
-                total_loss.append(loss)
-        else:
-            total_loss = [self.loss(y_pred, y_true)]
+        total_loss = []
+        for pred, true in zip(y_pred, y_true):
+            loss = -np.sum(true * np.log(pred + epsilon))
+            total_loss.append(loss)
         
         total_loss = np.array(total_loss)
         
         return total_loss
-         
-    def loss(self, y_pred, y_true) -> float:
-        """ 1D vectors """
-        return -np.sum(y_true * np.log(y_pred + epsilon))
 
     def backward(self):
         """Gradient of the cross-entropy loss function for p and y.
@@ -79,13 +83,23 @@ class CrossEntropyLoss(Loss):
                 one element of y is 1; the rest are 0.
         Returns a (1, T) Jacobian for this function.
         """
-        assert(self.y_pred.shape == self.y_true.shape and self.y_pred.shape[1] == 1)
-        # py is the value of p at the index where y == 1 (one and only one such
-        # index is expected for a one-hot y).
-        py = self.y_pred[self.y_true == 1]
-        assert(py.size == 1)
-        # D is zeros everywhere except at the index where y == 1. The final D has
-        # to be a row-vector.
-        D = np.zeros_like(self.y_pred)
-        D[self.y_pred == 1] = -1/py.flat[0]
-        return D.flatten()
+        #print(self.y_pred, self.y_pred.shape, self.y_true, self.y_true.shape)
+        loss_gradient = []
+        for pred, true in zip(self.y_pred, self.y_true):
+            pred = np.expand_dims(pred, axis=-1)
+            true = np.expand_dims(true, axis=-1)
+            assert(pred.shape == true.shape and pred.shape[1] == 1)
+            # py is the value of p at the index where y == 1 (one and only one such
+            # index is expected for a one-hot y).
+            py = pred[true == 1]
+            #print(py)
+            assert(py.size == 1)
+            # D is zeros everywhere except at the index where y == 1. The final D has
+            # to be a row-vector.
+            D = np.zeros_like(pred)
+            D[pred == 1] = -1/py.flat[0]
+            loss_gradient.append(D.flatten())
+        
+        loss_gradient = np.array(loss_gradient)
+        print(loss_gradient, loss_gradient.shape)
+        return loss_gradient

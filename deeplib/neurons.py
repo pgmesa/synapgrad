@@ -19,10 +19,6 @@ class Neuron:
         self.x = x
         self.activation = np.matmul(x, self.weights) + self.bias
         return self.activation
-    
-    def update_weights(self, gradients:np.ndarray, bias_grad:float, lr:float):
-        self.weights = self.weights - lr * gradients
-        self.bias = self.bias - lr * bias_grad
 
 
 def init_weights(inputs, outputs, method) -> np.ndarray:

@@ -25,7 +25,6 @@ class Model(ABC):
         for layer in self.layers:
             x = layer(x)
         return x
-        
 
 class Trainer:
     
@@ -52,14 +51,22 @@ class Trainer:
                 outputs = np.squeeze(outputs)
                 # ======================== Step Metrics ========================
                 train_loss = criterion(outputs, labels)
-                if len(train_loss) > 1:
-                    # Multilabel classification
-                    train_accuracy = 0
-                else:
-                    # Binary classification
-                    rounded_outputs = np.round(outputs)
-                    train_accuracy = (labels == rounded_outputs).sum() / len(labels)
                 train_loss = np.mean(train_loss)
+                
+                # -- Metrics
+                if len(labels.shape) > 1:
+                    # Multi-class
+                    y_true = np.argmax(labels, axis=1)
+                    y_pred = np.argmax(outputs, axis=1)
+                else:
+                    # Binary-class
+                    y_true = labels
+                    y_pred = np.where(outputs > 0.5, 1, 0)
+                    
+                y_true = y_true.astype(np.uint0)
+                y_pred = y_pred.astype(np.uint0)
+                
+                train_accuracy = ((y_true == y_pred).sum() / len(y_true))
                 # ========= Calculate gradients, Backpropagate error and Update Weights =========
                 optimizer.step(criterion.backward())
                 # ================= Update Train Metrics Info ==================
