@@ -1,23 +1,26 @@
 
 import math
 import numpy as np
+from deeplib.engine import Tensor, Module
+
 
 weight_initializers = ['glorot', 'glorot_norm', 'he']
 
-class Neuron:
+
+class Neuron(Module):
     
     def __init__(self, inputs:int, outputs:int, weight_init_method='he') -> None:
         self.inputs = inputs
         self.outputs = outputs
         # Randomly initialize weights and bias
-        self.weights = init_weights(inputs, outputs, weight_init_method)
+        self.weights = Tensor(init_weights(inputs, outputs, weight_init_method))
         assert len(self.weights) == inputs, f"{len(self.weights)} {inputs}"
-        self.bias = 0
+        self.bias = Tensor(0)
     
-    def __call__(self, x:np.ndarray) -> float:
+    def __call__(self, x:Tensor) -> float:
         assert x.shape[1] == len(self.weights), f"Expected input size '{len(self.weights)}' but received '{x.shape[1]}'"
         self.x = x
-        self.activation = np.matmul(x, self.weights) + self.bias
+        self.activation = (x @ self.weights) + self.bias
         return self.activation
 
 
