@@ -9,19 +9,22 @@ weight_initializers = ['glorot', 'glorot_norm', 'he']
 
 class Neuron(Module):
     
-    def __init__(self, inputs:int, outputs:int, weight_init_method='he') -> None:
+    def __init__(self, inputs:int, weight_init_method='he') -> None:
         self.inputs = inputs
-        self.outputs = outputs
         # Randomly initialize weights and bias
-        self.weights = Tensor(init_weights(inputs, outputs, weight_init_method))
+        self.weights = Tensor(init_weights(inputs, 1, weight_init_method))
         assert len(self.weights) == inputs, f"{len(self.weights)} {inputs}"
         self.bias = Tensor(0)
     
-    def __call__(self, x:Tensor) -> float:
-        assert x.shape[1] == len(self.weights), f"Expected input size '{len(self.weights)}' but received '{x.shape[1]}'"
+    def __call__(self, x:Tensor) -> Tensor:
+        assert x.shape[0] == len(self.weights), f"Expected input size '{len(self.weights)}' but received '{x.shape[0]}'"
         self.x = x
         self.activation = (x @ self.weights) + self.bias
-        return self.activation
+        
+        return self.activation.unsqueeze(0)
+    
+    def parameters(self):
+        return [self.weights, self.bias]
 
 
 def init_weights(inputs, outputs, method) -> np.ndarray:

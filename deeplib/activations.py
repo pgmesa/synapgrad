@@ -1,11 +1,12 @@
 
-from .engine import Tensor
-
+from deeplib.engine import Tensor
 import numpy as np
 
-class Relu:
+
+class ReLU:
     
     def __call__(self, x:Tensor) -> Tensor:
+        assert isinstance(x, Tensor), "Input must be a Tensor"
         out = Tensor(np.maximum(0, x.data), (x,), 'ReLU')
 
         def _backward():
@@ -19,31 +20,39 @@ class Relu:
 class Sigmoid:
     
     def __call__(self, x:Tensor) -> Tensor:
-        super().__call__(x)
-        return (1/(1 + np.exp(-x)))
+        assert isinstance(x, Tensor), "Input must be a Tensor"
+        out = Tensor(1/(1 + np.e**-x))
     
-    def backward(self, grad):
-        """ grad is the """
-        f = 1/(1 + np.exp(-self.input))
-        df = f * (1 - f)
+        def _backward():
+            f = 1/(1 + np.exp(-x.data))
+            x_grad = f * (1 - f)
+            
+            x.grad = (x_grad) * out.grad
+            
+        out._backward = _backward
         
-        return df
+        return out
     
-class Softmax:
+if __name__ == "__main__":
+    a = Tensor([-1,-2,4,5,1,7])
+    b = Sigmoid()(a)
+    b.backward()
+    print(a)
     
-    def __init__(self) -> None:
-        super().__init__()
-        self.trainable = False
+# class Softmax:
     
-    def __call__(self, x:np.ndarray) -> np.ndarray:
-        super().__call__(x)
-        softmax = []     
-        for sample in x:
-            exp = np.exp(sample)
-            out = exp / np.sum(exp)
-            softmax.append(out)
+#     def __init__(self) -> None:
+#         super().__init__()
+#         self.trainable = False
     
-        self.output = np.array(softmax)
+#     def __call__(self, x:np.ndarray) -> np.ndarray:
+#         super().__call__(x)
+#         softmax = []     
+#         for sample in x:
+#             exp = np.exp(sample)
+#             out = exp / np.sum(exp)
+#             softmax.append(out)
+    
+#         self.output = np.array(softmax)
 
-        return self.output
-    
+#         return self.output
