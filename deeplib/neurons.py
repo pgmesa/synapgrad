@@ -1,7 +1,8 @@
 
 import math
 import numpy as np
-from deeplib.engine import Tensor, Module
+from deeplib.engine import Tensor
+from deeplib.modules import Module
 
 
 weight_initializers = ['glorot', 'glorot_norm', 'he']
@@ -12,17 +13,17 @@ class Neuron(Module):
     def __init__(self, inputs:int, weight_init_method='he') -> None:
         self.inputs = inputs
         # Randomly initialize weights and bias
-        self.weights = Tensor(init_weights(inputs, 1, weight_init_method))
+        self.weights = Tensor(init_weights(inputs, 1, weight_init_method), requires_grad=True)
         assert len(self.weights) == inputs, f"{len(self.weights)} {inputs}"
-        self.bias = Tensor(0)
+        self.bias = Tensor(0, requires_grad=True)
     
     def __call__(self, x:Tensor) -> Tensor:
-        assert x.shape[0] == len(self.weights), f"Expected input size '{len(self.weights)}' but received '{x.shape[0]}'"
-        self.x = x
-        self.activation = (x @ self.weights) + self.bias
-        
-        return self.activation.unsqueeze(0)
+        assert x.matches_shape(self.weights), f"Expected input size '{self.weights.shape}' but received '{x.shape}'"
     
+        out: Tensor = (x @ self.weights) + self.bias
+    
+        return out.unsqueeze(0)
+
     def parameters(self):
         return [self.weights, self.bias]
 

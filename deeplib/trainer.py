@@ -1,30 +1,9 @@
-import time
-from abc import ABC, abstractmethod
-
-from .layers import Layer
-from .losses import Loss
 
 import pkbar
 import numpy as np
 import matplotlib.pyplot as plt
 
-class Model(ABC):
-    
-    def __init__(self) -> None:
-        self.layers = []
-        
-    def __call__(self, batch:np.ndarray) -> np.ndarray:
-        outputs = self.forward(batch)        
-        return np.array(outputs)
-    
-    def add(self, layer:Layer):
-        self.layers.append(layer)
-    
-    
-    def forward(self, x:np.ndarray) -> np.ndarray:
-        for layer in self.layers:
-            x = layer(x)
-        return x
+from deeplib.losses import Loss
 
 class Trainer:
     

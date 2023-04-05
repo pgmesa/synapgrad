@@ -1,43 +1,49 @@
 
-from deeplib.engine import Tensor
 import numpy as np
+from deeplib.engine import Tensor
+from deeplib.modules import Module
 
 
-class ReLU:
+class ReLU(Module):
     
     def __call__(self, x:Tensor) -> Tensor:
         assert isinstance(x, Tensor), "Input must be a Tensor"
-        out = Tensor(np.maximum(0, x.data), (x,), 'ReLU')
+        relu = np.maximum(0, x.data)
+        out = Tensor(relu, (x,), '<ReLU>', requires_grad=x.requires_grad)
 
         def _backward():
-            x.grad += (out.data > 0) * out.grad
+            x._grad += (out.data > 0) * out._grad
         
         out._backward = _backward
 
         return out
 
 
-class Sigmoid:
+class Sigmoid(Module):
     
     def __call__(self, x:Tensor) -> Tensor:
         assert isinstance(x, Tensor), "Input must be a Tensor"
-        out = Tensor(1/(1 + np.e**-x))
+        sigmoid = 1/(1 + np.e**-x.data)
+        out = Tensor(sigmoid, (x,), '<Sigmoid>', requires_grad=x.requires_grad)
     
         def _backward():
             f = 1/(1 + np.exp(-x.data))
             x_grad = f * (1 - f)
             
-            x.grad = (x_grad) * out.grad
+            x._grad = (x_grad) * out._grad
             
         out._backward = _backward
         
         return out
     
 if __name__ == "__main__":
-    a = Tensor([-1,-2,4,5,1,7])
+    a = Tensor([-1,-2,4,5,1,7], requires_grad=True)
+    a.retain_grad()
     b = Sigmoid()(a)
-    b.backward()
+    print(b)
+    b.sum().backward()
     print(a)
+    print(a.grad)
     
 # class Softmax:
     

@@ -1,6 +1,7 @@
 
-from deeplib.engine import Tensor, Module
+from deeplib.engine import Tensor
 from deeplib.neurons import Neuron
+from deeplib.modules import Module
 
 import numpy as np
 
@@ -19,24 +20,23 @@ class Linear(Module):
     def __call__(self, x:Tensor) -> list:
         assert x.shape[0] == self.input_size, f"Expected input size '{self.input_size}' but received '{x.shape[0]}'"
         
-        activations = [ neuron(x) for neuron in self.neurons ]
-        print(activations)
-        out = Tensor.concat(activations, axis=0)
-        #assert len(output.shape[1]) == self.output_size, f"CODE ERROR, ouput does not have the correct size {len(output[0])} != {self.output_size}"
+        out = Tensor.concat([ neuron(x) for neuron in self.neurons ])
         
         return out
     
-    def parameters(self):
+    def parameters(self) -> list[Tensor]:
         return [p for n in self.neurons for p in n.parameters()]
         
     
 if __name__ == "__main__":
-    list_ = [0.2, 1,4,2, -1, 4]
-    inp = Tensor(list_)
-    linear = Linear(6, 1)
+    list_ = [0.2, 1, 4, 2, -1, 4]
+    inp = Tensor(list_, requires_grad=True)
+    inp.retain_grad()
+    linear = Linear(6,2)
     out = linear(inp)
-    out.backward()
+    out.sum().backward()
     print(inp)
+    print(inp.grad)
     
     # print(inp.shape)
     # lin = Linear(inp.shape[1], 1)

@@ -1,8 +1,8 @@
 
 from abc import ABC, abstractmethod
 
-from .models import Model
-from .models import Layer
+from .modules import Model
+from .modules import Layer
 
 import numpy as np
 
