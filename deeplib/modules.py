@@ -1,22 +1,22 @@
 
+from abc import ABC, abstractmethod
 from deeplib.engine import Tensor
     
 
-class Module:
+class Module(ABC):
     
     def __init__(self) -> None:
         self.modules = []
         
     def __call__(self, batch:Tensor) -> Tensor:
-        outputs = []
-        for sample in batch:
-            out = self.forward(sample)
-            outputs.append(out)     
-        return Tensor.concat(outputs, dim=0)
+        if len(batch.shape) <= 1:
+            raise ValueError(f"Module '{self.__class__.__name__}' expects a batched input, Shape=(batch_size, *), but received {batch.shape}")
+
+        return self.forward(batch)
 
     def zero_grad(self):
         for p in self.parameters():
-            p.zero_grad()
+            p.zero_()
     
     def freeze(self):
         for p  in self.parameters():
@@ -25,6 +25,10 @@ class Module:
     def unfreeze(self):
         for p  in self.parameters():
             p.requires_grad = True
+            
+    def retain_grad(self):
+        for p in self.parameters():
+            p.retain_grad()
             
     def track_module(self, m:'Module'):
         self.modules.append(m)
@@ -45,12 +49,13 @@ class Module:
         if trainable: return num_trainable
         elif non_trainable: return num_non_trainable
         return num_params
-        
+    
+    @abstractmethod
     def forward(self, x:Tensor) -> Tensor:
         pass
     
     def __repr__(self) -> str:
-        return (f"Module(tracked_modules={len(self.modules)}, " +
+        return (f"{self.__class__.__name__}(tracked_modules={len(self.modules)}, " +
                 f"parameters={self.num_params()}, trainable={self.num_params(trainable=True)}, " +
                 f"non_trainable={self.num_params(non_trainable=True)})")
         

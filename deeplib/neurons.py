@@ -14,18 +14,28 @@ class Neuron(Module):
         self.inputs = inputs
         # Randomly initialize weights and bias
         self.weights = Tensor(init_weights(inputs, 1, weight_init_method), requires_grad=True)
-        assert len(self.weights) == inputs, f"{len(self.weights)} {inputs}"
+        self.weights.retain_grad()
         self.bias = Tensor(0, requires_grad=True)
+        self.bias.retain_grad()
+        assert len(self.weights) == inputs, f"{len(self.weights)} {inputs}"
     
-    def __call__(self, x:Tensor) -> Tensor:
-        assert x.matches_shape(self.weights), f"Expected input size '{self.weights.shape}' but received '{x.shape}'"
+    def forward(self, x:Tensor) -> Tensor:
+        assert x[0].matches_shape(self.weights), f"Expected input size '{self.weights.shape}' but received '{x[0].shape}'"
+
+        out = []
+        for inp in x:
+            o = (inp @ self.weights) + self.bias
+            out.append(o.unsqueeze(0))
+            
+        out = Tensor.concat(out, dim=0).unsqueeze(1)
     
-        out: Tensor = (x @ self.weights) + self.bias
-    
-        return out.unsqueeze(0)
+        return out
 
     def parameters(self):
         return [self.weights, self.bias]
+
+    def __repr__(self) -> str:
+        return f"Neuron(weights={self.weights}, bias={self.bias})"
 
 
 def init_weights(inputs, outputs, method) -> np.ndarray:
