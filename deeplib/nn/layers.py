@@ -1,10 +1,9 @@
 
-from deeplib.engine import Tensor
-from deeplib.neurons import Neuron
-from deeplib.modules import Module
+import deeplib as dl
+from deeplib import nn
 
 
-class Linear(Module):
+class Linear(nn.Module):
     
     def __init__(self, input_size:int, output_size:int, weight_init_method='he'):
         super().__init__()
@@ -12,17 +11,17 @@ class Linear(Module):
         self.output_size = output_size
         self.neurons = []
         for _ in range(self.output_size):
-            n = Neuron(input_size, weight_init_method=weight_init_method)
+            n = nn.Neuron(input_size, weight_init_method=weight_init_method)
             self.neurons.append(n)
         
-    def forward(self, x:Tensor) -> Tensor:
+    def forward(self, x:dl.Tensor) -> dl.Tensor:
         assert x.shape[1] == self.input_size, f"Expected input size '{self.input_size}' but received '{x.shape[1]}'"
         
-        out = Tensor.concat([ neuron(x) for neuron in self.neurons ], dim=1)
+        out = dl.Tensor.concat([ neuron(x) for neuron in self.neurons ], dim=1)
         
         return out
     
-    def parameters(self) -> list[Tensor]:
+    def parameters(self) -> list[dl.Tensor]:
         return [p for n in self.neurons for p in n.parameters()]
     
     def __repr__(self) -> str:
@@ -31,10 +30,9 @@ class Linear(Module):
     
 if __name__ == "__main__":
     list_ = [[0.2, 1, 4, 2, -1, 4], [0.2, 1, 4, 2, -1, 4]]
-    inp = Tensor(list_)
+    inp = dl.Tensor(list_)
     
     linear = Linear(6,2)
-    linear.retain_grad()
     
     out = linear(inp)
     print(out)

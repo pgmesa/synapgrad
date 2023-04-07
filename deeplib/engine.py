@@ -1,4 +1,5 @@
 
+import random
 import numpy as np
 from typing import Iterable
 
@@ -18,6 +19,15 @@ class no_grad:
     def __exit__(self, exc_type, exc_val, exc_tb):
         global gradient__
         gradient__ = self.prev
+        
+
+def manual_seed(seed:int):
+    np.random.seed(seed)
+    random.seed(seed)
+
+
+def tensor(data, requires_grad=False) -> 'Tensor':
+    return Tensor(data, requires_grad=requires_grad)
 
 
 class Tensor:
@@ -291,6 +301,8 @@ class Tensor:
         self._retain_grad = True
         
     def numpy(self) -> np.ndarray:
+        if self.requires_grad:
+            raise RuntimeError("Can't call numpy() on Tensor that requires grad. Use tensor.detach().numpy() instead")
         return self.data
     
     def item(self) -> float:
@@ -322,7 +334,7 @@ class Tensor:
     
     @property
     def is_leaf(self) -> bool:
-        return not self.requires_grad or self._backward is None
+        return not self.requires_grad or self.grad_fn is None
     
     @property
     def requires_grad(self) -> bool:

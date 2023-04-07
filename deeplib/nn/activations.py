@@ -1,10 +1,10 @@
 
 import numpy as np
 from deeplib.engine import Tensor
-from deeplib.modules import Module
+from deeplib import nn
 
 
-class ReLU(Module):
+class ReLU(nn.Module):
     
     def forward(self, x:Tensor) -> Tensor:
         assert isinstance(x, Tensor), "Input must be a Tensor"
@@ -20,7 +20,7 @@ class ReLU(Module):
         return out
 
 
-class Sigmoid(Module):
+class Sigmoid(nn.Module):
     
     def forward(self, x:Tensor) -> Tensor:
         # Returning (1/(1 + np.e**-x)) should be enough, but defining explicit 

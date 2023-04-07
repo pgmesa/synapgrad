@@ -8,6 +8,14 @@ class Module(ABC):
     def __init__(self) -> None:
         self.modules = []
         
+    def train(self):
+        """ Set module to train mode"""
+        pass
+        
+    def eval(self):
+        """ Set module to evaluation mode """
+        pass
+        
     def __call__(self, batch:Tensor) -> Tensor:
         if len(batch.shape) <= 1:
             raise ValueError(f"Module '{self.__class__.__name__}' expects a batched input, Shape=(batch_size, *), but received {batch.shape}")
@@ -16,14 +24,14 @@ class Module(ABC):
 
     def zero_grad(self):
         for p in self.parameters():
-            p.zero_()
+            if p.requires_grad: p.zero_()
     
     def freeze(self):
         for p  in self.parameters():
             p.requires_grad = False
     
     def unfreeze(self):
-        for p  in self.parameters():
+        for p in self.parameters():
             p.requires_grad = True
             
     def retain_grad(self):

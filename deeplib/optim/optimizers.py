@@ -1,8 +1,8 @@
 
 from abc import ABC, abstractmethod
 
-from . import engine
-from .engine import Tensor
+from .. import engine
+from ..engine import Tensor
 
 
 class Optimizer(ABC):
@@ -21,21 +21,13 @@ class Optimizer(ABC):
         pass
 
 
-class GD(Optimizer):
-    
-    def step(self):
-        with engine.no_grad():
-            for p in self.parameters:
-                p -= self.lr*p.grad
-        
-    
 class SGD(Optimizer):
     
     def step(self):
         with engine.no_grad():
             for p in self.parameters:
-                ...
-    
+                p.data -= self.lr*p._grad
+        
     
 class Adam(Optimizer):
     

@@ -2,13 +2,13 @@
 import math
 import numpy as np
 from deeplib.engine import Tensor
-from deeplib.modules import Module
+from deeplib import nn
 
 
 weight_initializers = ['glorot', 'glorot_norm', 'he']
 
 
-class Neuron(Module):
+class Neuron(nn.Module):
     
     def __init__(self, inputs:int, weight_init_method='he') -> None:
         self.inputs = inputs

@@ -1,7 +1,10 @@
+# deeplib core
 numpy
-matplotlib
+# utils
 pkbar
+matplotlib
 ipykernel
-# For testing
+graphviz
+# for testing
 scikit-learn
 torch

@@ -53,15 +53,16 @@ class MSELoss(Loss):
     
     
 if __name__ == "__main__":
-    from deeplib.activations import Sigmoid
+    from deeplib.nn import Sigmoid
     
-    true = [[[1.0, 0, 1.0, 0,0,1.0], [1.0, 0, 1.0, 0,0,1.0]]]
+    true = [1.0, 0]
     y_true = Tensor(true)
-    l1 = [[[-1.0,-2.0,4.0,5.0,1.0,7.0], [-1.0,-2.0,4.0,5.0,1.0,7.0]]]
+    l1 = [[2.0], [-1.0]]
     a = Tensor(l1, requires_grad=True)
     a.retain_grad()
     
     y_pred = Sigmoid()(a)
+    y_pred = y_pred.squeeze()
     print("y_pred", y_pred)
     
     loss = MSELoss(reduction='mean')(y_pred, y_true)
@@ -74,6 +75,7 @@ if __name__ == "__main__":
     a = torch.tensor(l1, requires_grad=True)
     a.retain_grad()
     out = torch.nn.Sigmoid()(a)
+    out = out.squeeze()
     out = torch.nn.MSELoss(reduction='mean')(out, target)
     out.backward()
     print(out)
