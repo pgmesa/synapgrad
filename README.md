@@ -1,13 +1,13 @@
 # A deep learning library from scratch
 
+This project is based on the amazing educational project 'micrograd' from 'karpathy' (https://github.com/karpathy/micrograd)
+
 ## Technical Description
 This project implements a completely functional engine for tracking operations between Tensors, by dynamically building a Directed Acyclic Graph (DAG), and an automatic backpropagation algorithm (reverse-mode autodiff) over this DAG. 
 
 Built on top of the engine, the deep learning library implements the most common functions, layers, losses and optimizers in order to create MLPs and CNNs able to solve basic AI problems in a reasonable time
 
 This library tries to mimic Pytorch in a very simplified way, but with similar functions and behaviour. 
-
-This project is based on the amazing educational project 'micrograd' from 'karpathy' (https://github.com/karpathy/micrograd)
 
 ## Aim of the project
 The aim of this project is to create a deep learning library from scratch, without using any existing framework such as keras, pytorch, tensorflow, sklearn, etc. However, some of these are used for the following reasons:
