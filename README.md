@@ -1,5 +1,7 @@
 # A deep learning library from scratch
 
+[ ! ] This project is currently being developed...
+
 This project is based on the amazing educational project 'micrograd' from 'karpathy' (https://github.com/karpathy/micrograd)
 
 ## Technical Description
