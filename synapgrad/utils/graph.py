@@ -26,7 +26,7 @@ def draw_dot(root, format='svg', rankdir='LR'):
     for n in nodes:
         nid = str(id(n))
         grad = None if n._grad is None else n._grad.round(decimals=2)
-        dot.node(name=nid, label=f"tensor={n.data.round(decimals=2)}, req_grad={n.requires_grad} | grad={grad}", shape='record')
+        dot.node(name=nid, label=f"tensor={n.data.round(decimals=2)} | req_grad={n.requires_grad}, is_leaf={n.is_leaf} | grad={grad}", shape='record')
         if n._operation:
             dot.node(name=nid + n._operation, label=n._operation)
             dot.edge(nid + n._operation, nid)

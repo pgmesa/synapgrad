@@ -7,7 +7,7 @@ This project implements a completely functional engine for tracking operations b
 
 Built on top of the engine, the deep learning library implements the most common functions, layers, losses and optimizers in order to create MLPs and CNNs able to solve AI problems
 
-This library tries to mimic Pytorch in a very simplified way, but with similar functions and behaviour. 
+This library tries to mimic Pytorch in a simplified way, but with similar functions and behaviour. 
 
 ## Aim of the project
 The aim of this project is to create a deep learning library from scratch, without using any existing framework (such as keras, pytorch, tensorflow, sklearn, etc) in order to fully understand the core aspects of how they work. Specifically, this time I have focused on pytorch.
@@ -65,7 +65,7 @@ Example 1 (synapgrad MLP solution)     |  Example 2 and 3
 ![Board Image](/assets/example1.png) | ![Check Image](/assets/example23.png) 
 
 ## Comparisons with other frameworks
-In order to see the efficiency of synapgrad, it is compared with other existing engines (torch and micrograd).
+In order to see the efficiency of synapgrad, it is compared with other existing engines (in this case torch and micrograd).
 
 
 | Training Example | synapgrad | torch | micrograd |
