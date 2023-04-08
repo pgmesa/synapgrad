@@ -17,7 +17,7 @@ Some of the external frameworks mentioned before have been used for the followin
 - (pytorch) to check gradient calculation is correct
 - (sklearn) (keras) to download the example datasets
 
-This project is based on the amazing educational project `micrograd` from `karpathy` (https://github.com/karpathy/micrograd)
+This project stems from the amazing educational project `micrograd` by `karpathy` (https://github.com/karpathy/micrograd)
 
 Note: Supporting GPU execution is out of the scope of this project
 
@@ -77,7 +77,7 @@ In order to see the efficiency of synapgrad, it is compared with other existing 
 As you can see, synapgrad is fast
 
 ## Graph Visualization
-In the `examples/trace_graph.ipynb` notebook, there is an example of how to visualize the graph that synapgrad is creating in the background as the operations are chained.
+In the `examples/trace_graph.ipynb` notebook there is an example of how to display the graph that synapgrad creates in the background as operations are chained.
 
 ```python
 import synapgrad
