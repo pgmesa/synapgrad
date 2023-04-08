@@ -1,5 +1,4 @@
-# --- SYNAPGRAD CORE
-numpy>=1.21.0
+numpy>=1.21.0 # --- SYNAPGRAD CORE
 # --- UTILS
 # pkbar
 # matplotlib

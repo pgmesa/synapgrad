@@ -5,9 +5,9 @@ An autograd Tensor-based engine with a deep learning library built on top of it 
 [ ! ] This project is currently being developed...
 
 ## Technical Description
-This project implements a completely functional engine for tracking operations between Tensors, by dynamically building a Directed Acyclic Graph (DAG), and an automatic backpropagation algorithm (reverse-mode autodiff) over this DAG. 
+This project implements a completely functional engine for tracking operations between Tensors, by dynamically building a Directed Acyclic Graph (DAG), and an automatic backpropagation algorithm (reverse-mode autodiff) over this DAG.
 
-Built on top of the engine, the deep learning library implements the most common functions, layers, losses and optimizers in order to create MLPs and CNNs able to solve basic AI problems
+Built on top of the engine, the deep learning library implements the most common functions, layers, losses and optimizers in order to create MLPs and CNNs able to solve AI problems
 
 This library tries to mimic Pytorch in a very simplified way, but with similar functions and behaviour. 
 
@@ -49,7 +49,7 @@ s = out.sum()
 s.backward()
 ```
 
-## Training examples using nanotorch
+## Training examples using synapgrad
 
 This project comes with 3 jupyter notebooks that solve 3 beginner's problems in AI:
 
@@ -62,23 +62,23 @@ Example 1 (synapgrad MLP solution)     |  Example 2 and 3
 ![Board Image](/assets/example1.png) | ![Check Image](/assets/example23.png) 
 
 ## Comparisons with other frameworks
-In order to see the efficiency of synapgrad, it is compared with other existing engines (pytorch and micrograd).
+In order to see the efficiency of synapgrad, it is compared with other existing engines (torch and micrograd).
 
 
-| Training Example | synapgrad | pytorch | micrograd |
+| Training Example | synapgrad | torch | micrograd |
 |     :---:        |  :---:  |  :---:  |   :---:   |  
-| 1  | 33.2 s | 1.5 s | 1 min y 43 s |
+| 1  | 1.7 s | 1.5 s | 1 min y 43 s |
 | 2  | - | - | - |
 | 3  | - | - | - |
 
-As it was expected, synapgrad is faster than micrograd but much slower that pytorch.
+As you can see, synapgrad is very efficient
 
 ## Graph Visualization
 ```
 ```
 
 ## Running tests
-To run the unit tests you will have to install PyTorch. In this tests, gradients calculation as well as losses, layers, etc, are assessed against pytorch to check everything is working fine. To run the tests:
+To run the unit tests you will have to install PyTorch. In this tests, gradients calculation as well as losses, layers, etc, are assessed with pytorch to check everything is working fine. To run the tests:
 ```bash
 python -m pytest
 ```

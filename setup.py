@@ -3,7 +3,7 @@ import setuptools
 with open("README.md", "r") as fh:
     long_description = fh.read()
     
-with open("requirements.txt", "r", encoding='utf-16') as fh:
+with open("requirements.txt", "r", encoding='utf-8') as fh:
     req = fh.readlines()
     requirements = []
     for line in req:
@@ -11,7 +11,7 @@ with open("requirements.txt", "r", encoding='utf-16') as fh:
 
 setuptools.setup(
     name='synapgrad',  
-    version='0.1.0',
+    version='0.1.1',
     author="Pablo García Mesa",
     author_email="pgmesa.sm@gmail.com",
     description="An autograd Tensor-based engine with a deep learning library built on top of it made from scratch",
