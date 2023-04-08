@@ -1,10 +1,10 @@
-# synapgrad core
-numpy
-# utils
-pkbar
-matplotlib
-ipykernel
-graphviz
-scikit-learn
-# for testing
-torch
+# --- SYNAPGRAD CORE
+numpy>=1.21.0
+# --- UTILS
+# pkbar
+# matplotlib
+# ipykernel
+# graphviz
+# scikit-learn
+# ---FOR TESTING
+# torch
