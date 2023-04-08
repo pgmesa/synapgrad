@@ -45,8 +45,11 @@ c = Tensor(4.0, requires_grad=True)
 out1 = Tensor.stack((a.squeeze(), b.squeeze()))[0]
 out2 = Tensor.concat((a*c, b), dim=1).transpose(0, 1)[0, :]
 out = out1 @ out2.view(3).unsqueeze(1)
-s = out.sum()
-s.backward()
+print(out) # outcome of this forward pass
+out.sum().backward()
+
+print(a.grad) # da/dout
+print(c.grad) # dc/dout
 ```
 
 ## Training examples using synapgrad
