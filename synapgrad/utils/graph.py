@@ -4,11 +4,11 @@ from graphviz import Digraph
 
 def trace(root):
     nodes, edges = set(), set()
-    def build(v):
-        if v not in nodes:
-            nodes.add(v)
-            for child in v._prev:
-                edges.add((child, v))
+    def build(n):
+        if n not in nodes:
+            nodes.add(n)
+            for child in n._children:
+                edges.add((child, n))
                 build(child)
     build(root)
     return nodes, edges
@@ -22,14 +22,17 @@ def draw_dot(root, format='svg', rankdir='LR'):
     nodes, edges = trace(root)
     dot = Digraph(format=format, graph_attr={'rankdir': rankdir}) #, node_attr={'rankdir': 'TB'})
     
+    
     for n in nodes:
-        dot.node(name=str(id(n)), label = "{ data %.4f | grad %.4f }" % (n.data, n.grad), shape='record')
-        if n._op:
-            dot.node(name=str(id(n)) + n._op, label=n._op)
-            dot.edge(str(id(n)) + n._op, str(id(n)))
+        nid = str(id(n))
+        grad = None if n._grad is None else n._grad.round(decimals=2)
+        dot.node(name=nid, label=f"tensor={n.data.round(decimals=2)}, req_grad={n.requires_grad} | grad={grad}", shape='record')
+        if n._operation:
+            dot.node(name=nid + n._operation, label=n._operation)
+            dot.edge(nid + n._operation, nid)
     
     for n1, n2 in edges:
-        dot.edge(str(id(n1)), str(id(n2)) + n2._op)
+        dot.edge(str(id(n1)), str(id(n2)) + n2._operation)
     
     return dot
 

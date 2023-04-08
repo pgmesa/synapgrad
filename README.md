@@ -2,8 +2,6 @@
 
 An autograd Tensor-based engine with a deep learning library built on top of it made from scratch
 
-[ ! ] This project is currently being developed...
-
 ## Technical Description
 This project implements a completely functional engine for tracking operations between Tensors, by dynamically building a Directed Acyclic Graph (DAG), and an automatic backpropagation algorithm (reverse-mode autodiff) over this DAG.
 
@@ -54,11 +52,13 @@ print(c.grad) # dc/dout
 
 ## Training examples using synapgrad
 
-This project comes with 3 jupyter notebooks that solve 3 beginner's problems in AI:
+This project comes with 3 jupyter notebooks (in `examples/`) that solve 3 beginner's problems in AI:
 
 - [x] 1. Basic MLP for binary classification (sklearn 'make_moons' toy dataset)
 - [ ] 2. MLP for handwritten digits classification (MNIST dataset) 
 - [ ] 3. CNN for handwritten digits classification (MNIST dataset)
+
+So far, only the first example has been implemented
 
 Example 1 (synapgrad MLP solution)     |  Example 2 and 3
 :-------------------------:|:-------------------------:
@@ -74,14 +74,30 @@ In order to see the efficiency of synapgrad, it is compared with other existing 
 | 2  | - | - | - |
 | 3  | - | - | - |
 
-As you can see, synapgrad is very efficient
+As you can see, synapgrad is fast
 
 ## Graph Visualization
-```
+In the `examples/trace_graph.ipynb` notebook, there is an example of how to visualize the graph that synapgrad is creating in the background as the operations are chained.
+
+```python
+import synapgrad
+from synapgrad import nn, utils
+
+with synapgrad.retain_grads():
+    x = synapgrad.tensor([5.0, 3.0], requires_grad=True)
+    x2 = synapgrad.tensor([6.0, 0.4], requires_grad=True)
+    y = (x ** 3 + 3) 
+    y2 = (x2 / x)
+    z = y * y2 * x2
+    z = z.sum()
+    z.backward()
+utils.graph.draw_dot(z)
 ```
 
+![Board Image](/assets/graph_example.svg)
+
 ## Running tests
-To run the unit tests you will have to install PyTorch. In this tests, gradients calculation as well as losses, layers, etc, are assessed with pytorch to check everything is working fine. To run the tests:
+To run the unit tests you will have to install PyTorch. In these tests, gradients calculation as well as losses, layers, etc, are assessed with pytorch to check everything is working fine. To run the tests:
 ```bash
 python -m pytest
 ```

@@ -5,7 +5,7 @@ from utils import check_tensors
 
 # Check with pytorch that gradients are correct when applying different tensor operations
 def test_engine():
-    l1 = [[-4.0, 0, 5.0], [6.3, 3.2, 1.3]]
+    l1 = [[-4.0, 0.7, 5.0], [6.3, 3.2, 1.3]]
     l2 = [[2.0, 2,  3.0], [2.4, 1.7, 0.5]]
     
     # synapgrad
@@ -50,13 +50,13 @@ def test_engine_v2():
     # synapgrad
     a = Tensor(l1, requires_grad=True)
     b = Tensor(l2, requires_grad=True)
-    c = (a+b)*b
+    c = (a.exp()+b)*b.log().sqrt()
     c.sum().backward()
     
     # torch
-    a_t = torch.tensor([[[2.0, 4.0], [2.0,4.3]], [[2.0, 4.0], [2.0,4.3]]], requires_grad=True)
-    b_t = torch.tensor([2.0, 4.0], requires_grad=True)
-    c_t = (a_t+b_t)*b_t
+    a_t = torch.tensor(l1, requires_grad=True)
+    b_t = torch.tensor(l2, requires_grad=True)
+    c_t = (a_t.exp()+b_t)*b_t.log().sqrt()
     c_t.sum().backward()
     
     assert check_tensors(c, c_t)

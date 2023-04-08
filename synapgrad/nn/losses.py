@@ -1,6 +1,7 @@
 from typing import Any
 from abc import ABC, abstractmethod
 from .. import Tensor
+import numpy as np
 
 
 epsilon = 1e-7
@@ -13,9 +14,6 @@ class Loss(ABC):
         
     def __call__(self, y_pred:Tensor, y_true:Tensor) -> Any:
         assert y_pred.matches_shape(y_true), f"Inputs shape don't match y_pred={y_pred.shape}, y_true={y_true.shape}"
-        
-        if len(y_pred.shape) > 1:
-            raise ValueError("Module expects a batched input of Shape=(batch_size,)")
 
         loss = self.criterion(y_pred, y_true)
         
@@ -38,12 +36,12 @@ class MSELoss(Loss):
     def criterion(self, y_pred:Tensor, y_true:Tensor) -> Tensor:
         assert isinstance(y_pred, Tensor) and isinstance(y_true, Tensor), "Inputs must be Tensors"
         req_grad = y_pred.requires_grad or y_true.requires_grad
-        loss = Tensor((y_pred.data - y_true.data)**2, (y_pred, y_true), '<MeanSquaredError>', requires_grad=req_grad)
+        loss = Tensor((y_pred.data - y_true.data)**2, (y_pred, y_true), '<MSELoss>', requires_grad=req_grad)
         
         def _backward():
             grad = 2*(y_pred.data - y_true.data) * loss._grad
-            if y_pred.requires_grad: y_pred._grad += grad
-            if y_true.requires_grad: y_true._grad += grad
+            if y_pred.requires_grad: y_pred._grad += grad # * loss._grad
+            if y_true.requires_grad: y_true._grad += grad # * loss._grad
         
         loss._backward = _backward
         
@@ -51,6 +49,7 @@ class MSELoss(Loss):
     
 
 # class BCELoss(Loss):
+#     # TODO: Not working properly
     
 #     def __init__(self) -> None:
 #         pass
@@ -64,46 +63,18 @@ class MSELoss(Loss):
 #         return -np.mean(term_0+term_1, axis=0)
     
     
-# class CrossEntropyLoss:
-
-#     def __init__(self) -> None:
-#         pass
+class CrossEntropyLoss(Loss):
+    """ Reference: https://deepnotes.io/softmax-crossentropy#:~:text=Cross%20entropy%20indicates%20the%20distance,used%20alternative%20of%20squared%20error"""
+    # TODO: Not working properly
     
-#     def __call__(self, y_pred:np.ndarray, y_true:np.ndarray) -> np.ndarray:
-#         super().__call__(y_pred, y_true)
-#         total_loss = []
-#         for pred, true in zip(y_pred, y_true):
-#             loss = -np.sum(true * np.log(pred + epsilon))
-#             total_loss.append(loss)
+    def criterion(self, y_pred: Tensor, y_true: Tensor) -> Tensor:
+        """
+        X is the output from fully connected layer (num_examples x num_classes)
+        y is labels (num_examples x 1)
+            Note that y is not one-hot encoded vector. 
+            It can be computed as y.argmax(axis=1) from one-hot encoded vectors of labels if required.
+        """
+        assert isinstance(y_pred, Tensor) and isinstance(y_true, Tensor), "Inputs must be Tensors"
+        return -y_pred[range(y_true.shape[0]), y_true.data.argmax(axis=1)].log().mean()
+                    
         
-#         total_loss = np.array(total_loss)
-        
-#         return total_loss
-
-#     def backward(self):
-#         """Gradient of the cross-entropy loss function for p and y.
-#         p: (T, 1) vector of predicted probabilities.
-#         y: (T, 1) vector of expected probabilities; must be one-hot -- one and only
-#                 one element of y is 1; the rest are 0.
-#         Returns a (1, T) Jacobian for this function.
-#         """
-#         #print(self.y_pred, self.y_pred.shape, self.y_true, self.y_true.shape)
-#         loss_gradient = []
-#         for pred, true in zip(self.y_pred, self.y_true):
-#             pred = np.expand_dims(pred, axis=-1)
-#             true = np.expand_dims(true, axis=-1)
-#             assert(pred.shape == true.shape and pred.shape[1] == 1)
-#             # py is the value of p at the index where y == 1 (one and only one such
-#             # index is expected for a one-hot y).
-#             py = pred[true == 1]
-#             #print(py)
-#             assert(py.size == 1)
-#             # D is zeros everywhere except at the index where y == 1. The final D has
-#             # to be a row-vector.
-#             D = np.zeros_like(pred)
-#             D[pred == 1] = -1/py.flat[0]
-#             loss_gradient.append(D.flatten())
-        
-#         loss_gradient = np.array(loss_gradient)
-#         print(loss_gradient, loss_gradient.shape)
-#         return loss_gradient

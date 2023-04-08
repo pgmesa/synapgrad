@@ -4,7 +4,7 @@ from typing import Iterable, Union
 
 
 gradient__ = True
-
+retain_grads__ = False
 
 class no_grad:
     
@@ -18,6 +18,19 @@ class no_grad:
     def __exit__(self, exc_type, exc_val, exc_tb):
         global gradient__
         gradient__ = self.prev
+        
+
+class retain_grads:
+    def __init__(self) -> None:
+        self.prev = retain_grads__
+    
+    def __enter__(self):
+        global retain_grads__
+        retain_grads__ = True
+        
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        global retain_grads__
+        retain_grads__ = self.prev
         
 
 def manual_seed(seed:int):
@@ -59,12 +72,30 @@ class Tensor:
             tensor (Tensor): Tensor whose gradient is going to be updated
             grad (np.ndarray): Gradient array to add
         """
-        tensor_shape = len(tensor.data.shape); grad_shape = len(grad.data.shape)
-        diff_axis = grad_shape-tensor_shape
+        def get_incompatible_dims(tensor_shape, grad_shape) -> tuple:
+            not_compatible_dims = []
+            for i, (tdim, gdim) in enumerate(zip(tensor_shape[::-1], grad_shape[::-1])):
+                print(tdim, gdim)
+                if gdim != 1 and tdim != gdim:
+                    not_compatible_dims.append(len(grad_shape)-1-i)
+            not_compatible_dims = tuple(not_compatible_dims)
+            return not_compatible_dims
+            
+        
+        if len(tensor.data.squeeze().shape) == 0:
+            tensor._grad += grad.sum()
+            return
+        
+        tensor_shape = tensor.data.shape; grad_shape = grad.data.shape
+        diff_axis = len(grad_shape)-len(tensor_shape)
         sum_axis = None if diff_axis <= 0 else tuple(np.arange(abs(diff_axis), dtype=np.int8).tolist())
-              
+        
         if tensor.grad.matches_shape(grad) or sum_axis is None: 
-            tensor._grad += grad
+            if sum_axis is None and not tensor.grad.matches_shape(grad):
+                not_compatible_dims = get_incompatible_dims(tensor_shape, grad_shape)
+                tensor += grad.sum(axis=not_compatible_dims)
+            else:
+                tensor._grad += grad
         else:
             tensor._grad += grad.sum(axis=sum_axis)
     
@@ -302,10 +333,37 @@ class Tensor:
         """ Transpose tensor, dim0 and dim1 are swapped (0, 1 for 2D tensor)"""
         out = Tensor(self.data.swapaxes(dim0, dim1), (self,), '<Transpose>', requires_grad=self.requires_grad)
         
-        
         def _backward():
             if self.requires_grad:
                 self._grad += out._grad.swapaxes(dim0, dim1)
+                
+        out._backward = _backward
+        
+        return out
+    
+    
+    def exp(self) -> 'Tensor':
+        return np.e**self
+    
+    
+    def log(self) -> 'Tensor':
+        out = Tensor(np.log(self.data), (self,), '<Log>', requires_grad=self.requires_grad)
+        
+        def _backward():
+            if self.requires_grad:
+                self._grad += (out._grad / (self.data + 1e-10)) 
+                
+        out._backward = _backward
+        
+        return out
+    
+    
+    def sqrt(self) -> 'Tensor':
+        out = Tensor(np.sqrt(self.data), (self,), '<Sqrt>', requires_grad=self.requires_grad)
+        
+        def _backward():
+            if self.requires_grad:
+                self._grad += out._grad / (2 * out.data)
                 
         out._backward = _backward
         
@@ -346,7 +404,7 @@ class Tensor:
         for i, node in enumerate(reversed(ordered_nodes)):
             if node.grad_fn is not None:
                 node.grad_fn()
-            if node is not self and not node.is_leaf and not node._retain_grad:
+            if node is not self and not node.is_leaf and not node._retain_grad and not retain_grads__:
                 del node._grad
                 node._grad = None
     
