@@ -1,8 +1,7 @@
 
 from abc import ABC, abstractmethod
 
-from .. import engine
-from ..engine import Tensor
+from .. import engine, Tensor
 
 
 class Optimizer(ABC):

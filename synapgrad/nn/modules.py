@@ -1,6 +1,5 @@
-
 from abc import ABC, abstractmethod
-from deeplib.engine import Tensor
+from .. import Tensor
     
 
 class Module(ABC):
@@ -33,10 +32,6 @@ class Module(ABC):
     def unfreeze(self):
         for p in self.parameters():
             p.requires_grad = True
-            
-    def retain_grad(self):
-        for p in self.parameters():
-            p.retain_grad()
             
     def track_module(self, m:'Module'):
         self.modules.append(m)

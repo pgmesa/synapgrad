@@ -1,7 +1,6 @@
-
 import random
 import numpy as np
-from typing import Iterable
+from typing import Iterable, Union
 
 
 gradient__ = True
@@ -32,7 +31,7 @@ def tensor(data, requires_grad=False) -> 'Tensor':
 
 class Tensor:
     
-    def __init__(self, data, _children=(), _operation='None', requires_grad=False) -> None:
+    def __init__(self, data, _children=(), _operation=None, requires_grad=False) -> None:
         if not isinstance(data, np.ndarray):
             data = np.array(data, dtype=np.float64)
         assert isinstance(data, np.ndarray), "data must be a list or numpy array"
@@ -48,17 +47,40 @@ class Tensor:
         self._operation = _operation # Operation that produced this node, for graphviz / debugging         
     
     
+    @staticmethod
+    def __add_grad(tensor:'Tensor', grad:np.ndarray):
+        """Function that ensures that the gradient that wants to be added is compatible
+        with the tensor gradient. It is a useful function for operations like __add__ and __mul__
+        when opertions like v1:(3,) (+ or *) v2:(2,3) pop up. In this case the incomming gradient
+        would be shape (2,3) and the gradient of v1 is (3,), so a sum() operation over axis 0 is required.
+        This function calculates the necessary axes in which to perform the sum() operation.
+
+        Args:
+            tensor (Tensor): Tensor whose gradient is going to be updated
+            grad (np.ndarray): Gradient array to add
+        """
+        tensor_shape = len(tensor.data.shape); grad_shape = len(grad.data.shape)
+        diff_axis = grad_shape-tensor_shape
+        sum_axis = None if diff_axis <= 0 else tuple(np.arange(abs(diff_axis), dtype=np.int8).tolist())
+              
+        if tensor.grad.matches_shape(grad) or sum_axis is None: 
+            tensor._grad += grad
+        else:
+            tensor._grad += grad.sum(axis=sum_axis)
+    
+    
     def __add__(self, summand:'Tensor') -> 'Tensor':
         summand = summand if isinstance(summand, Tensor) else Tensor(summand)
         r_grad = self.requires_grad or summand.requires_grad
+        
         out = Tensor(self.data + summand.data, (self, summand), '<Add>', requires_grad=r_grad)
         
         def _backward():
             if self.requires_grad:
-                self._grad += out._grad.sum() if len(self.data.shape) == 0 else out._grad
+                self.__add_grad(self, out._grad)
                 
             if summand.requires_grad:
-                summand._grad += out._grad.sum() if len(summand.data.shape) == 0 else out._grad
+                self.__add_grad(summand, out._grad)
     
         out._backward = _backward 
         
@@ -72,12 +94,10 @@ class Tensor:
         
         def _backward():
             if self.requires_grad:
-                self_grad = factor.data * out._grad
-                self._grad += self_grad.sum() if len(self.data.shape) == 0 else self_grad
+                self.__add_grad(self, factor.data * out._grad)
             
             if factor.requires_grad:
-                factor_grad = self.data * out._grad
-                factor._grad += factor_grad.sum() if len(factor.data.shape) == 0 else factor_grad
+                self.__add_grad(factor, self.data * out._grad)
             
         out._backward = _backward 
         
@@ -87,20 +107,35 @@ class Tensor:
     def __matmul__(self, tensor:'Tensor') -> 'Tensor':
         tensor = tensor if isinstance(tensor, Tensor) else Tensor(tensor)
         r_grad = self.requires_grad or tensor.requires_grad
-        out = Tensor(np.matmul(self.data, tensor.data), (self, tensor), '<Matmul>', requires_grad=r_grad)
+        assert len(self.data.shape) > 1 and len(tensor.data.shape) > 1, "Both inputs should have dimension > 1"
+        out = Tensor(self.data @ tensor.data, (self, tensor), '<Matmul>', requires_grad=r_grad)
         
         def _backward():
             if self.requires_grad:
-                self_grad = tensor.data * out._grad
-                self._grad += self_grad.sum() if len(self.data.shape) == 0 else self_grad
+                self._grad += np.dot(tensor.data, out._grad.T).T
             
             if tensor.requires_grad:
-                tensor_grad = self.data * out._grad
-                tensor._grad += tensor_grad.sum() if len(tensor.data.shape) == 0 else tensor_grad
+                tensor._grad += np.dot(self.data.T, out._grad)
                     
         out._backward = _backward
         
         return out
+    
+    
+    def __rmatmul__(self, tensor:'Tensor') -> 'Tensor':
+        tensor = tensor if isinstance(tensor, Tensor) else Tensor(tensor)
+        r_grad = self.requires_grad or tensor.requires_grad
+        assert len(self.data.shape) > 1 and len(tensor.data.shape) > 1, "Both inputs should have dimension > 1"
+        out = Tensor(tensor.data @ self.data, (self, tensor), '<Matmul>', requires_grad=r_grad)
+        
+        def _backward():
+            if self.requires_grad:
+                self._grad += np.dot(tensor.data.T, out._grad)
+            
+            if tensor.requires_grad:
+                tensor._grad += np.dot(self.data, out._grad.T).T
+                    
+        out._backward = _backward
     
     
     def __pow__(self, power) -> 'Tensor':
@@ -109,8 +144,7 @@ class Tensor:
         
         def _backward():
             if self.requires_grad:
-                self_grad = (power * self.data**(power-1)) * out._grad
-                self._grad += self_grad.sum() if len(self.data.shape) == 0 else self_grad
+                self._grad += (power * self.data**(power-1)) * out._grad
                     
         out._backward = _backward
         
@@ -123,8 +157,7 @@ class Tensor:
         
         def _backward():
             if self.requires_grad:
-                self_grad = (power**self.data * np.log(power)) * out._grad
-                self._grad += self_grad.sum() if len(self.data.shape) == 0 else self_grad
+                self._grad += (power**self.data * np.log(power)) * out._grad
                     
         out._backward = _backward
         
@@ -133,7 +166,7 @@ class Tensor:
     
     def __getitem__(self, key) -> 'Tensor':
         new_data = self.data[key]
-        out = Tensor(new_data, (self,), _operation='Slice', requires_grad=self.requires_grad)
+        out = Tensor(new_data, (self,), _operation='<Slice>', requires_grad=self.requires_grad)
 
         def _backward():
             if self.requires_grad:
@@ -164,6 +197,31 @@ class Tensor:
         def _backward():
             # Split the gradient along the concatenated dim and backpropagate to each input tensor
             grads = np.split(out._grad, len(tensors), axis=dim)
+            for tensor, grad in zip(tensors, grads):
+                if not tensor.requires_grad: continue
+                tensor._grad += grad
+
+        out._backward = _backward
+        
+        return out
+    
+    
+    @staticmethod
+    def stack(tensors:Iterable['Tensor'], dim=0) -> 'Tensor':
+        r_grad = False
+        for t in tensors:
+            if not isinstance(t, Tensor):
+                raise ValueError("All elements must be Tensors")
+            r_grad = r_grad or t.requires_grad
+    
+        # Stack data along the specified dim
+        new_data = np.stack([tensor.data for tensor in tensors], axis=dim)
+
+        out = Tensor(new_data, tensors, _operation='<Stack>', requires_grad=r_grad)
+
+        def _backward():
+            # Split the gradient along the concatenated dim and backpropagate to each input tensor
+            grads = np.rollaxis(out._grad, axis=dim)
             for tensor, grad in zip(tensors, grads):
                 if not tensor.requires_grad: continue
                 tensor._grad += grad
@@ -315,7 +373,7 @@ class Tensor:
     def detach(self) -> 'Tensor':
         return Tensor(self.data)
         
-    def matches_shape(self, tensor:'Tensor') -> bool:
+    def matches_shape(self, tensor:Union['Tensor', np.ndarray]) -> bool:
         if len(self.shape) != len(tensor.shape):
             return False
         
@@ -405,55 +463,21 @@ class Tensor:
         return other * self**-1
         
     def __repr__(self) -> str:
-        return f"Tensor({self.data}, shape={self.shape}, req_grad={self.requires_grad}, op={self._operation})"
-
-
-# Check with pytorch that gradients are correct when applying different tensor operations
-if __name__ == "__main__":
-    l1 = [[-4.0, 0, 5.0], [6.3, 3.2, 1.3]]
-    l2 = [[2.0, 2,  3.0], [2.4, 1.7, 0.5]]
-    
-    a = Tensor(l1, requires_grad=True).unsqueeze(0)
-    a.retain_grad()
-    b = Tensor(l2, requires_grad=True).unsqueeze(0)
-    b.retain_grad()
-    c = Tensor(4.0, requires_grad=True)
-    c.retain_grad()
-    out = Tensor.concat((a*c, b), dim=1).transpose(0, 1)[0, :]
-    out = out.view(3).unsqueeze(0).unsqueeze(0).squeeze()
-    s = out.sum()
-    s.backward()
-    
-    print("Tensor 1: ", a)
-    print("Tensor 2: ", b)
-    print("Tensor 3: ", c)
-    print("Tensor resultado: ", out)
-    print("Gradiente de tensor 1: ", a.grad)
-    print("Gradiente de tensor 2: ", b.grad)
-    print("Gradiente de tensor 3: ", c.grad)
-    
-    import torch
-    # Creamos el tensor con valores diferentes
-    a = torch.tensor(l1, requires_grad=True).unsqueeze(0)
-    a.retain_grad()
-    b = torch.tensor(l2, requires_grad=True).unsqueeze(0)
-    b.retain_grad()
-    c = torch.tensor(4.0, requires_grad=True)
-    c.retain_grad()
-
-    # Realizamos la multiplicación entre los dos tensores
-    out = torch.concat((a*c, b), dim=1).transpose(0, 1)[0, :]
-    out = out.view(3).unsqueeze(0).unsqueeze(0).squeeze()
-
-    # Calculamos el gradiente del tensor resultado
-    s = out.sum()
-    s.backward()
-
-    # Mostramos los resultados
-    print("\nTensor 1: ", a)
-    print("Tensor 2: ", b)
-    print("Tensor 3:", c)
-    print("Tensor resultado: ", out)
-    print("Gradiente de tensor 1: ", a.grad)
-    print("Gradiente de tensor 2: ", b.grad)
-    print("Gradiente de tensor 3: ", c.grad)
+        beggining = "Tensor("
+        data_str = ""
+        for i, line in enumerate(str(self.data).splitlines(keepends=True)):
+            if i != 0:
+                line = " "*len(beggining) + line  
+            data_str += line 
+             
+        string = f"{beggining}{data_str}, shape={self.shape}"
+        
+        if self.requires_grad:
+            string += f", req_grad={self.requires_grad}"
+            
+        if self._operation is not None:
+            string += f", op={self._operation})"
+            
+        string += ")"
+            
+        return string

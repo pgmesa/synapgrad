@@ -1,8 +1,6 @@
-
 from typing import Any
 from abc import ABC, abstractmethod
-
-from deeplib.engine import Tensor
+from .. import Tensor
 
 
 epsilon = 1e-7
@@ -51,35 +49,6 @@ class MSELoss(Loss):
         
         return loss
     
-    
-if __name__ == "__main__":
-    from deeplib.nn import Sigmoid
-    
-    true = [1.0, 0]
-    y_true = Tensor(true)
-    l1 = [[2.0], [-1.0]]
-    a = Tensor(l1, requires_grad=True)
-    a.retain_grad()
-    
-    y_pred = Sigmoid()(a)
-    y_pred = y_pred.squeeze()
-    print("y_pred", y_pred)
-    
-    loss = MSELoss(reduction='mean')(y_pred, y_true)
-    print("Loss", loss)
-    loss.backward()
-    print("a grad:", a.grad)
-    
-    import torch
-    target = torch.tensor(true)
-    a = torch.tensor(l1, requires_grad=True)
-    a.retain_grad()
-    out = torch.nn.Sigmoid()(a)
-    out = out.squeeze()
-    out = torch.nn.MSELoss(reduction='mean')(out, target)
-    out.backward()
-    print(out)
-    print(a.grad)
 
 # class BCELoss(Loss):
     

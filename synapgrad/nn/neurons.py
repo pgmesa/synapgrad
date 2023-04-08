@@ -1,8 +1,6 @@
-
 import math
 import numpy as np
-from deeplib.engine import Tensor
-from deeplib import nn
+from .. import Tensor, nn
 
 
 weight_initializers = ['glorot', 'glorot_norm', 'he']
@@ -13,21 +11,14 @@ class Neuron(nn.Module):
     def __init__(self, inputs:int, weight_init_method='he') -> None:
         self.inputs = inputs
         # Randomly initialize weights and bias
-        self.weights = Tensor(init_weights(inputs, 1, weight_init_method), requires_grad=True)
-        self.weights.retain_grad()
-        self.bias = Tensor(0, requires_grad=True)
-        self.bias.retain_grad()
-        assert len(self.weights) == inputs, f"{len(self.weights)} {inputs}"
+        weight_values = np.expand_dims(init_weights(inputs, 1, weight_init_method), 0)
+        self.weights = Tensor(weight_values, requires_grad=True)
+        self.bias = Tensor([0], requires_grad=True)
     
     def forward(self, x:Tensor) -> Tensor:
-        assert x[0].matches_shape(self.weights), f"Expected input size '{self.weights.shape}' but received '{x[0].shape}'"
+        assert x[0].matches_shape(self.weights[0]), f"Expected input size '{self.weights[0].shape}' but received '{x[0].shape}'"
 
-        out = []
-        for inp in x:
-            o = (inp @ self.weights) + self.bias
-            out.append(o.unsqueeze(0))
-            
-        out = Tensor.concat(out, dim=0).unsqueeze(1)
+        out = (x @ self.weights.transpose(0,-1)) + self.bias
     
         return out
 

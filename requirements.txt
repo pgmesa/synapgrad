@@ -1,10 +1,10 @@
-# deeplib core
+# synapgrad core
 numpy
 # utils
 pkbar
 matplotlib
 ipykernel
 graphviz
-# for testing
 scikit-learn
+# for testing
 torch

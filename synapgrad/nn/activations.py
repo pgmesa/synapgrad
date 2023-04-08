@@ -1,7 +1,5 @@
-
 import numpy as np
-from deeplib.engine import Tensor
-from deeplib import nn
+from .. import Tensor, nn
 
 
 class ReLU(nn.Module):
@@ -40,24 +38,6 @@ class Sigmoid(nn.Module):
         
         return out
     
-if __name__ == "__main__":
-    l1 = [[-1.0,-2.0,4.0,5.0,1.0,7.0]]
-    a = Tensor(l1, requires_grad=True)
-    a.retain_grad()
-    b = Sigmoid()(a)
-    print(Sigmoid())
-    print(b)
-    b.sum().backward()
-    print(a)
-    print(a.grad)
-    
-    import torch
-    a = torch.tensor(l1, requires_grad=True)
-    a.retain_grad()
-    out = torch.nn.Sigmoid()(a)
-    out.sum().backward()
-    print(out)
-    print(a.grad)
     
 # class Softmax:
     
