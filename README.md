@@ -91,7 +91,7 @@ with synapgrad.retain_grads():
     z = y * y2 * x2
     z = z.sum()
     z.backward()
-utils.graph.draw_dot(z)
+utils.graph.draw(z)
 ```
 
 ![Board Image](/assets/graph_example.svg)

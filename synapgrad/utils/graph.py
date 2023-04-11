@@ -14,7 +14,7 @@ def trace(root):
     build(root)
     return nodes, edges
 
-def draw_dot(root, format='svg', rankdir='LR'):
+def draw(root, format='svg', rankdir='LR'):
     """
     format: png | svg | ...
     rankdir: TB (top to bottom graph) | LR (left to right)
