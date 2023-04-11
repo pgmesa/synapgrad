@@ -2,6 +2,8 @@
 
 An autograd Tensor-based engine with a deep learning library built on top of it made from scratch
 
+> :warning: This project is not yet fully completed. Please review the following sections for updates on [current bugs](#current-issues) and [next steps](#todo-list). 
+
 ## Technical Description
 This project implements a completely functional engine for tracking operations between Tensors, by dynamically building a Directed Acyclic Graph (DAG), and an automatic backpropagation algorithm (reverse-mode autodiff) over this DAG.
 
@@ -102,3 +104,12 @@ To run the unit tests you will have to install PyTorch. In these tests, gradient
 ```bash
 python -m pytest
 ```
+
+## Current Issues 
+1. Softmax and LogSoftmax gradient is not calculated correctly
+2. BCEWithLogitsLoss is not working as expected
+
+## ToDo list
+- Add extra parameters to SGD
+- Finish Adam optimizer
+- Implement training example 3 (Conv2D, MaxPool2D, BatchNorm2D)
