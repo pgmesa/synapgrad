@@ -57,6 +57,7 @@ class Sigmoid(nn.Module):
 
     
 class Softmax(nn.Module):
+    # TODO: Not working properly
     """ References: 
             https://eli.thegreenplace.net/2016/the-softmax-function-and-its-derivative/
             https://aimatters.wordpress.com/2019/06/17/the-softmax-function-derivative/
@@ -75,10 +76,10 @@ class Softmax(nn.Module):
             # Hand made derivation
             if x.requires_grad:
                 diag = np.stack([np.diag(v) for v in softmax])
-                S_matrix = np.stack([np.tile(v, softmax.shape[self.dim]) for v in softmax]).reshape(diag.shape)
-                S_matrix_T = np.stack([np.transpose(m) for m in S_matrix])
-                grad = diag - (S_matrix * S_matrix_T)
-                x._grad += grad.sum(axis=self.dim) * out._grad
+                S_matrix = np.repeat(softmax, softmax.shape[self.dim], axis=self.dim).reshape(diag.shape)
+                S_matrix_T = S_matrix.swapaxes(-2, -1)
+                grad = diag - (S_matrix*S_matrix_T)
+                x._grad += grad.sum(axis=2) * out._grad
             
         out._backward = _backward
         
@@ -86,6 +87,7 @@ class Softmax(nn.Module):
 
     
 class LogSoftmax(nn.Module):
+    # TODO: Not working properly
     
     def __init__(self, dim) -> None:
         super().__init__()

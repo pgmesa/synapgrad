@@ -4,14 +4,9 @@ from utils import check_tensors
 import numpy as np
 
 
-def check_optimizer(opt:optim.Optimizer, opt_t:torch.optim.Optimizer):
+def check_optimizer(opt:optim.Optimizer, param, opt_t:torch.optim.Optimizer, param_t):
     inp = Tensor(np.ones((4,4)), requires_grad=True)
-    param = Tensor(np.ones((4,4)), requires_grad=True)
-    opt = opt([param], lr=0.1)
-    
     inp_t = torch.tensor(np.ones((4,4)), requires_grad=True)
-    param_t = torch.tensor(np.ones((4,4)), requires_grad=True)
-    opt_t = opt_t([param_t], lr=0.1)
     
     for i in range(10):
         # synapgrad
@@ -38,7 +33,17 @@ def check_optimizer(opt:optim.Optimizer, opt_t:torch.optim.Optimizer):
 
 
 def test_SGD():
-    check_optimizer(optim.SGD, torch.optim.SGD)
+    attrs = {
+        "lr": 0.1
+    }
+    
+    param = Tensor(np.ones((4,4)), requires_grad=True)
+    opt = optim.SGD([param], **attrs)
+    
+    param_t = torch.tensor(np.ones((4,4)), requires_grad=True)
+    opt_t = torch.optim.SGD([param_t], **attrs)
+    
+    check_optimizer(opt, param, opt_t, param_t)
     
     
 # def test_Adam():

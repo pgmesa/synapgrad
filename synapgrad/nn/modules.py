@@ -6,14 +6,15 @@ class Module(ABC):
     
     def __init__(self) -> None:
         self.modules = []
+        self.training = False
         
     def train(self):
         """ Set module to train mode"""
-        pass
+        self.training = True
         
     def eval(self):
         """ Set module to evaluation mode """
-        pass
+        self.training = False
         
     def __call__(self, batch:Tensor) -> Tensor:
         if len(batch.shape) <= 1:

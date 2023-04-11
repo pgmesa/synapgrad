@@ -11,6 +11,7 @@ class Optimizer(ABC):
         super().__init__()
         self.parameters = parameters
         self.lr = lr
+        self.t = 0
         
     def zero_grad(self):
         for p in self.parameters:
@@ -18,15 +19,58 @@ class Optimizer(ABC):
         
     @abstractmethod
     def step(self):
-        pass
+        self.t += 1
 
 
 class SGD(Optimizer):
+    """Reference: 
+        https://pytorch.org/docs/stable/generated/torch.optim.SGD.html
+    """
+    
+    def __init__(self, parameters: list[Tensor], lr=0.001, momentum=0, dampening=0,
+                 weight_decay=0, nesterov=False, maximize=False) -> None:
+        super().__init__(parameters, lr)
+        self.momentum = momentum
+        self.acum_m = []
+        self.nesterov = nesterov
+        self.dampening = dampening
+        self.maximize = maximize
+        self.weight_decay = weight_decay
+        
+        if nesterov and (momentum <= 0 or dampening != 0):
+            raise ValueError("Nesterov momentum requires a momentum and zero dampening")
     
     def step(self):
+        super().step()
         with engine.no_grad():
-            for p in self.parameters:
-                p.data -= self.lr*p._grad
+            for i, p in enumerate(self.parameters):
+                grad = p._grad
+                
+                p.data -= self.lr*grad
+                
+                # Pytorch version with extra attrs (Not working yet)
+                # # Weight decay
+                # if self.weight_decay != 0:
+                #     grad += self.weight_decay*p.data
+                
+                # # Momentum
+                # if self.momentum != 0:
+                #     if self.t > 1:
+                #         self.acum_m[i] = self.momentum*self.acum_m[i] + (1-self.dampening)*grad
+                #     else:
+                #         self.acum_m.append(grad)
+                
+                #     # Nesterov
+                #     if self.nesterov:
+                #         grad += self.momentum*self.acum_m[i]
+                #     else:
+                #         grad = self.acum_m[i]
+                
+                # # Update Parameter
+                # if self.maximize:
+                #     p.data += self.lr*grad
+                # else:
+                #     p.data -= self.lr*grad
         
     
 class Adam(Optimizer):
@@ -49,7 +93,7 @@ class Adam(Optimizer):
         self.vt = [0 for _ in range(len(parameters))]
     
     def step(self):
-        
+        super().step()
         with engine.no_grad():
             for i, p in enumerate(self.parameters):
                 # Update the moving average of the gradient

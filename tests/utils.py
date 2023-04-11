@@ -1,7 +1,7 @@
 import torch
 import numpy as np
 from synapgrad import Tensor
-
+import warnings
 
 rtol = 0.00001
 atol = 1e-8
@@ -18,6 +18,9 @@ def check_tensors(t1:Tensor, t2:torch.Tensor) -> bool:
     
     t1_t = torch.from_numpy(t1.data)
     
-    assert t1_t.dtype == t2.dtype, f"dtype of tensors don't match t1={t1.dtype} t2={t2.dtype}"
+    if t1_t.dtype != t2.dtype:
+        if not (t1_t.dtype.is_floating_point and t2.dtype.is_floating_point):
+            warnings.warn(f"\nThis could be ignored, but dtype of tensors don't match t1={t1.dtype} t2={t2.dtype}", stacklevel=0) 
+        t1_t = t1_t.type(t2.dtype)
     
     return torch.equal(t1_t, t2) or torch.allclose(t1_t, t2, rtol=rtol, atol=atol)

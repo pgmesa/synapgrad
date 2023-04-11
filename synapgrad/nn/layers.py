@@ -26,7 +26,19 @@ class Linear(nn.Module):
     
     def __repr__(self) -> str:
         return f"Linear(input_size={self.input_size}, neurons={len(self.output_size)})"
-        
+
+
+class Flatten(nn.Module):
+    
+    def __init__(self, start_dim=1, end_dim=-1) -> None:
+        super().__init__()
+        self.start_dim = start_dim
+        self.end_dim = end_dim
+    
+    def forward(self, x: Tensor) -> Tensor:
+        return x.flatten(self.start_dim, self.end_dim)
+
+
 
 # class Conv2D(Layer):
     

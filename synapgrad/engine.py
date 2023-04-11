@@ -47,6 +47,7 @@ class Tensor:
     def __init__(self, data, _children=(), _operation=None, requires_grad=False, dtype=np.float32) -> None:
         if not isinstance(data, np.ndarray):
             data = np.array(data, dtype=dtype)
+        if dtype is not None and data.dtype != dtype: data = data.astype(dtype)
         assert isinstance(data, np.ndarray), "data must be a list or numpy array"
         
         self.data = data
@@ -289,18 +290,23 @@ class Tensor:
         return out
     
     
-    def squeeze(self, dim=None) -> 'Tensor':
-        data = np.squeeze(self.data, dim)
-        if dim is None:
-            dim = []
-            for i, d in enumerate(self.data.shape):
-                if d == 1: dim.append(i)
-                
+    def squeeze(self, dim:int=None) -> 'Tensor':
+        data = self.data
+        can_apply = len(self.shape) > 0 and (dim is None or self.shape[dim] == 1)
+        if can_apply:
+            data = np.squeeze(self.data, dim)
+            if dim is None:
+                dim = []
+                for i, d in enumerate(self.data.shape):
+                    if d == 1: dim.append(i) 
         out = Tensor(data, (self,), '<Squeeze>', requires_grad=self.requires_grad)
         
         def _backward():
             if self.requires_grad:
-                self._grad += np.expand_dims(out._grad, dim)
+                if can_apply:
+                    self._grad += np.expand_dims(out._grad, dim)
+                else:
+                    self._grad += out._grad
             
         out._backward = _backward
         
@@ -357,6 +363,25 @@ class Tensor:
         return out
     
     
+    def flatten(self, start_dim=0, end_dim=-1) -> 'Tensor':
+        shape = self.shape
+        start = start_dim if start_dim != -1 else len(shape)
+        end = end_dim if end_dim != -1 else len(shape)
+        if start > end:
+            raise RuntimeError("flatten() has invalid args: start_dim cannot come after end_dim")
+        if start < end:
+            shape = self.shape[:start] + (-1,) + self.shape[end+1:]
+        out = Tensor(self.data.reshape(shape), (self,), '<Flatten>', requires_grad=self.requires_grad)
+        
+        def _backward():
+            if self.requires_grad:
+                self._grad += out._grad.reshape(self.shape)
+                
+        out._backward = _backward
+        
+        return out
+    
+    
     def exp(self) -> 'Tensor':
         return np.e**self
     
@@ -393,7 +418,7 @@ class Tensor:
             if self.data.size > 1:
                 raise RuntimeError("grad must be specified for non-scalar tensors")
             else:
-                grad = np.array(1.0, dtype=np.float64)
+                grad = np.array(1.0, dtype=self.data.dtype)
                 
         if not isinstance(grad, np.ndarray):
             raise ValueError("Gradient parameter must be a numpy array")
@@ -540,7 +565,9 @@ class Tensor:
         return other * self**-1
     
     @staticmethod
-    def pretty_numpy(array:np.ndarray, decimals=4) -> str:
+    def pretty_numpy(array:np.ndarray, decimals=5) -> str:
+        def truncate(f, n):
+            return np.floor(f * 10 ** n) / 10 ** n
         rounded_data = array.copy().round(decimals=decimals)
         #rounded_data += 0. # Remove -0.0 values (just 0.0)
         str_to_rm = "array("

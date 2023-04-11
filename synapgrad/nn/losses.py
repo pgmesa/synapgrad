@@ -34,7 +34,7 @@ def bce_with_logits_loss(y_pred: np.ndarray, y_true: np.ndarray) -> np.ndarray:
 
 
 def cross_entropy_loss(y_pred: np.ndarray, y_true: np.ndarray) -> np.ndarray:
-    softmax = np.log(softmax_fn(y_pred, 1))
+    softmax = np.log(softmax_fn(y_pred, 1) + epsilon)
     log_likelihood = nll_loss(softmax, y_true)
     return log_likelihood
 

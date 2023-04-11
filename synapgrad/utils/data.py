@@ -1,4 +1,5 @@
 
+from abc import ABC, abstractmethod 
 import numpy as np
 
 
@@ -53,16 +54,23 @@ def one_hot_encode(y) -> np.ndarray:
         encoded.append(zeros)
         
     return np.array(encoded)
-        
+
+
+class DataLoaderCallback(ABC):
+    
+    @abstractmethod
+    def __call__(self, data_loader:'DataLoader', X_batch:np.ndarray, y_batch:np.ndarray):
+        pass
+    
         
 class DataLoader:
     
-    def __init__(self, X, y, batch_size, engine) -> None:
-        self.X = X
-        self.y = y
+    def __init__(self, X, y, batch_size, engine, transform:DataLoaderCallback=None) -> None:
+        self.X = X; self.y = y
         self.batach_size = batch_size
         self.engine = engine
         self.step = 0
+        self.transform = transform
     
     def __len__(self):
         return len(self.y) // self.batach_size
@@ -82,7 +90,13 @@ class DataLoader:
     def __getitem__(self, idx) -> tuple:
         start = idx*self.batach_size
         end = (idx*self.batach_size) + self.batach_size
-        x = self.engine.tensor(self.X[start:end])
-        y = self.engine.tensor(self.y[start:end])
+        
+        X_batch = self.X[start:end]
+        y_batch = self.y[start:end]
+        if self.transform is not None:
+            return self.transform(self, X_batch, y_batch)
+        
+        x = self.engine.tensor(X_batch)
+        y = self.engine.tensor(y_batch)
         
         return x, y 

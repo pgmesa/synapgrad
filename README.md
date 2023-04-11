@@ -12,10 +12,11 @@ This library tries to mimic Pytorch in a simplified way, but with similar functi
 ## Aim of the project
 The aim of this project is to create a deep learning library from scratch, without using any existing framework (such as keras, pytorch, tensorflow, sklearn, etc) in order to fully understand the core aspects of how they work. Specifically, this time I have focused on pytorch.
 
-Some of the external frameworks mentioned before have been used for the following reasons:
+However, some of these external frameworks have been used for the following reasons:
 
-- (pytorch) to check gradient calculation is correct
-- (sklearn) (keras) to download the example datasets
+- (pytorch) to check gradient calculation is correct.
+- (keras) to download handwritten digits MNIST dataset
+- (sklearn) to create 'make_moons' dataset
 
 This project stems from the amazing educational project `micrograd` by `karpathy` (https://github.com/karpathy/micrograd)
 
@@ -55,10 +56,10 @@ print(c.grad) # dc/dout
 This project comes with 3 jupyter notebooks (in `examples/`) that solve 3 beginner's problems in AI:
 
 - [x] 1. Basic MLP for binary classification (sklearn 'make_moons' toy dataset)
-- [ ] 2. MLP for handwritten digits classification (MNIST dataset) 
+- [x] 2. MLP for handwritten digits classification (MNIST dataset) 
 - [ ] 3. CNN for handwritten digits classification (MNIST dataset)
 
-So far, only the first example has been implemented
+The 3rd example has not been implemented yet
 
 Example 1 (synapgrad MLP solution)     |  Example 2 and 3
 :-------------------------:|:-------------------------:
@@ -70,11 +71,11 @@ In order to see the efficiency of synapgrad, it is compared with other existing 
 
 | Training Example | synapgrad | torch | micrograd |
 |     :---:        |  :---:  |  :---:  |   :---:   |  
-| 1  | 1.7 s | 1.5 s | 1 min y 43 s |
-| 2  | - | - | - |
+| 1  | 1.7 s | 1.5 s | 1 min 43 s |
+| 2  | 39.7 s | 32.8 s | - |
 | 3  | - | - | - |
 
-As you can see, synapgrad is fast
+As it can be seen, synapgrad is quite fast
 
 ## Graph Visualization
 In the `examples/trace_graph.ipynb` notebook there is an example of how to display the graph that synapgrad creates in the background as operations are chained.

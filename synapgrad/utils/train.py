@@ -12,18 +12,25 @@ MAX_MODE = 'max'
 
 class Evaluator:
     
-    def __init__(self, epoch_callback=None, step_callback=None, accuracy=True) -> None:
+    # output of model is scalar as well as labels (0 or 1) ex: [0,1,0,1,0]
+    BINARY = 'binary' 
+    # output of model is vector but labels are scalars with values [0, n_class) ex: [0,3,9,2,1] (10 classes)
+    MULTI_CLASS = 'multi-class'
+    # output of model is vector and labels are one-hot encoded ex: [[0,0,1] [0,1,0]]
+    CATEGORICAL = 'categorical'
+    
+    
+    def __init__(self, epoch_callback=None, step_callback=None, accuracy=True, mode=MULTI_CLASS) -> None:
         self.accuracy_bool = accuracy
         self.epoch_callback = epoch_callback
         self.step_callback = step_callback
-        self.y_true = np.array([], dtype=np.uint0)
-        self.y_pred = np.array([], dtype=np.uint0)
-        self.binary_low_boundary = 0
-        self.binary_high_boundary = 1
+        self.y_true = np.array([], dtype=np.int16)
+        self.y_pred = np.array([], dtype=np.int16)
+        self.mode = mode
         
     def reset(self):
-        self.y_true = np.array([], dtype=np.uint0)
-        self.y_pred = np.array([], dtype=np.uint0)
+        self.y_true = np.array([], dtype=np.int16)
+        self.y_pred = np.array([], dtype=np.int16)
     
     def step(self, labels, outputs, prefix=None) -> list:
         """ Calculates custom metrics for each step
@@ -40,21 +47,25 @@ class Evaluator:
         labels_numpy = labels.squeeze().detach().numpy()
         outputs_numpy = outputs.squeeze().detach().numpy()
         
-        if len(labels_numpy.shape) > 1:
-            # Multi-class
-            y_true = np.argmax(labels_numpy, axis=1)
-            y_pred = np.argmax(outputs_numpy, axis=1)
-        else:
-            # Binary-class
-            y_true = labels_numpy
-            low = self.binary_low_boundary; high = self.binary_high_boundary
-            y_pred = np.where(outputs_numpy > (high+low)/2, high, low)
-            
-        y_true = y_true.astype(np.uint0)
-        y_pred = y_pred.astype(np.uint0)
         
-        self.y_true = np.concatenate([self.y_true, y_true], axis=0, dtype=np.uint0)
-        self.y_pred = np.concatenate([self.y_pred, y_pred], axis=0, dtype=np.uint0)
+        if self.mode == self.BINARY:
+            y_pred = np.where(outputs_numpy > 0.5, 1, 0)
+            y_true = labels_numpy
+        elif self.mode == self.MULTI_CLASS:
+            y_pred = np.argmax(outputs_numpy, axis=1)
+            y_true = labels_numpy
+        elif self.mode == self.CATEGORICAL:
+            y_pred = np.argmax(outputs_numpy, axis=1)
+            y_true = np.argmax(labels_numpy, axis=1)
+        else:
+            raise RuntimeError(f"Evaluator: mode '{self.mode}' is not valid")
+            
+            
+        y_true = y_true.astype(np.int16)
+        y_pred = y_pred.astype(np.int16)
+        
+        self.y_true = np.concatenate([self.y_true, y_true], axis=0, dtype=np.int16)
+        self.y_pred = np.concatenate([self.y_pred, y_pred], axis=0, dtype=np.int16)
         
         metrics = self.__compute(y_true, y_pred, prefix, callback=self.step_callback)
         
@@ -87,6 +98,26 @@ class Evaluator:
             metrics = metrics_with_prefix
             
         return metrics
+    
+    def report(self, y_pred, y_true, classes=None):
+        
+        auc = None
+        if self.mode == self.BINARY:
+            y_pred = np.where(y_pred > 0.5, 1, 0)
+            # Compute AUC
+            auc = roc_auc_score(y_true, y_pred)
+        elif self.mode == self.MULTI_CLASS:
+            y_pred = np.argmax(y_pred, axis=1)
+        elif self.mode == self.CATEGORICAL:
+            y_pred = np.argmax(y_pred, axis=1)
+            y_true = np.argmax(y_true, axis=1)
+        else:
+            raise RuntimeError(f"Evaluator: mode '{self.mode}' is not valid")
+        
+        print("Accuracy:", accuracy_score(y_true, y_pred))
+        if auc is not None: print("ROC_AUC:", auc)
+        print(confusion_matrix(y_true, y_pred))
+        print(classification_report(y_true, y_pred, target_names=classes))
             
              
 class Trainer:
@@ -198,40 +229,23 @@ class Trainer:
             plot_history_metric(m)
         plt.show()
     
-    # def test(self, test_loader, report=True, classes=None) -> np.ndarray:
-    #     # we can now evaluate the network on the test set
-    #     print("[INFO] Testing network...")
-    #     # set the model in evaluation mode
-    #     self.model.eval()
-    #     if self.model.training: raise Exception("Model is in training mode")
-    #     preds = []; y_test = []
-    #     with torch.no_grad():
-    #         for data in test_loader:
-    #             *inputs, labels = data
-    #             for l in labels.cpu().numpy():
-    #                 y_test.append(l)
-    #             inputs = self.__to_device(inputs)
-    #             pred = self.model(*inputs).squeeze(dim=1)
-    #             pred = pred.cpu()
-    #             for p in pred:
-    #                 preds.append(p.numpy())
+    def test(self, test_loader) -> tuple[np.ndarray, np.ndarray]:
+        print("[INFO] Testing network...")
+        # set the model in evaluation mode
+        self.model.eval()
+        if self.model.training: raise Exception("Model is in training mode")
+        preds = []; y_test = []
+        with self.engine.no_grad():
+            for data in test_loader:
+                *inputs, labels = data
+                for l in labels.numpy():
+                    y_test.append(l)
+                pred = self.model(*inputs).squeeze(dim=1)
+                for p in pred:
+                    preds.append(p.numpy())
 
-    #     y_test = np.array(y_test)
-    #     y_pred = np.array(preds)
+        y_test = np.array(y_test)
+        y_pred = np.array(preds)
         
-    #     if len(y_test.shape) > 1:
-    #         # Multi-class
-    #         y_test = np.argmax(y_test, axis=1)
-    #         y_pred = np.argmax(y_pred, axis=1)
-    #     else:
-    #         # Binary-class
-    #         y_pred = np.where(y_pred > 0.5, 1, 0)
-        
-    #     if report:
-    #         print("Accuracy:", accuracy_score(y_test, y_pred))
-    #         print("ROC_AUC:", roc_auc_score(y_test, y_pred))
-    #         print(confusion_matrix(y_test, y_pred))
-    #         print(classification_report(y_test, y_pred, target_names=classes))
-        
-    #     return y_pred, y_test
+        return y_pred, y_test
                 

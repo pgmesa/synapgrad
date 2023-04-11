@@ -1,6 +1,7 @@
 import torch
 from synapgrad import Tensor, nn
 from utils import check_tensors
+import numpy as np
     
     
 def test_linear():
@@ -26,3 +27,24 @@ def test_linear():
     assert len(params) == len(params_t)
     for p, p_t in zip(params, params_t):
         assert check_tensors(p.grad, p_t.grad)
+        
+        
+def test_flatten():
+    l = np.random.randn(30,28,28,3,4)
+    
+    # synapgrad
+    inp = Tensor(l, requires_grad=True)
+    linear = nn.Flatten(start_dim=1, end_dim=2)
+    out_l = linear(inp)
+    out = out_l.sum()
+    out.backward()
+
+    # torch
+    inp_t = torch.tensor(l, requires_grad=True)
+    linear_t = torch.nn.Flatten(start_dim=1, end_dim=2)
+    out_tl = linear_t(inp_t)
+    out_t = out_tl.sum()
+    out_t.backward()
+
+    assert check_tensors(out_l, out_tl)
+    assert check_tensors(inp.grad, inp_t.grad)
