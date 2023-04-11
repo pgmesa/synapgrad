@@ -38,15 +38,15 @@ def manual_seed(seed:int):
     random.seed(seed)
 
 
-def tensor(data, requires_grad=False) -> 'Tensor':
-    return Tensor(data, requires_grad=requires_grad)
+def tensor(data, requires_grad=False, dtype=np.float32) -> 'Tensor':
+    return Tensor(data, requires_grad=requires_grad, dtype=dtype)
 
 
 class Tensor:
     
-    def __init__(self, data, _children=(), _operation=None, requires_grad=False) -> None:
+    def __init__(self, data, _children=(), _operation=None, requires_grad=False, dtype=np.float32) -> None:
         if not isinstance(data, np.ndarray):
-            data = np.array(data, dtype=np.float64)
+            data = np.array(data, dtype=dtype)
         assert isinstance(data, np.ndarray), "data must be a list or numpy array"
         
         self.data = data
@@ -93,7 +93,7 @@ class Tensor:
         if tensor.grad.matches_shape(grad) or sum_axis is None: 
             if sum_axis is None and not tensor.grad.matches_shape(grad):
                 not_compatible_dims = get_incompatible_dims(tensor_shape, grad_shape)
-                tensor += grad.sum(axis=not_compatible_dims)
+                tensor += grad.sum(axis=not_compatible_dims, keepdims=True)
             else:
                 tensor._grad += grad
         else:
@@ -262,6 +262,21 @@ class Tensor:
         return out
     
     
+    @staticmethod
+    def add(t1:'Tensor', t2:'Tensor') -> 'Tensor':
+        return t1 + t2
+    
+    
+    @staticmethod
+    def mul(t1:'Tensor', t2:'Tensor') -> 'Tensor':
+        return t1 * t2
+    
+    
+    @staticmethod
+    def matmul(t1:'Tensor', t2:'Tensor') -> 'Tensor':
+        return t1 @ t2
+    
+    
     def view(self, shape:tuple) -> 'Tensor':
         out = Tensor(self.data.reshape(shape), (self,), '<View>', requires_grad=self.requires_grad)
         
@@ -305,12 +320,12 @@ class Tensor:
         return out
     
     
-    def sum(self, dim:int=None) -> 'Tensor':
-        out = Tensor(self.data.sum(axis=dim), (self,), '<Sum>', requires_grad=self.requires_grad)
+    def sum(self, dim:int=None, keepdims=False) -> 'Tensor':
+        out = Tensor(self.data.sum(axis=dim, keepdims=keepdims), (self,), '<Sum>', requires_grad=self.requires_grad)
         
         def _backward():
             if self.requires_grad:
-                self._grad += np.ones(self.shape) * out._grad
+                self._grad += out._grad
             
         out._backward = _backward
         
@@ -445,6 +460,10 @@ class Tensor:
         return self.data.shape
     
     @property
+    def dtype(self) -> np.dtype:
+        return self.data.dtype
+    
+    @property
     def size(self) -> int:
         return self.data.size
     
@@ -519,15 +538,28 @@ class Tensor:
 
     def __rtruediv__(self, other) -> 'Tensor': # other / self
         return other * self**-1
+    
+    @staticmethod
+    def pretty_numpy(array:np.ndarray, decimals=4) -> str:
+        rounded_data = array.copy().round(decimals=decimals)
+        #rounded_data += 0. # Remove -0.0 values (just 0.0)
+        str_to_rm = "array("
+        data_str = repr(rounded_data).replace(str_to_rm, "")
+        crop_index = (len(data_str)) - data_str[::-1].find("]")
+        cropped = data_str[:crop_index]
+        
+        braces_padd = (len(array.shape)-1)
+        no_padding = cropped.replace("\n" + " "*(braces_padd+len(str_to_rm)), "\n" + " "*braces_padd)
+        return no_padding
         
     def __repr__(self) -> str:
+        pretty_data_str = self.pretty_numpy(self.data)
         beggining = "Tensor("
         data_str = ""
-        for i, line in enumerate(str(self.data).splitlines(keepends=True)):
+        for i, line in enumerate(pretty_data_str.splitlines(keepends=True)):
             if i != 0:
                 line = " "*len(beggining) + line  
-            data_str += line 
-             
+            data_str += line
         string = f"{beggining}{data_str}, shape={self.shape}"
         
         if self.requires_grad:

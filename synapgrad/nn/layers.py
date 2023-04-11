@@ -10,9 +10,9 @@ class Linear(nn.Module):
         self.input_size = input_size
         self.output_size = output_size
         # Randomly initialize weights and biases
-        weight_values = [ init_weights(input_size, output_size, weight_init_method) for _ in range(output_size) ]
+        weight_values = [ init_weights(input_size, output_size, weight_init_method).astype(np.float32) for _ in range(output_size) ]
         self.weights = Tensor(weight_values, requires_grad=True)
-        self.biases = Tensor(np.zeros(output_size,), requires_grad=True)
+        self.biases = Tensor(np.zeros((output_size,), dtype=np.float32), requires_grad=True)
         
     def forward(self, x:Tensor) -> Tensor:
         assert x.shape[1] == self.input_size, f"Expected input size '{self.input_size}' but received '{x.shape[1]}'"

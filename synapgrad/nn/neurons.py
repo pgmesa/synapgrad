@@ -11,7 +11,7 @@ class Neuron(nn.Module):
     def __init__(self, inputs:int, weight_init_method='he') -> None:
         self.inputs = inputs
         # Randomly initialize weights and bias
-        weight_values = np.expand_dims(init_weights(inputs, 1, weight_init_method), 0)
+        weight_values = np.expand_dims(init_weights(inputs, 1, weight_init_method), 0).astype(np.float32)
         self.weights = Tensor(weight_values, requires_grad=True)
         self.bias = Tensor([0], requires_grad=True)
     
