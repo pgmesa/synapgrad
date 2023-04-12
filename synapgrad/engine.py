@@ -472,6 +472,10 @@ class Tensor:
         
     def detach(self) -> 'Tensor':
         return Tensor(self.data)
+    
+    def cpu(self) -> 'Tensor':
+        """ Returns itself, just added for compatibility with .cpu() pytorch call """
+        return self
         
     def matches_shape(self, tensor:Union['Tensor', np.ndarray]) -> bool:
         if len(self.shape) != len(tensor.shape):

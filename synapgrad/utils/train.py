@@ -209,7 +209,7 @@ class Trainer:
         
         return [('val_loss', val_loss)] + val_metrics
         
-    def plot(self, metrics:list=['loss'], figsize=(15,5), style=False, ylim:tuple=None):
+    def plot(self, metrics:list=['loss'], figsize=(15,5), style=False, ylim:tuple=(0,1)):
         if style: plt.style.use("ggplot")
         
         plt.figure(figsize=figsize)
@@ -234,18 +234,18 @@ class Trainer:
         # set the model in evaluation mode
         self.model.eval()
         if self.model.training: raise Exception("Model is in training mode")
-        preds = []; y_test = []
+        preds = []; y_true = []
         with self.engine.no_grad():
             for data in test_loader:
                 *inputs, labels = data
                 for l in labels.numpy():
-                    y_test.append(l)
+                    y_true.append(l)
                 pred = self.model(*inputs).squeeze(dim=1)
                 for p in pred:
                     preds.append(p.numpy())
 
-        y_test = np.array(y_test)
+        y_true = np.array(y_true)
         y_pred = np.array(preds)
         
-        return y_pred, y_test
+        return y_pred, y_true
                 

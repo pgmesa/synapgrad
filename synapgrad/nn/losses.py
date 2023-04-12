@@ -105,8 +105,9 @@ class NLLLoss(Loss):
             # Hand made derivation
             if y_pred.requires_grad:
                 grad = np.zeros(y_pred.shape)
-                for i, true in enumerate(y_true.data):
-                    grad[i][true] = -1.0
+                grad[range(len(y_pred.data)), y_true.data] = -1.0
+                # for i, true in enumerate(y_true.data):
+                #     grad[i][true] = -1.0
                 y_pred._grad += (grad * loss._grad)
         
         loss._backward = _backward

@@ -19,6 +19,15 @@ def softmax_fn(data:np.ndarray, dim:int) -> np.ndarray:
     exp_sums = exps.sum(axis=dim, keepdims=True)
     return exps / exp_sums
 
+def log_softmax_fn(data:np.ndarray, dim:int) -> np.ndarray:
+    # Using log-sum-exp trick for numerical stability
+    max_val = data.max(axis=dim, keepdims=True)
+    substract = data - max_val
+    exp = np.exp(substract)
+    lse = max_val + np.log(exp.sum(axis=dim, keepdims=True))
+    log_softmax = data - lse
+    return log_softmax
+
 # ----------------------------- Modules -----------------------------
 # -------------------------------------------------------------------
 class ReLU(nn.Module):
@@ -84,7 +93,9 @@ class Softmax(nn.Module):
 
     
 class LogSoftmax(nn.Module):
-    # TODO: Not as fast as posible
+    """ Same as Softmax(dim=self.dim)(x).log() but more numerically stable due to the log-sum-exp trick
+            Reference to log-sum-exp trick: https://en.wikipedia.org/wiki/LogSumExp 
+    """
     
     def __init__(self, dim) -> None:
         super().__init__()
@@ -92,19 +103,16 @@ class LogSoftmax(nn.Module):
     
     def forward(self, x: Tensor) -> Tensor:
         assert isinstance(x, Tensor), "Input must be a Tensor"
-        return Softmax(dim=self.dim)(x).log()
-        
-        # Implement hand made derivation correctly
-        softmax = softmax_fn(x.data, self.dim)
-        log_softmax = np.log(softmax)
+        log_softmax = log_softmax_fn(x.data, self.dim)
         out = Tensor(log_softmax, (x,), '<LogSoftmax>', requires_grad=x.requires_grad)
     
         def _backward():
-            
             if x.requires_grad:
-                jacobians = np.stack([np.identity(len(y)) - np.outer(y, y) for y in softmax])
-                out_grad = np.expand_dims(out._grad, axis=self.dim)
-                x._grad += (out_grad @ jacobians).sum(axis=self.dim)
+                softmax = np.exp(log_softmax)
+                jacobians = np.stack([np.diag(y) - np.outer(y, y) for y in softmax])
+                dlog_dsoftmax = (1/softmax) * out._grad
+                dlog_dsoftmax = np.expand_dims(dlog_dsoftmax, axis=self.dim)
+                x._grad += (dlog_dsoftmax @ jacobians).sum(axis=self.dim)
             
         out._backward = _backward
         

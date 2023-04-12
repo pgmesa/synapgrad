@@ -73,9 +73,9 @@ In order to see the efficiency of synapgrad, it is compared with other existing 
 
 | Training Example | synapgrad | torch | micrograd |
 |     :---:        |  :---:  |  :---:  |   :---:   |  
-| 1  | 1.7 s | 1.5 s | 1 min 43 s |
-| 2  | 39.7 s | 32.8 s | - |
-| 3  | - | - | - |
+| 1 | 1.7 s | 1.5 s | 1 min 43 s |
+| 2 | 52 s | 31 s | - |
+| 3 |    |    | - |
 
 As it can be seen, synapgrad is quite fast
 
