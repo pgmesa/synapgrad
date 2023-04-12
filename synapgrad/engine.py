@@ -6,6 +6,8 @@ from typing import Iterable, Union
 gradient__ = True
 retain_grads__ = False
 
+default_type__ = np.float32
+
 class no_grad:
     
     def __init__(self) -> None:
@@ -38,15 +40,15 @@ def manual_seed(seed:int):
     random.seed(seed)
 
 
-def tensor(data, requires_grad=False, dtype=np.float32) -> 'Tensor':
+def tensor(data, requires_grad=False, dtype=None) -> 'Tensor':
     return Tensor(data, requires_grad=requires_grad, dtype=dtype)
 
 
 class Tensor:
     
-    def __init__(self, data, _children=(), _operation=None, requires_grad=False, dtype=np.float32) -> None:
+    def __init__(self, data, _children=(), _operation=None, requires_grad=False, dtype=None) -> None:
         if not isinstance(data, np.ndarray):
-            data = np.array(data, dtype=dtype)
+            data = np.array(data, dtype=default_type__)
         if dtype is not None and data.dtype != dtype: data = data.astype(dtype)
         assert isinstance(data, np.ndarray), "data must be a list or numpy array"
         

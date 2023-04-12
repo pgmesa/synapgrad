@@ -106,8 +106,7 @@ python -m pytest
 ```
 
 ## Current Issues 
-1. Softmax and LogSoftmax gradient is not calculated correctly
-2. BCEWithLogitsLoss is not working as expected
+1. BCEWithLogitsLoss is not working as expected
 
 ## ToDo list
 - Add extra parameters to SGD

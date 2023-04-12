@@ -179,7 +179,7 @@ class CrossEntropyLoss(Loss):
         y_true is labels (num_examples x 1)
             Note that y is not one-hot encoded vector. 
             It can be computed as y.argmax(axis=1) from one-hot encoded vectors of labels if required.
-        """        
+        """
         req_grad = y_pred.requires_grad or y_true.requires_grad
         cross_entropy = cross_entropy_loss(y_pred.data, y_true.data)
         loss = Tensor(cross_entropy, (y_pred, y_true), '<CrossEntropyLoss>', requires_grad=req_grad)

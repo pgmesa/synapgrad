@@ -57,7 +57,6 @@ class Sigmoid(nn.Module):
 
     
 class Softmax(nn.Module):
-    # TODO: Not working properly
     """ References: 
             https://eli.thegreenplace.net/2016/the-softmax-function-and-its-derivative/
             https://aimatters.wordpress.com/2019/06/17/the-softmax-function-derivative/
@@ -75,11 +74,9 @@ class Softmax(nn.Module):
         def _backward():
             # Hand made derivation
             if x.requires_grad:
-                diag = np.stack([np.diag(v) for v in softmax])
-                S_matrix = np.repeat(softmax, softmax.shape[self.dim], axis=self.dim).reshape(diag.shape)
-                S_matrix_T = S_matrix.swapaxes(-2, -1)
-                grad = diag - (S_matrix*S_matrix_T)
-                x._grad += grad.sum(axis=2) * out._grad
+                jacobians = np.stack([np.diag(y) - np.outer(y, y) for y in softmax])
+                out_grad = np.expand_dims(out._grad, axis=self.dim)
+                x._grad += (out_grad @ jacobians).sum(axis=self.dim)
             
         out._backward = _backward
         
@@ -87,7 +84,7 @@ class Softmax(nn.Module):
 
     
 class LogSoftmax(nn.Module):
-    # TODO: Not working properly
+    # TODO: Not as fast as posible
     
     def __init__(self, dim) -> None:
         super().__init__()
@@ -95,18 +92,19 @@ class LogSoftmax(nn.Module):
     
     def forward(self, x: Tensor) -> Tensor:
         assert isinstance(x, Tensor), "Input must be a Tensor"
+        return Softmax(dim=self.dim)(x).log()
+        
+        # Implement hand made derivation correctly
         softmax = softmax_fn(x.data, self.dim)
         log_softmax = np.log(softmax)
         out = Tensor(log_softmax, (x,), '<LogSoftmax>', requires_grad=x.requires_grad)
     
         def _backward():
-            # Hand made derivation
+            
             if x.requires_grad:
-                I = np.stack((np.identity(softmax.shape[self.dim]),)*softmax.shape[0])
-                S_matrix = np.stack([np.tile(v, softmax.shape[self.dim]) for v in softmax]).reshape(I.shape)
-                S_matrix_T = np.stack([np.transpose(m) for m in S_matrix])
-                grad = I - S_matrix_T
-                x._grad += grad.sum(axis=self.dim) * out._grad
+                jacobians = np.stack([np.identity(len(y)) - np.outer(y, y) for y in softmax])
+                out_grad = np.expand_dims(out._grad, axis=self.dim)
+                x._grad += (out_grad @ jacobians).sum(axis=self.dim)
             
         out._backward = _backward
         

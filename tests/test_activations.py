@@ -4,7 +4,7 @@ from utils import check_tensors
 
 
 def check_activation(act, act_t):
-    l1 = [[-1.0,-2.0, 4.0, 5.0, 1.0, 7.0], [-1.0,-2.0, 4.0, 5.0, 1.0, 7.0]]
+    l1 = [[-1.0,-2.0, 4.0, 5.0, 1.0, 7.0], [-1.0,-2.0, 2.0, 1.0, 10.0, -4.0]]
     
     # synapgrad
     a = Tensor(l1, requires_grad=True)
@@ -35,9 +35,9 @@ def test_sigmoid():
     check_activation(nn.Sigmoid(), torch.nn.Sigmoid())
     
     
-# def test_softmax():
-#     check_activation(nn.Softmax(dim=1), torch.nn.Softmax(dim=1))
+def test_softmax():
+    check_activation(nn.Softmax(dim=1), torch.nn.Softmax(dim=1))
     
     
-# def test_log_softmax():
-#     check_activation(nn.LogSoftmax(dim=1), torch.nn.LogSoftmax(dim=1))
+def test_log_softmax():
+    check_activation(nn.LogSoftmax(dim=1), torch.nn.LogSoftmax(dim=1))
