@@ -106,6 +106,4 @@ python -m pytest
 ```
 
 ## ToDo list
-- Add extra parameters to SGD
-- Finish Adam optimizer
 - Implement training example 3 (Conv2D, MaxPool2D, BatchNorm2D)
