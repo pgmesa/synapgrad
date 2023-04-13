@@ -65,7 +65,7 @@ This project comes with 3 jupyter notebooks (in `examples/`) that solve 3 beginn
 
 Example 1 (synapgrad MLP solution)     |  Example 2 and 3
 :-------------------------:|:-------------------------:
-![Board Image](/assets/example_moons.png) | ![Check Image](/assets/example_mnist.png) 
+![Image 1](/assets/example_moons.png) | ![Image 2](/assets/example_mnist.png) 
 
 ## Comparisons with other frameworks
 In order to see the efficiency of synapgrad, it is compared with other existing engines (in this case torch and micrograd).
@@ -97,7 +97,7 @@ with synapgrad.retain_grads():
 utils.graph.draw(z)
 ```
 
-![Board Image](/assets/graph_example.svg)
+![Graph Image](/assets/graph_example.svg)
 
 ## Running tests
 To run the unit tests you will have to install PyTorch. In these tests, gradients calculation as well as losses, layers, etc, are assessed with pytorch to check everything is working fine. To run the tests:
