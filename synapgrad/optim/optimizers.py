@@ -29,9 +29,24 @@ class SGD(Optimizer):
     
     def __init__(self, parameters: list[Tensor], lr=0.001, momentum=0, dampening=0,
                  weight_decay=0, nesterov=False, maximize=False) -> None:
+        """
+        Implements stochastic gradient descent (optionally with momentum).
+
+        Args:
+            params (iterable): Iterable of parameters to optimize.
+            lr (float): Learning rate.
+            momentum (float, optional): Momentum factor (default: 0).
+            dampening (float, optional): Dampening for momentum (default: 0).
+            weight_decay (float, optional): Weight decay factor (default: 0).
+            nesterov (bool, optional): Enables Nesterov momentum (default: False).
+            maximize (bool, optional): Whether to maximize the objective (default: False).
+
+        Returns:
+            None
+        """
         super().__init__(parameters, lr)
         self.momentum = momentum
-        self.acum_m = []
+        self.momentum_buffer = []
         self.nesterov = nesterov
         self.dampening = dampening
         self.maximize = maximize
@@ -46,34 +61,34 @@ class SGD(Optimizer):
             for i, p in enumerate(self.parameters):
                 grad = p._grad
                 
-                p.data -= self.lr*grad
+                # Weight decay
+                if self.weight_decay != 0:
+                    grad = grad + self.weight_decay*p.data
                 
-                # Pytorch version with extra attrs (Not working yet)
-                # # Weight decay
-                # if self.weight_decay != 0:
-                #     grad += self.weight_decay*p.data
+                # Momentum
+                if self.momentum != 0:
+                    if self.t > 1:
+                        self.momentum_buffer[i] = self.momentum*self.momentum_buffer[i] + (1 - self.dampening)*grad
+                    else:
+                        self.momentum_buffer.append(grad)
                 
-                # # Momentum
-                # if self.momentum != 0:
-                #     if self.t > 1:
-                #         self.acum_m[i] = self.momentum*self.acum_m[i] + (1-self.dampening)*grad
-                #     else:
-                #         self.acum_m.append(grad)
+                    # Nesterov
+                    if self.nesterov:
+                        grad = grad + self.momentum*self.momentum_buffer[i]
+                    else:
+                        grad = self.momentum_buffer[i]
                 
-                #     # Nesterov
-                #     if self.nesterov:
-                #         grad += self.momentum*self.acum_m[i]
-                #     else:
-                #         grad = self.acum_m[i]
-                
-                # # Update Parameter
-                # if self.maximize:
-                #     p.data += self.lr*grad
-                # else:
-                #     p.data -= self.lr*grad
+                # Update Parameter
+                if self.maximize:
+                    p.data += self.lr*grad
+                else:
+                    p.data -= self.lr*grad
         
     
 class Adam(Optimizer):
+    """Reference: 
+        https://pytorch.org/docs/stable/generated/torch.optim.Adam.html
+    """
     # TODO: Nos working properly
     
     def __init__(self, parameters: list[Tensor], lr=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8) -> None:

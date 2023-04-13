@@ -24,6 +24,9 @@ def check_optimizer(opt:optim.Optimizer, param, opt_t:torch.optim.Optimizer, par
     print(param)
     print(param_t)
     
+    print(param.grad)
+    print(param_t.grad)
+    
     assert check_tensors(inp, inp_t)
     assert check_tensors(param, param_t)
     assert check_tensors(inp.grad, inp_t.grad)
@@ -34,7 +37,12 @@ def check_optimizer(opt:optim.Optimizer, param, opt_t:torch.optim.Optimizer, par
 
 def test_SGD():
     attrs = {
-        "lr": 0.1
+        "lr": 0.1,
+        "momentum": 0.9,
+        "maximize": True,
+        "dampening": 0,
+        "nesterov": True,
+        "weight_decay": 0.5,
     }
     
     param = Tensor(np.ones((4,4)), requires_grad=True)
