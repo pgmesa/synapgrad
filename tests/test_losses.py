@@ -60,8 +60,8 @@ def test_NLLLoss():
 
     
 def test_BCELoss():
-    pred = [0.3, 0.4, 0.7]
-    label = [0, 1, 0]
+    pred = [0.3, 0.4, 0.999, 1, 0]
+    label = [0, 1, 0, 1, 1]
     
     # synapgrad
     ypred = Tensor(pred, requires_grad=True)
@@ -75,6 +75,7 @@ def test_BCELoss():
     loss_t = torch.nn.BCELoss()(ypred_t, ylabel_t)
     loss_t.backward()
 
+    print(loss, "\n", loss_t)
     print(ypred_t.grad)
     print(ypred.grad)
     
@@ -83,8 +84,8 @@ def test_BCELoss():
 
 
 def test_BCEWithLogitsLoss():
-    pred = [0.3, 0.4, 0.7]
-    label = [0, 1, 0]
+    pred = [0.3, 0.4, 0.7, -2, -1]
+    label = [0, 1, 0, 1, 1]
     
     # synapgrad
     ypred = Tensor(pred, requires_grad=True)
@@ -97,7 +98,8 @@ def test_BCEWithLogitsLoss():
     ylabel_t = torch.tensor(label, dtype=torch.float)
     loss_t = torch.nn.BCEWithLogitsLoss()(ypred_t, ylabel_t)
     loss_t.backward()
-
+    
+    print(loss, "\n", loss_t)
     print(ypred_t.grad)
     print(ypred.grad)
     

@@ -8,6 +8,10 @@ def relu_fn(data:np.ndarray) -> np.ndarray:
     return np.maximum(0, data)
 
 
+def tanh_fn(data:np.ndarray) -> np.ndarray:
+    return np.tanh(data)
+
+
 def sigmoid_fn(data:np.ndarray) -> np.ndarray:
     return 1/(1 + np.exp(-data))
 
@@ -46,6 +50,24 @@ class ReLU(nn.Module):
         return out
 
 
+class Tanh(nn.Module):
+    """ np.sinh(x)/np.cosh(x) or -1j * np.tan(1j*x) """
+    
+    def forward(self, x:Tensor) -> Tensor:
+        assert isinstance(x, Tensor), "Input must be a Tensor"
+        tanh = tanh_fn(x.data)
+        out = Tensor(tanh, (x,), '<Tanh>', requires_grad=x.requires_grad)
+    
+        def _backward():
+            if x.requires_grad:
+                x_grad = 1 - tanh**2
+                x._grad += x_grad * out._grad
+            
+        out._backward = _backward
+        
+        return out
+
+
 class Sigmoid(nn.Module):
     
     def forward(self, x:Tensor) -> Tensor:
@@ -58,7 +80,7 @@ class Sigmoid(nn.Module):
         def _backward():
             if x.requires_grad:
                 x_grad = sigmoid * (1 - sigmoid)
-                x._grad += (x_grad) * out._grad
+                x._grad += x_grad * out._grad
             
         out._backward = _backward
         

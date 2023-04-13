@@ -2,7 +2,7 @@
 
 An autograd Tensor-based engine with a deep learning library built on top of it made from scratch
 
-> :warning: This project is not yet fully completed. Please review the following sections for updates on [current bugs](#current-issues) and [next steps](#todo-list). 
+> :warning: This project is not yet fully completed. Please review the following sections for updates on [next steps](#todo-list). 
 
 ## Technical Description
 This project implements a completely functional engine for tracking operations between Tensors, by dynamically building a Directed Acyclic Graph (DAG), and an automatic backpropagation algorithm (reverse-mode autodiff) over this DAG.
@@ -61,7 +61,7 @@ This project comes with 3 jupyter notebooks (in `examples/`) that solve 3 beginn
 - [x] 2. MLP for handwritten digits classification (MNIST dataset) 
 - [ ] 3. CNN for handwritten digits classification (MNIST dataset)
 
-The 3rd example has not been implemented yet
+> :warning: The 3rd example has not been implemented yet
 
 Example 1 (synapgrad MLP solution)     |  Example 2 and 3
 :-------------------------:|:-------------------------:
@@ -75,7 +75,7 @@ In order to see the efficiency of synapgrad, it is compared with other existing 
 |     :---:        |  :---:  |  :---:  |   :---:   |  
 | 1 | 1.7 s | 1.5 s | 1 min 43 s |
 | 2 | 52 s | 31 s | - |
-| 3 |    |    | - |
+| 3 |  -  |  -  | - |
 
 As it can be seen, synapgrad is quite fast
 
@@ -104,9 +104,6 @@ To run the unit tests you will have to install PyTorch. In these tests, gradient
 ```bash
 python -m pytest
 ```
-
-## Current Issues 
-1. BCEWithLogitsLoss is not working as expected
 
 ## ToDo list
 - Add extra parameters to SGD

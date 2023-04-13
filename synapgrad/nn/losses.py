@@ -1,36 +1,36 @@
 from typing import Any
 from abc import ABC, abstractmethod
 from .. import Tensor
-from .activations import softmax_fn, LogSoftmax, relu_fn
+from .activations import softmax_fn, relu_fn
 import numpy as np
 
 
-epsilon = 1e-7
+epsilon = 1e-12
 
 # ---------------------------- Functions ----------------------------
 # -------------------------------------------------------------------
 def mse_loss(y_pred: np.ndarray, y_true: np.ndarray) -> np.ndarray:
-    return (y_pred - y_true)**2
+    loss = (y_pred - y_true)**2
+    return loss
     
     
 def nll_loss(y_pred: np.ndarray, y_true: np.ndarray) -> np.ndarray:
-    return -y_pred[range(len(y_pred)), y_true].reshape((-1, 1))
+    loss = -y_pred[range(len(y_pred)), y_true].reshape((-1, 1))
+    return loss
 
 
 def bce_loss(y_pred: np.ndarray, y_true: np.ndarray) -> np.ndarray:
-    y_pred = np.clip(y_pred, epsilon, 1 - epsilon)
-    term_0 = (1-y_true) * np.log(1-y_pred + epsilon)
-    term_1 = y_true * np.log(y_pred + epsilon)
-    
-    return -(term_0 + term_1)
+    assert y_pred.max() <= 1 and y_pred.min() >= 0, "BCELoss inputs must be between 0 and 1"
+    loss = - (y_true * np.log(y_pred + epsilon) + (1 - y_true) * np.log(1 - y_pred + epsilon))
+    # For compatibility with pytorch (returns 100 when y_pred=0 and y_true=1; vice versa)
+    loss = np.where(loss == -np.log(epsilon), 100, loss) 
+    return loss
 
 
 def bce_with_logits_loss(y_pred: np.ndarray, y_true: np.ndarray) -> np.ndarray:
-    y_pred = np.clip(y_pred, epsilon, 1 - epsilon)
     tn = -relu_fn(y_pred)
-    term = (1-y_true) * y_pred + tn + np.log(np.exp(-tn) + np.exp((-y_pred-tn)))
-    
-    return term
+    loss = (1-y_true) * y_pred + tn + np.log(np.exp(-tn) + np.exp((-y_pred-tn)))
+    return loss
 
 
 def cross_entropy_loss(y_pred: np.ndarray, y_true: np.ndarray) -> np.ndarray:
@@ -125,8 +125,8 @@ class BCELoss(Loss):
         def _backward():
             # Hand made derivation
             if y_pred.requires_grad:
-                term_0 = -(1 - y_true.data) / ((1 - y_pred.data) + epsilon)
-                term_1 = y_true.data / (y_pred.data + epsilon)
+                term_0 = -(1 - y_true.data + epsilon) / ((1 - y_pred.data) + epsilon)
+                term_1 = (y_true.data + epsilon) / (y_pred.data + epsilon)
                 y_pred._grad += -(term_0 + term_1) * loss._grad
         
         loss._backward = _backward
