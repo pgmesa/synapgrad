@@ -65,7 +65,7 @@ This project comes with 3 jupyter notebooks (in `examples/`) that solve 3 beginn
 
 Example 1 (synapgrad MLP solution)     |  Example 2 and 3
 :-------------------------:|:-------------------------:
-![Board Image](/assets/example1.png) | ![Check Image](/assets/example23.png) 
+![Board Image](/assets/example_moons.png) | ![Check Image](/assets/example_mnist.png) 
 
 ## Comparisons with other frameworks
 In order to see the efficiency of synapgrad, it is compared with other existing engines (in this case torch and micrograd).
