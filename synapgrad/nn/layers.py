@@ -39,24 +39,49 @@ class Flatten(nn.Module):
         return x.flatten(self.start_dim, self.end_dim)
 
 
-
-# class Conv2D(Layer):
+class Conv2D(nn.Module):
     
-#     def __init__(self, filters, kernel_size, strides=None, padding=None) -> None:
-#         self.filters = filters
-#         self.kernel_size = kernel_size
-#         self.strides = strides
-#         self.padding = padding
+    def __init__(self, filters, kernel_size, strides=None, padding=None) -> None:
+        self.filters = filters
+        self.kernel_size = kernel_size
+        self.strides = strides
+        self.padding = padding
+    
+    def forward(self, x: Tensor) -> Tensor:
+        return super().forward(x)
+    
+    
+class BatchNorm2d(nn.Module):
+    
+    def __init__(self, num_features:int, eps:float=0.00001, momentum:float=0.1, affine:bool=True) -> None:
+        super().__init__()
+        self.num_features = num_features
+        self.eps = eps
+        self.momentum = momentum
+        self.affine = affine
         
-#     def __call__(self, x:np.ndarray) -> np.ndarray:
-#         super().__call__(x)
-#         ...
+    def forward(self, x: Tensor) -> Tensor:
+        return super().forward(x)
     
-# class BatchNorm2d(Layer):
-#     ...
     
-# class MaxPool2D(Layer):
+class MaxPool2D(nn.Module):
     
-#     def __call__(self, x:np.ndarray) -> np.ndarray:
-#         super().__call__(x)
-#         ...
+    def __init__(self, kernel_size:'int | tuple', stride:'int | tuple | None'=None, padding:'int | tuple'=0) -> None:
+        super().__init__()
+        self.kernel_size = kernel_size
+        self.stride = stride
+        self.padding = padding
+        
+    def forward(self, x: Tensor) -> Tensor:
+        return super().forward(x)
+    
+
+class Dropout(nn.Module):
+    
+    def __init__(self, p=0.5, inplace=False) -> None:
+        super().__init__()
+        self.p = p
+        self.inplace = inplace
+        
+    def forward(self, x: Tensor) -> Tensor:
+        return super().forward(x)
