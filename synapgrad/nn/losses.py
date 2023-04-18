@@ -1,42 +1,12 @@
 from typing import Any
 from abc import ABC, abstractmethod
 from .. import Tensor
-from .activations import softmax_fn, relu_fn
+from .functional import (
+    mse_loss, nll_loss, cross_entropy_loss, bce_loss, softmax_fn,
+    bce_with_logits_loss, relu_fn, epsilon
+)
 import numpy as np
 
-
-epsilon = 1e-12
-
-# ---------------------------- Functions ----------------------------
-# -------------------------------------------------------------------
-def mse_loss(y_pred: np.ndarray, y_true: np.ndarray) -> np.ndarray:
-    loss = (y_pred - y_true)**2
-    return loss
-    
-    
-def nll_loss(y_pred: np.ndarray, y_true: np.ndarray) -> np.ndarray:
-    loss = -y_pred[range(len(y_pred)), y_true].reshape((-1, 1))
-    return loss
-
-
-def bce_loss(y_pred: np.ndarray, y_true: np.ndarray) -> np.ndarray:
-    assert y_pred.max() <= 1 and y_pred.min() >= 0, "BCELoss inputs must be between 0 and 1"
-    loss = - (y_true * np.log(y_pred + epsilon) + (1 - y_true) * np.log(1 - y_pred + epsilon))
-    # For compatibility with pytorch (returns 100 when y_pred=0 and y_true=1; vice versa)
-    loss = np.where(loss == -np.log(epsilon), 100, loss) 
-    return loss
-
-
-def bce_with_logits_loss(y_pred: np.ndarray, y_true: np.ndarray) -> np.ndarray:
-    tn = -relu_fn(y_pred)
-    loss = (1-y_true) * y_pred + tn + np.log(np.exp(-tn) + np.exp((-y_pred-tn)))
-    return loss
-
-
-def cross_entropy_loss(y_pred: np.ndarray, y_true: np.ndarray) -> np.ndarray:
-    softmax = np.log(softmax_fn(y_pred, 1) + epsilon)
-    log_likelihood = nll_loss(softmax, y_true)
-    return log_likelihood
 
 # ----------------------------- Modules -----------------------------
 # -------------------------------------------------------------------
@@ -96,7 +66,6 @@ class NLLLoss(Loss):
     """
     
     def criterion(self, y_pred: Tensor, y_true: Tensor) -> Tensor:
-        assert isinstance(y_pred, Tensor) and isinstance(y_true, Tensor), "Inputs must be Tensors"
         req_grad = y_pred.requires_grad or y_true.requires_grad
         log_likelihood = nll_loss(y_pred.data, y_true.data)
         loss = Tensor(log_likelihood, (y_pred, y_true), '<NLLLoss>', requires_grad=req_grad)

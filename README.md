@@ -2,8 +2,6 @@
 
 An autograd Tensor-based engine with a deep learning library built on top of it made from scratch
 
-> :warning: This project is not yet fully completed. Please review the following sections for updates on [next steps](#todo-list). 
-
 ## Technical Description
 This project implements a completely functional engine for tracking operations between Tensors, by dynamically building a Directed Acyclic Graph (DAG), and an automatic backpropagation algorithm (reverse-mode autodiff) over this DAG.
 

@@ -48,3 +48,29 @@ def test_flatten():
 
     assert check_tensors(out_l, out_tl)
     assert check_tensors(inp.grad, inp_t.grad)
+    
+    
+# def test_maxpool2d():
+#     l = np.random.randn(32,5,28,28).astype(np.float32)
+#     l2 = np.random.randn(32,5,14,14).astype(np.float32)
+    
+#     inp = Tensor(l, requires_grad=True)
+#     p2 = Tensor(l2)
+#     pool = nn.MaxPool2d(kernel_size=(2,2), stride=(2,2), padding=0)
+#     out = pool(inp)*p2
+#     out.sum().backward()
+    
+#     inp_t = torch.tensor(l, requires_grad=True)
+#     p2_t = torch.tensor(l2)
+#     pool_t = torch.nn.MaxPool2d(kernel_size=(2,2), stride=(2,2), padding=0)
+#     out_t = pool_t(inp_t)*p2_t
+#     out_t.sum().backward()
+    
+#     print(out.shape, "\n" + str(out)[:100])
+#     print(out_t.shape, "\n" + str(out_t)[:100])
+    
+#     print(inp.grad.shape, "\n" + str(inp.grad)[:200])
+#     print(inp_t.grad.shape, "\n" + str(inp_t.grad)[:200])
+        
+#     assert check_tensors(out, out_t)
+#     assert check_tensors(inp.grad, inp_t.grad)

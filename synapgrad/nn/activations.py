@@ -1,43 +1,13 @@
 import numpy as np
 from .. import Tensor, nn
+from .functional import relu_fn, tanh_fn, sigmoid_fn, softmax_fn,  log_softmax_fn
 
-
-# ---------------------------- Functions ----------------------------
-# -------------------------------------------------------------------
-def relu_fn(data:np.ndarray) -> np.ndarray:
-    return np.maximum(0, data)
-
-
-def tanh_fn(data:np.ndarray) -> np.ndarray:
-    return np.tanh(data)
-
-
-def sigmoid_fn(data:np.ndarray) -> np.ndarray:
-    return 1/(1 + np.exp(-data))
-
-
-def softmax_fn(data:np.ndarray, dim:int) -> np.ndarray:
-    # Shift to make it numerically stable (with large values 'inf' appears)
-    shiftx = data - data.max(axis=dim, keepdims=True) 
-    exps = np.exp(shiftx)
-    exp_sums = exps.sum(axis=dim, keepdims=True)
-    return exps / exp_sums
-
-def log_softmax_fn(data:np.ndarray, dim:int) -> np.ndarray:
-    # Using log-sum-exp trick for numerical stability
-    max_val = data.max(axis=dim, keepdims=True)
-    substract = data - max_val
-    exp = np.exp(substract)
-    lse = max_val + np.log(exp.sum(axis=dim, keepdims=True))
-    log_softmax = data - lse
-    return log_softmax
 
 # ----------------------------- Modules -----------------------------
 # -------------------------------------------------------------------
 class ReLU(nn.Module):
     
     def forward(self, x:Tensor) -> Tensor:
-        assert isinstance(x, Tensor), "Input must be a Tensor" 
         relu = relu_fn(x.data)
         out = Tensor(relu, (x,), '<ReLU>', requires_grad=x.requires_grad)
 
@@ -54,7 +24,6 @@ class Tanh(nn.Module):
     """ np.sinh(x)/np.cosh(x) or -1j * np.tan(1j*x) """
     
     def forward(self, x:Tensor) -> Tensor:
-        assert isinstance(x, Tensor), "Input must be a Tensor"
         tanh = tanh_fn(x.data)
         out = Tensor(tanh, (x,), '<Tanh>', requires_grad=x.requires_grad)
     
@@ -73,7 +42,6 @@ class Sigmoid(nn.Module):
     def forward(self, x:Tensor) -> Tensor:
         # Returning (1/(1 + np.e**-x)) should be enough, but defining explicit 
         # grad function should be faster
-        assert isinstance(x, Tensor), "Input must be a Tensor"
         sigmoid = sigmoid_fn(x.data)
         out = Tensor(sigmoid, (x,), '<Sigmoid>', requires_grad=x.requires_grad)
     
@@ -98,7 +66,6 @@ class Softmax(nn.Module):
         self.dim = dim
     
     def forward(self, x: Tensor) -> Tensor:
-        assert isinstance(x, Tensor), "Input must be a Tensor"
         softmax = softmax_fn(x.data, self.dim)
         out = Tensor(softmax, (x,), '<Softmax>', requires_grad=x.requires_grad)
     
@@ -124,7 +91,6 @@ class LogSoftmax(nn.Module):
         self.dim = dim
     
     def forward(self, x: Tensor) -> Tensor:
-        assert isinstance(x, Tensor), "Input must be a Tensor"
         log_softmax = log_softmax_fn(x.data, self.dim)
         out = Tensor(log_softmax, (x,), '<LogSoftmax>', requires_grad=x.requires_grad)
     

@@ -17,6 +17,7 @@ class Module(ABC):
         self.training = False
         
     def __call__(self, batch:Tensor) -> Tensor:
+        assert isinstance(batch, Tensor), "Input must be a Tensor" 
         if len(batch.shape) <= 1:
             raise ValueError(f"Module '{self.__class__.__name__}' expects a batched input, Shape=(batch_size, *), but received {batch.shape}")
 
