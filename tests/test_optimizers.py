@@ -8,7 +8,9 @@ def check_optimizer(opt:optim.Optimizer, param, opt_t:torch.optim.Optimizer, par
     inp = Tensor(np.ones((4,4)), requires_grad=True)
     inp_t = torch.tensor(np.ones((4,4)), requires_grad=True)
     
-    for i in range(100):
+    print(param)
+    
+    for _ in range(100):
         # synapgrad
         out = inp @ param
         opt.zero_grad()
@@ -36,7 +38,7 @@ def test_SGD():
     attrs = {
         "lr": 0.1,
         "momentum": 0.9,
-        "maximize": True,
+        "maximize": False,
         "dampening": 0,
         "nesterov": True,
         "weight_decay": 0.5,
