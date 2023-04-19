@@ -6,15 +6,19 @@ class Module(ABC):
     
     def __init__(self) -> None:
         self.modules = []
-        self.training = False
+        self.training = True
         
     def train(self):
         """ Set module to train mode"""
         self.training = True
+        for m in self.modules:
+            m.train()
         
     def eval(self):
         """ Set module to evaluation mode """
         self.training = False
+        for m in self.modules:
+            m.eval()
         
     def __call__(self, batch:Tensor) -> Tensor:
         assert isinstance(batch, Tensor), "Input must be a Tensor" 

@@ -1,6 +1,6 @@
 import numpy as np
 from .. import Tensor, nn
-from .functional import relu_fn, tanh_fn, sigmoid_fn, softmax_fn,  log_softmax_fn
+from .functional import relu_fn, tanh_fn, sigmoid_fn, softmax_fn,  log_softmax_fn, epsilon
 
 
 # ----------------------------- Modules -----------------------------
@@ -98,7 +98,7 @@ class LogSoftmax(nn.Module):
             if x.requires_grad:
                 softmax = np.exp(log_softmax)
                 jacobians = np.stack([np.diag(y) - np.outer(y, y) for y in softmax])
-                dlog_dsoftmax = (1/softmax) * out._grad
+                dlog_dsoftmax = (1/(softmax + epsilon)) * out._grad
                 dlog_dsoftmax = np.expand_dims(dlog_dsoftmax, axis=self.dim)
                 x._grad += (dlog_dsoftmax @ jacobians).sum(axis=self.dim)
             

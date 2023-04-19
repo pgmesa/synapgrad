@@ -6,7 +6,7 @@ import warnings
 rtol = 0.00001
 atol = 1e-8
 
-def check_tensors(t1:Tensor, t2:torch.Tensor) -> bool:
+def check_tensors(t1:'Tensor | np.ndarray', t2:torch.Tensor) -> bool:
     """Returns if 2 tensors have the same values and shape
 
     Args:
@@ -16,7 +16,9 @@ def check_tensors(t1:Tensor, t2:torch.Tensor) -> bool:
     if t1 is None or t2 is None: 
         return t1 is t2
     
-    t1_t = torch.from_numpy(t1.data)
+    if isinstance(t1, Tensor):
+        t1 = t1.data
+    t1_t = torch.from_numpy(t1)
     
     if t1_t.dtype != t2.dtype:
         if not (t1_t.dtype.is_floating_point and t2.dtype.is_floating_point):

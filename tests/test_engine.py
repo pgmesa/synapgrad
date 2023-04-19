@@ -63,3 +63,6 @@ def test_engine_v2():
     assert check_tensors(b.grad, b_t.grad)
     
     
+def test_engine_v3():
+    # Testear unfold max() y min()
+    ...

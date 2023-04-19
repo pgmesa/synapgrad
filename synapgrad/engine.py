@@ -280,7 +280,7 @@ class Tensor:
         return t1 @ t2
     
     
-    def view(self, shape:tuple) -> 'Tensor':
+    def view(self, *shape:tuple) -> 'Tensor':
         out = Tensor(self.data.reshape(shape), (self,), '<View>', requires_grad=self.requires_grad)
         
         def _backward():
@@ -328,6 +328,94 @@ class Tensor:
         return out
     
     
+    def unfold(self, dimension:int, size:int, step:int) -> 'Tensor':
+        """
+        Unfold a tensor along a specified dimension.
+
+        Parameters
+        ----------
+        tensor : Tensor
+            The tensor to unfold.
+        dimension : int
+            The dimension to unfold.
+        size : int
+            The size of the unfolding window.
+        step : int
+            The step between each unfolding window.
+
+        Returns
+        -------
+        Tensor
+            The unfolding result.
+
+        Raises
+        ------
+        ValueError
+            If the specified dimension is invalid, if the size or step are not positive integers, or if the size is
+            larger than the size of the specified dimension.
+
+        Examples
+        --------
+        >>> import numpy as np
+        >>> a = np.arange(10)
+        >>> unfold(a, 0, 3, 1)
+        array([[[0, 1, 2],
+                [3, 4, 5],
+                [6, 7, 8]],
+            
+               [[9, 0, 1],
+                [2, 3, 4],
+                [5, 6, 7]]])
+        """
+        tensor = self.data
+        # check that the specified dimension is valid
+        if dimension >= tensor.ndim or dimension < -tensor.ndim:
+            raise ValueError(f"Dimension out of range for tensor with {tensor.ndim} dimensions: {dimension}")
+        if dimension < 0:
+            dimension += tensor.ndim
+        # check that the size and step are positive integers
+        if not isinstance(size, int) or size <= 0:
+            raise ValueError(f"Invalid size: {size}")
+        if not isinstance(step, int) or step <= 0:
+            raise ValueError(f"Invalid step: {step}")
+        # get the size of the specified dimension
+        dim_size = tensor.shape[dimension]
+        # check that the size is smaller than or equal to the size of the dimension
+        if size > dim_size:
+            raise ValueError(f"Size ({size}) must be smaller than or equal to the size of the specified dimension ({dim_size})")
+        # calculate the size of the output dimension
+        out_size = int((dim_size - size) / step) + 1
+        # create an output array with the appropriate shape
+        out_shape = list(tensor.shape)
+        out_shape[dimension] = out_size
+        out_shape.append(size)
+        out_array = np.zeros(out_shape, dtype=tensor.dtype)
+        # fill the output array with the unfolded slices
+        for i in range(out_size):
+            start = i * step
+            end = start + size
+            window = np.take(tensor, np.arange(start, end), axis=dimension)
+            window = np.moveaxis(window, dimension, -1)
+            out_array = np.delete(out_array, i, axis=dimension)
+            out_array = np.insert(out_array, i, window, axis=dimension)
+        
+        out = Tensor(out_array, (tensor,), '<Unfold>', requires_grad=self.requires_grad)
+        
+        def _backward():
+            if self.requires_grad:
+                folded_grad = np.zeros_like(tensor)
+                for i, arr in enumerate(out._grad):
+                    start = i * step
+                    end = start + size
+                    s = Tensor.create_slice(len(folded_grad.shape), dimension, slice(start, end))
+                    folded_grad[s] = arr
+                self._grad += folded_grad
+            
+        out._backward = _backward
+
+        return out
+    
+    
     def sum(self, dim:int=None, keepdims=False) -> 'Tensor':
         out = Tensor(self.data.sum(axis=dim, keepdims=keepdims), (self,), '<Sum>', requires_grad=self.requires_grad)
         
@@ -346,6 +434,30 @@ class Tensor:
         def _backward():
             if self.requires_grad:
                 self._grad += (np.ones(self.shape) / self.data.size) * out._grad
+            
+        out._backward = _backward
+        
+        return out
+    
+    
+    def max(self, dim:int=None) -> 'Tensor':
+        out = Tensor(self.data.max(axis=dim), (self,), '<Max>', requires_grad=self.requires_grad)
+        
+        def _backward():
+            if self.requires_grad:
+                self._grad += out._grad
+            
+        out._backward = _backward
+        
+        return out
+    
+    
+    def min(self, dim:int=None) -> 'Tensor':
+        out = Tensor(self.data.min(axis=dim), (self,), '<Min>', requires_grad=self.requires_grad)
+        
+        def _backward():
+            if self.requires_grad:
+                self._grad += out._grad
             
         out._backward = _backward
         
@@ -485,6 +597,22 @@ class Tensor:
             if n1 != n2: return False
         
         return True
+    
+    @staticmethod
+    def create_slice(dimensions, slices:tuple[int, slice]):    
+        # Create a list of slices of length "dimensions"
+        slice_list = [slice(None)] * dimensions
+        
+        for dim, sl in slices:
+            # Check if dimension to slice is valid
+            if dim < 0 or dim >= dimensions:
+                raise ValueError(f"Invalid dimension to slice. Must be between 0 and {dimensions-1}.")
+        
+            # Set the slice in the specified dimension
+            slice_list[dim] = sl
+        
+        # Return a tuple of slices
+        return tuple(slice_list)
                 
     @property
     def shape(self) -> tuple:
@@ -581,9 +709,14 @@ class Tensor:
         crop_index = (len(data_str)) - data_str[::-1].find("]")
         cropped = data_str[:crop_index]
         
-        braces_padd = (len(array.shape)-1)
-        no_padding = cropped.replace("\n" + " "*(braces_padd+len(str_to_rm)), "\n" + " "*braces_padd)
-        return no_padding
+        braces_padd = (len(array.shape))
+        processed = ""
+        for line in cropped.splitlines():
+            line = line.strip()
+            brc_count = line.count("[")
+            processed += " "*(braces_padd - brc_count) + line + "\n"
+        #no_padding = cropped.replace("\n" + " "*(braces_padd+len(str_to_rm)), "\n" + " "*braces_padd)
+        return processed
         
     def __repr__(self) -> str:
         pretty_data_str = self.pretty_numpy(self.data)
@@ -591,8 +724,9 @@ class Tensor:
         data_str = ""
         for i, line in enumerate(pretty_data_str.splitlines(keepends=True)):
             if i != 0:
-                line = " "*len(beggining) + line  
+                line = " "*len(beggining) + line
             data_str += line
+        data_str = data_str[:-1] # Remove last \n
         string = f"{beggining}{data_str}, shape={self.shape}"
         
         if self.requires_grad:

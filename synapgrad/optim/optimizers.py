@@ -80,7 +80,7 @@ class SGD(Optimizer):
                 if self.maximize:
                     p.data += self.lr*grad
                 else:
-                    p.data -= p.data - self.lr*grad
+                    p.data -= self.lr*grad
         
     
 class Adam(Optimizer):
