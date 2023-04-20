@@ -44,10 +44,9 @@ class MaxPool2d(nn.Module):
     
     def __init__(self, kernel_size, stride=None, padding=0, dilation=1) -> None:
         """
-        Apply Max Pooling 2D to a batch of N images with C channels (N, C, H, W).
+        Applies Max Pooling 2D to a batch of N images with C channels (N, C, H, W).
         References:
             https://pytorch.org/docs/stable/generated/torch.nn.MaxPool2d.html
-            https://github.com/pytorch/pytorch/pull/1523#issue-119774673
 
         Args:
             kernel_size (int or tuple): the size of the sliding blocks
@@ -86,22 +85,13 @@ class MaxPool2d(nn.Module):
         split_per_channel = unfolded.reshape(N, C, int(C_k/C), L)
         
         unfolded_reorganized = np.moveaxis(split_per_channel, -2, -1).reshape(N, C, lH, lW, -1)
-        pooled = unfolded_reorganized.max(axis=-1)
+        pooled, max_indices, selected = Tensor(unfolded_reorganized).max(dim=-1, return_selected=True)
     
-        out = Tensor(pooled, (x,), "<MaxPool2d>", requires_grad=x.requires_grad)
+        out = Tensor(pooled.data, (x,), "<MaxPool2d>", requires_grad=x.requires_grad)
         
         def _backward():
             if x.requires_grad:
-                grad_weights = np.zeros_like(unfolded_reorganized)
-                max_indices = np.argmax(unfolded_reorganized, axis=-1)
-                
-                index = (np.arange(unfolded_reorganized.shape[0])[:, None, None, None],
-                         np.arange(unfolded_reorganized.shape[1])[None, :, None, None],
-                         np.arange(unfolded_reorganized.shape[2])[None, None, :, None],
-                         np.arange(unfolded_reorganized.shape[3])[None, None, None, :])
-
-                grad_weights[index[0], index[1], index[2], index[3], max_indices] = 1
-                grad = grad_weights * np.expand_dims(out._grad, axis=-1)
+                grad = selected * np.expand_dims(out._grad, axis=-1)
 
                 grad = grad.reshape(N, C, L, int(C_k/C))
                 grad = np.moveaxis(grad, -1, -2)
@@ -119,14 +109,58 @@ class MaxPool2d(nn.Module):
 
 class Conv2d(nn.Module):
     
-    def __init__(self, filters, kernel_size, strides=None, padding=None) -> None:
-        self.filters = filters
+    def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0, dilation=1) -> None:
+        """
+        Applies 2D Convolution to a batch of N images with C channels (N, C, H, W).
+        Reference:
+            https://pytorch.org/docs/stable/generated/torch.nn.Conv2d.html
+
+        Args:
+            in_channels (int): the number of input channels
+            out_channels (int): the number of output channels produced by the convolution
+            kernel_size (int or tuple): the size of the sliding blocks
+            stride (int or tuple, optional): the stride of the sliding blocks in the input spatial dimensions. Default: 1
+            padding (int or tuple, optional):  implicit zero padding to be added on both sides of input. Default: 0
+            dilation (int or tuple, optional): a parameter that controls the stride of elements within the neighborhood. Default: 1
+        """
+        super().__init__()
+        
+        kernel_size = np.broadcast_to(kernel_size, 2)
+        if stride is None:
+            stride = kernel_size
+        else:
+            stride = np.broadcast_to(stride, 2)
+        padding = np.broadcast_to(padding, 2)
+        dilation = np.broadcast_to(dilation, 2)
+        
+        self.in_channels = in_channels
+        self.out_channels = out_channels
         self.kernel_size = kernel_size
-        self.strides = strides
+        self.stride = stride
+        self.stride = stride
         self.padding = padding
+        self.dilation = dilation
+        
+        weight_values = ... # np.random.rand(out_channels, in_channels, *kernel_size) * 0.01
+        self.weights = Tensor(weight_values, requires_grad=True)
+        self.biases = Tensor(np.zeros((out_channels,), dtype=np.float32), requires_grad=True)
     
     def forward(self, x: Tensor) -> Tensor:
+        # unfolded = unfold(x.data, kernel_size=self.kernel_size, stride=self.stride, dilation=self.dilation,
+        #                    padding=self.padding, pad_value=-np.inf)
+        
+        # out = unfolded.transpose(1,2) @ self.weights + self.biases
+        
+        # return out.transpose(1,2)
         return super().forward(x)
+        
+    def parameters(self) -> list['Tensor']:
+        return [self.weights, self.biases]
+    
+    def __repr__(self) -> str:
+        return (f"Conv2d(in_channels={self.in_channels}, out_channels={self.out_channels}, " + 
+                f"kernel_size={self.kernel_size}, stride={self.stride}, padding={self.padding}, " + 
+                f"dilation={self.dilation}")
     
     
 class BatchNorm2d(nn.Module):

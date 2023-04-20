@@ -56,7 +56,10 @@ class Tensor:
         # Internal variables used for autograd graph construction
         self._grad = None
         self._grad_fn = None
-        self._requires_grad = requires_grad and gradient__
+        req_grad = requires_grad and gradient__
+        if req_grad and not self.is_floating_point(data):
+            raise RuntimeError("Only floating point Tensors can require gradients")
+        self._requires_grad = req_grad
         self._is_leaf = True
         self._retain_grad = False
         self._children = _children
@@ -399,20 +402,43 @@ class Tensor:
             out_array = np.delete(out_array, i, axis=dimension)
             out_array = np.insert(out_array, i, window, axis=dimension)
         
-        out = Tensor(out_array, (tensor,), '<Unfold>', requires_grad=self.requires_grad)
+        out = Tensor(out_array, (self,), '<Unfold>', requires_grad=self.requires_grad)
         
         def _backward():
             if self.requires_grad:
-                folded_grad = np.zeros_like(tensor)
-                for i, arr in enumerate(out._grad):
+                folded = np.zeros_like(tensor)
+                for i in range(out._grad.shape[dimension]):
                     start = i * step
                     end = start + size
-                    s = Tensor.create_slice(len(folded_grad.shape), dimension, slice(start, end))
-                    folded_grad[s] = arr
-                self._grad += folded_grad
+                    s1 = [slice(None)] * (dimension + 1); s1[dimension] = slice(start, end)
+                    s2 = [slice(None)] * (dimension + 1); s2[dimension] = i
+                    s1 = tuple(s1); s2 = tuple(s2)
+                    folded[s1] += np.moveaxis(out._grad[s2], -1, dimension).reshape(folded[s1].shape)
+                
+                self._grad += folded 
             
         out._backward = _backward
 
+        return out
+    
+    
+    def contiguous(self) -> 'Tensor':
+        """
+        Returns a contiguous tensor.
+
+        Returns
+        -------
+        Tensor
+            The contiguous tensor.
+        """
+        out = Tensor(np.ascontiguousarray(self.data), (self,), '<Contiguous>', requires_grad=self.requires_grad)
+        
+        def _backward():
+            if self.requires_grad:
+                self._grad += out._grad
+            
+        out._backward = _backward
+        
         return out
     
     
@@ -439,29 +465,93 @@ class Tensor:
         
         return out
     
+    @staticmethod
+    def __get_selected_from_indices(values:np.ndarray, indices:np.ndarray, dim) -> np.ndarray:
+        """
+        Returns a boolean array of the same shape as the input array, where each element is True if the corresponding
+        element in the input array is the selected value in the corresponding dimension.
+
+        Parameters
+        ----------
+        values : np.ndarray
+            The values in the input array.
+        indices : np.ndarray
+            The indices of the selected values in the input array.
+        dim : int
+            The dimension of the input array.
+
+        Returns
+        -------
+        np.ndarray
+            The boolean array.
+        """
+        def get_indices(array, dim):
+            indices = []
+            if dim == -1: dim = array.ndim - 1
+            for i in range(dim):
+                s = [None,] * dim
+                s[i] = slice(None)
+                s = tuple(s)
+                #print(s)
+                indices.append(np.arange(array.shape[i])[s])
+            return tuple(indices)
     
-    def max(self, dim:int=None) -> 'Tensor':
-        out = Tensor(self.data.max(axis=dim), (self,), '<Max>', requires_grad=self.requires_grad)
+        selected = np.zeros_like(values)
+        
+        slices = get_indices(values, dim)
+        slices = list(slices)
+        slices.append(indices)
+        slices = tuple(slices)
+
+        selected[slices] = 1
+        
+        return selected
+    
+    
+    def max(self, dim:int=None, keepdims=False, return_selected=False) -> tuple['Tensor',...]:
+        max_values = self.data.max(axis=dim, keepdims=keepdims)
+        max_indices = self.data.argmax(axis=dim)
+        selected = self.__get_selected_from_indices(self.data, max_indices, dim)
+        
+        out = Tensor(max_values, (self,), '<Max>', requires_grad=self.requires_grad)
         
         def _backward():
             if self.requires_grad:
-                self._grad += out._grad
+                grad = out._grad
+                if not keepdims:
+                    grad = np.expand_dims(grad, axis=dim)
+                self._grad += selected * grad
             
         out._backward = _backward
         
-        return out
+        out_tuple = (out, max_indices)
+        if return_selected:
+            out_tuple += (selected,)
+        
+        return out_tuple
     
     
-    def min(self, dim:int=None) -> 'Tensor':
-        out = Tensor(self.data.min(axis=dim), (self,), '<Min>', requires_grad=self.requires_grad)
+    def min(self, dim:int=None, keepdims=False, return_selected=False) -> tuple['Tensor',...]:
+        min_values = self.data.min(axis=dim, keepdims=keepdims)
+        min_indices = self.data.argmin(axis=dim)
+        selected = self.__get_selected_from_indices(self.data, min_indices, dim)
+        
+        out = Tensor(min_values, (self,), '<Min>', requires_grad=self.requires_grad)
         
         def _backward():
             if self.requires_grad:
-                self._grad += out._grad
+                grad = out._grad
+                if not keepdims:
+                    grad = np.expand_dims(grad, axis=dim)
+                self._grad += selected * grad
             
         out._backward = _backward
         
-        return out
+        out_tuple = (out, min_indices)
+        if return_selected:
+            out_tuple += (selected,)
+        
+        return out_tuple
     
     
     def transpose(self, dim0:int, dim1:int) -> 'Tensor':
@@ -524,6 +614,11 @@ class Tensor:
         return out
     
     
+    @staticmethod
+    def is_floating_point(array) -> bool:
+        return array.dtype == np.float16 or array.dtype == np.float32 or array.dtype == np.float64
+    
+    
     def backward(self, grad:np.ndarray=None):
         if not self.requires_grad:
             raise RuntimeError("Trying to call backward on Tensor with requires_grad=False")
@@ -533,11 +628,11 @@ class Tensor:
                 raise RuntimeError("grad must be specified for non-scalar tensors")
             else:
                 grad = np.array(1.0, dtype=self.data.dtype)
-                
+        
+        assert self.is_floating_point(grad), "expected float dtype for grad, got %s" % grad.dtype
+          
         if not isinstance(grad, np.ndarray):
             raise ValueError("Gradient parameter must be a numpy array")
-                
-        self._is_leaf = True
         
         # Topological order all of the children in the graph 
         # (init gradients for those who are going to need it)
@@ -597,22 +692,6 @@ class Tensor:
             if n1 != n2: return False
         
         return True
-    
-    @staticmethod
-    def create_slice(dimensions, slices:tuple[int, slice]):    
-        # Create a list of slices of length "dimensions"
-        slice_list = [slice(None)] * dimensions
-        
-        for dim, sl in slices:
-            # Check if dimension to slice is valid
-            if dim < 0 or dim >= dimensions:
-                raise ValueError(f"Invalid dimension to slice. Must be between 0 and {dimensions-1}.")
-        
-            # Set the slice in the specified dimension
-            slice_list[dim] = sl
-        
-        # Return a tuple of slices
-        return tuple(slice_list)
                 
     @property
     def shape(self) -> tuple:
@@ -640,7 +719,10 @@ class Tensor:
             raise RuntimeError("you can only change requires_grad flags of leaf variables. " + 
                     "If you want to use a computed variable in a subgraph that doesn't require " + 
                     "differentiation use var_no_grad = var.detach()")
-            
+        
+        if value and not self.is_floating_point(self.data):
+            raise RuntimeError("Only floating point Tensors can require gradients")
+        
         self._requires_grad = value
     
     @property
