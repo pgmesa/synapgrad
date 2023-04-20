@@ -47,8 +47,8 @@ out = out1 @ out2.view(3).unsqueeze(1)
 print(out) # outcome of this forward pass
 out.sum().backward()
 
-print(a.grad) # da/dout
-print(c.grad) # dc/dout
+print(a.grad) # dout/da
+print(c.grad) # dout/dc
 ```
 
 ## Training examples using synapgrad
