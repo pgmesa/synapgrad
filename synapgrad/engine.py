@@ -47,6 +47,17 @@ def tensor(data, requires_grad=False, dtype=None) -> 'Tensor':
 class Tensor:
     
     def __init__(self, data, _children=(), _operation=None, requires_grad=False, dtype=None) -> None:
+        """
+        Creates a Tensor object from the given data, which is always transformed internally into a numpy array.
+
+        Args:
+            data (number or iterable): data of the tensor, must be convertible into a numpy.array().
+            _children (tuple, optional): tensors which produced this tensor as a result of an operation. Defaults to ().
+            _operation (str, optional): string that represents the operation that created this tensor. Defaults to None.
+            requires_grad (bool, optional): Whether this tensor requieres gradients or not. Defaults to False.
+            dtype (type, optional): numpy type of this tensor data. Defaults to None.
+            
+        """
         if not isinstance(data, np.ndarray):
             data = np.array(data, dtype=default_type__)
         if dtype is not None and data.dtype != dtype: data = data.astype(dtype)

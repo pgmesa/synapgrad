@@ -40,8 +40,6 @@ class Tanh(nn.Module):
 class Sigmoid(nn.Module):
     
     def forward(self, x:Tensor) -> Tensor:
-        # Returning (1/(1 + np.e**-x)) should be enough, but defining explicit 
-        # grad function should be faster
         sigmoid = sigmoid_fn(x.data)
         out = Tensor(sigmoid, (x,), '<Sigmoid>', requires_grad=x.requires_grad)
     
@@ -56,9 +54,10 @@ class Sigmoid(nn.Module):
 
     
 class Softmax(nn.Module):
-    """ References: 
-            https://eli.thegreenplace.net/2016/the-softmax-function-and-its-derivative/
-            https://aimatters.wordpress.com/2019/06/17/the-softmax-function-derivative/
+    """ 
+    References: 
+        https://eli.thegreenplace.net/2016/the-softmax-function-and-its-derivative/
+        https://aimatters.wordpress.com/2019/06/17/the-softmax-function-derivative/
     """
     
     def __init__(self, dim) -> None:
@@ -82,8 +81,11 @@ class Softmax(nn.Module):
 
     
 class LogSoftmax(nn.Module):
-    """ Same as Softmax(dim=self.dim)(x).log() but more numerically stable due to the log-sum-exp trick
-            Reference to log-sum-exp trick: https://en.wikipedia.org/wiki/LogSumExp 
+    """ 
+    Same as Softmax(dim=self.dim)(x).log() but more numerically stable due to the log-sum-exp trick
+            
+    Reference to log-sum-exp trick: 
+        https://en.wikipedia.org/wiki/LogSumExp 
     """
     
     def __init__(self, dim) -> None:

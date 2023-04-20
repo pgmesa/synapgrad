@@ -58,11 +58,14 @@ class MSELoss(Loss):
 
 
 class NLLLoss(Loss):
-    """ This class expects y_true to be the probabilities of a LogSoftmax function. Also, y_pred 
-        should be shape=(batch, num_classes). It expects to receive the probability of a sample to be of each class.
-        For binary classification problems, output should not be a scalar value (0 <= x <=1) but an array with 
-        the probability of each class [0.3, 0.7]
-        reference: https://towardsdatascience.com/cross-entropy-negative-log-likelihood-and-all-that-jazz-47a95bd2e81    
+    """ 
+    This class expects y_true to be the probabilities of a LogSoftmax function. Also, y_pred 
+    should be shape=(batch, num_classes). It expects to receive the probability of a sample to be of each class.
+    For binary classification problems, output should not be a scalar value (0 <= x <=1) but an array with 
+    the probability of each class [0.3, 0.7]
+    
+    Reference: 
+        https://towardsdatascience.com/cross-entropy-negative-log-likelihood-and-all-that-jazz-47a95bd2e81    
     """
     
     def criterion(self, y_pred: Tensor, y_true: Tensor) -> Tensor:
@@ -104,7 +107,8 @@ class BCELoss(Loss):
 
 
 class BCEWithLogitsLoss(Loss):
-    """ This loss combines a Sigmoid layer and the BCELoss in one single class.
+    """ 
+    This loss combines a Sigmoid layer and the BCELoss in one single class.
     This version is more numerically stable than using a plain Sigmoid followed by a BCELoss as,
     by combining the operations into one layer, we take advantage of the log-sum-exp
     trick for numerical stability
@@ -136,8 +140,11 @@ class BCEWithLogitsLoss(Loss):
     
     
 class CrossEntropyLoss(Loss):
-    """ Same as:\n
-    log_softmax = LogSoftmax(dim=1)(y_pred)\n
+    """ 
+    Same as:
+    
+    log_softmax = LogSoftmax(dim=1)(y_pred)
+    
     loss = NLLLoss(reduction=None)(log_softmax, y_true)
     
     Reference: https://deepnotes.io/softmax-crossentropy#:~:text=Cross%20entropy%20indicates%20the%20distance,used%20alternative%20of%20squared%20error

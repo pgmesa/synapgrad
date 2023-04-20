@@ -23,7 +23,8 @@ class Optimizer(ABC):
 
 
 class SGD(Optimizer):
-    """Reference: 
+    """
+    Reference: 
         https://pytorch.org/docs/stable/generated/torch.optim.SGD.html
     """
     
@@ -84,7 +85,8 @@ class SGD(Optimizer):
         
     
 class Adam(Optimizer):
-    """Reference: 
+    """
+    Reference: 
         https://pytorch.org/docs/stable/generated/torch.optim.Adam.html
     """
     
