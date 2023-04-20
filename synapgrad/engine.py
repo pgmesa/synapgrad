@@ -163,7 +163,10 @@ class Tensor:
                 self._grad += np.dot(tensor.data, out._grad.T).T
             
             if tensor.requires_grad:
-                tensor._grad += np.dot(self.data.T, out._grad)
+                print(self.data.shape, np.moveaxis(self.data, -1, -2).shape, out._grad.shape, tensor._grad.shape)
+                print(np.dot(np.moveaxis(self.data, -1, -2), out._grad).shape)
+                grad = np.dot(np.moveaxis(self.data, -1, -2), out._grad)
+                tensor._grad += grad # grad.sum(axis=(0,2))
                     
         out._backward = _backward
         
@@ -283,15 +286,24 @@ class Tensor:
     def add(t1:'Tensor', t2:'Tensor') -> 'Tensor':
         return t1 + t2
     
+    def add(self, t2:'Tensor') -> 'Tensor':
+        return self + t2
+    
     
     @staticmethod
     def mul(t1:'Tensor', t2:'Tensor') -> 'Tensor':
         return t1 * t2
     
+    def mul(self, t2:'Tensor') -> 'Tensor':
+        return self * t2
+    
     
     @staticmethod
     def matmul(t1:'Tensor', t2:'Tensor') -> 'Tensor':
         return t1 @ t2
+    
+    def matmul(self, t2:'Tensor') -> 'Tensor':
+        return self @ t2
     
     
     def view(self, *shape:tuple) -> 'Tensor':
@@ -413,7 +425,7 @@ class Tensor:
             out_array = np.delete(out_array, i, axis=dimension)
             out_array = np.insert(out_array, i, window, axis=dimension)
         
-        out = Tensor(out_array, (self,), '<Unfold>', requires_grad=self.requires_grad)
+        out = Tensor(out_array, (self,), f'<UnfoldDim{dimension}>', requires_grad=self.requires_grad)
         
         def _backward():
             if self.requires_grad:
@@ -465,8 +477,8 @@ class Tensor:
         return out
     
     
-    def mean(self, dim:int=None) -> 'Tensor':
-        out = Tensor(self.data.mean(axis=dim), (self,), '<Mean>', requires_grad=self.requires_grad)
+    def mean(self, dim:int=None, keepdims=False) -> 'Tensor':
+        out = Tensor(self.data.mean(axis=dim, keepdims=keepdims), (self,), '<Mean>', requires_grad=self.requires_grad)
         
         def _backward():
             if self.requires_grad:
@@ -792,24 +804,9 @@ class Tensor:
         return other * self**-1
     
     @staticmethod
-    def pretty_numpy(array:np.ndarray, decimals=5) -> str:
-        def truncate(f, n):
-            return np.floor(f * 10 ** n) / 10 ** n
-        rounded_data = array.copy().round(decimals=decimals)
-        #rounded_data += 0. # Remove -0.0 values (just 0.0)
-        str_to_rm = "array("
-        data_str = repr(rounded_data).replace(str_to_rm, "")
-        crop_index = (len(data_str)) - data_str[::-1].find("]")
-        cropped = data_str[:crop_index]
-        
-        braces_padd = (len(array.shape))
-        processed = ""
-        for line in cropped.splitlines():
-            line = line.strip()
-            brc_count = line.count("[")
-            processed += " "*(braces_padd - brc_count) + line + "\n"
-        #no_padding = cropped.replace("\n" + " "*(braces_padd+len(str_to_rm)), "\n" + " "*braces_padd)
-        return processed
+    def pretty_numpy(array:np.ndarray, precision=4, separator=',') -> str: 
+        data_str = np.array2string(array, precision=precision, separator=separator)
+        return data_str
         
     def __repr__(self) -> str:
         pretty_data_str = self.pretty_numpy(self.data)
@@ -819,7 +816,6 @@ class Tensor:
             if i != 0:
                 line = " "*len(beggining) + line
             data_str += line
-        data_str = data_str[:-1] # Remove last \n
         string = f"{beggining}{data_str}, shape={self.shape}"
         
         if self.requires_grad:

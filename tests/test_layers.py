@@ -49,6 +49,39 @@ def test_flatten():
     assert check_tensors(out_l, out_tl)
     assert check_tensors(inp.grad, inp_t.grad)
     
+
+def test_fold_unfold():
+    l = np.random.randn(2,3,5,4).astype(np.float32)
+    print(l)
+    
+    kernel_size = (3,2); stride = (2,3); padding = (2,3); dilation = (2,3)
+    
+    inp = Tensor(l, requires_grad=True)
+    inp_t = torch.tensor(l, requires_grad=True)
+    # unfolde
+    unf_t = torch.nn.Unfold(kernel_size, stride=stride, padding=padding, dilation=dilation)(inp_t)*3
+    unf = nn.Unfold(kernel_size, stride=stride, padding=padding, dilation=dilation)(inp)*3
+    
+    print(unf_t)
+    print(unf)
+
+    # fold
+    f_t = torch.nn.Fold(l.shape[2:], kernel_size, stride=stride, padding=padding, dilation=dilation)(unf_t)
+    f = nn.Fold(l.shape[2:], kernel_size, stride=stride, padding=padding, dilation=dilation)(unf)
+    
+    f_t.sum().backward()
+    f.sum().backward()
+    
+    print(f_t)
+    print(f)
+    
+    print(inp.grad)
+    print(inp_t.grad)
+    
+    check_tensors(unf, unf_t)
+    check_tensors(f, f_t)
+    check_tensors(inp.grad, inp_t.grad)
+    
     
 def test_maxpool2d():
     l = np.random.randn(32,5,28,28).astype(np.float32)

@@ -57,9 +57,7 @@ This project comes with 3 jupyter notebooks (in `examples/`) that solve 3 beginn
 
 - [x] 1. Basic MLP for binary classification (sklearn 'make_moons' toy dataset)
 - [x] 2. MLP for handwritten digits classification (MNIST dataset) 
-- [ ] 3. CNN for handwritten digits classification (MNIST dataset)
-
-> :warning: The 3rd example has not been implemented yet
+- [x] 3. CNN for handwritten digits classification (MNIST dataset)
 
 Example 1 (synapgrad MLP solution)     |  Example 2 and 3
 :-------------------------:|:-------------------------:
@@ -102,6 +100,3 @@ To run the unit tests you will have to install PyTorch. In these tests, gradient
 ```bash
 python -m pytest
 ```
-
-## ToDo list
-- Implement training example 3 (Conv2D, MaxPool2D, BatchNorm2D)
