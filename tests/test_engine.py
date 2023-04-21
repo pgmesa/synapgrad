@@ -51,17 +51,37 @@ def test_engine_v2():
     # synapgrad
     a = Tensor(l1, requires_grad=True)
     b = Tensor(l2, requires_grad=True)
-    c = (a.exp()+b)*b.log().sqrt()
+    c = (a.exp()+b)*b.log().sqrt().mean(dim=0, keepdims=True)
     c.sum().backward()
     
     # torch
     a_t = torch.tensor(l1, requires_grad=True)
     b_t = torch.tensor(l2, requires_grad=True)
-    c_t = (a_t.exp()+b_t)*b_t.log().sqrt()
+    c_t = (a_t.exp()+b_t)*b_t.log().sqrt().mean(dim=0, keepdims=True)
     c_t.sum().backward()
     
     assert check_tensors(c, c_t)
     assert check_tensors(b.grad, b_t.grad)
+    
+    
+def test_engine_v3():
+    l1 = np.random.randint(0, 10, size=(1,2,4,6)).astype(np.float32)
+    
+    # synapgrad
+    a = Tensor(l1, requires_grad=True)
+    c = a.mean(dim=(0,2,3), keepdims=True).max()
+    c.sum().backward()
+    
+    # torch
+    a_t = torch.tensor(l1, requires_grad=True)
+    c_t = a_t.mean(dim=(0,2,3), keepdims=True).max()
+    c_t.sum().backward()
+    
+    print(a.grad)
+    print(a_t.grad)
+    
+    assert check_tensors(c, c_t)
+    assert check_tensors(a.grad, a_t.grad)
     
 
 def test_engine_unfold():

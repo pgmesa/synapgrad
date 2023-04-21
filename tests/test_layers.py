@@ -111,12 +111,66 @@ def test_maxpool2d():
     assert check_tensors(inp.grad, inp_t.grad)
     
 
-# def test_conv2d():
-#     ...
+def test_conv2d():
+    l = np.random.rand(2,3,4,4).astype(np.float32)
+    out_channels = 5; kernel_size = 3; stride = 1; padding = 'same'
+
+    inp = Tensor(l, requires_grad=True)
+    conv = nn.Conv2d(l.shape[1], out_channels, kernel_size, stride, padding)
+    out = conv(inp)
+    out.sum().backward()
+    
+    inp_t = torch.tensor(l, requires_grad=True)
+    conv_t = torch.nn.Conv2d(l.shape[1], out_channels, kernel_size, stride, padding)
+    out_t = conv_t(inp_t)
+    out_t.sum().backward()
+
+    print(out_t.shape)
+    print(out.shape)
+    
+    assert out.matches_shape(out_t.detach().numpy())
+
+    params_t = list(conv_t.parameters())
+    params = list(conv.parameters())
+    for i, (p_t, p) in enumerate(zip(params_t, params)):
+        print(f"Param {i+1}")
+        print(p_t); print(p)
+        print(p_t.grad); print(p.grad)
+        check_tensors(p.grad, p_t.grad)
     
     
 # def test_batchnorm2d():
-#     ...
+#     l = np.random.randn(1,2,4,4).astype(np.float32)
+#     momentum = 0.1; affine = False;  track_running_stats = False
+
+#     bnorm_t = torch.nn.BatchNorm2d(l.shape[1], momentum=momentum, affine=affine, track_running_stats=track_running_stats)
+
+#     inp_t = torch.tensor(l, requires_grad=True)
+#     out_t = bnorm_t(inp_t)
+#     out_t.sum().backward()
+
+#     inp = Tensor(l, requires_grad=True)
+#     bnorm = nn.BatchNorm2d(inp.shape[1], momentum=momentum, affine=affine, track_running_stats=track_running_stats)
+#     out = bnorm(inp)
+#     out.sum().backward()
+
+#     print(out_t)
+#     print(out)
+
+#     print(inp_t.grad)
+#     print(inp.grad)
+    
+#     check_tensors(out, out_t)
+#     check_tensors(inp.grad, inp_t.grad)
+
+#     params_t = list(bnorm_t.parameters())
+#     params = list(bnorm.parameters())
+#     for i, (p_t, p) in enumerate(zip(params_t, params)):
+#         print(f"Param {i+1}")
+#         print(p_t); print(p)
+#         print(p_t.grad); print(p.grad)
+#         check_tensors(p, p_t)
+#         check_tensors(p.grad, p_t.grad)
     
 
 def test_dropout():

@@ -54,7 +54,7 @@ class Tensor:
             data (number or iterable): data of the tensor, must be convertible into a numpy.array().
             _children (tuple, optional): tensors which produced this tensor as a result of an operation. Defaults to ().
             _operation (str, optional): string that represents the operation that created this tensor. Defaults to None.
-            requires_grad (bool, optional): Whether this tensor requieres gradients or not. Defaults to False.
+            requires_grad (bool, optional): whether this tensor requieres gradients or not. Defaults to False.
             dtype (type, optional): numpy type of this tensor data. Defaults to None.
             
         """
@@ -92,7 +92,6 @@ class Tensor:
         def get_incompatible_dims(tensor_shape, grad_shape) -> tuple:
             not_compatible_dims = []
             for i, (tdim, gdim) in enumerate(zip(tensor_shape[::-1], grad_shape[::-1])):
-                print(tdim, gdim)
                 if gdim != 1 and tdim != gdim:
                     not_compatible_dims.append(len(grad_shape)-1-i)
             not_compatible_dims = tuple(not_compatible_dims)
@@ -160,13 +159,13 @@ class Tensor:
         
         def _backward():
             if self.requires_grad:
-                self._grad += np.dot(tensor.data, out._grad.T).T
+                grad = out._grad @ np.moveaxis(tensor.data, -2, -1)
+                self.__add_grad(self, grad)
             
             if tensor.requires_grad:
-                print(self.data.shape, np.moveaxis(self.data, -1, -2).shape, out._grad.shape, tensor._grad.shape)
-                print(np.dot(np.moveaxis(self.data, -1, -2), out._grad).shape)
-                grad = np.dot(np.moveaxis(self.data, -1, -2), out._grad)
-                tensor._grad += grad # grad.sum(axis=(0,2))
+                grad = np.moveaxis(out._grad, -2,-1) @ self.data
+                grad = np.moveaxis(grad, -2,-1)
+                self.__add_grad(tensor, grad)
                     
         out._backward = _backward
         
@@ -282,25 +281,13 @@ class Tensor:
         return out
     
     
-    @staticmethod
-    def add(t1:'Tensor', t2:'Tensor') -> 'Tensor':
-        return t1 + t2
-    
     def add(self, t2:'Tensor') -> 'Tensor':
         return self + t2
     
     
-    @staticmethod
-    def mul(t1:'Tensor', t2:'Tensor') -> 'Tensor':
-        return t1 * t2
-    
     def mul(self, t2:'Tensor') -> 'Tensor':
         return self * t2
     
-    
-    @staticmethod
-    def matmul(t1:'Tensor', t2:'Tensor') -> 'Tensor':
-        return t1 @ t2
     
     def matmul(self, t2:'Tensor') -> 'Tensor':
         return self @ t2
@@ -465,29 +452,6 @@ class Tensor:
         return out
     
     
-    def sum(self, dim:int=None, keepdims=False) -> 'Tensor':
-        out = Tensor(self.data.sum(axis=dim, keepdims=keepdims), (self,), '<Sum>', requires_grad=self.requires_grad)
-        
-        def _backward():
-            if self.requires_grad:
-                self._grad += out._grad
-            
-        out._backward = _backward
-        
-        return out
-    
-    
-    def mean(self, dim:int=None, keepdims=False) -> 'Tensor':
-        out = Tensor(self.data.mean(axis=dim, keepdims=keepdims), (self,), '<Mean>', requires_grad=self.requires_grad)
-        
-        def _backward():
-            if self.requires_grad:
-                self._grad += (np.ones(self.shape) / self.data.size) * out._grad
-            
-        out._backward = _backward
-        
-        return out
-    
     @staticmethod
     def __get_selected_from_indices(values:np.ndarray, indices:np.ndarray, dim) -> np.ndarray:
         """
@@ -521,17 +485,51 @@ class Tensor:
     
         selected = np.zeros_like(values)
         
-        slices = get_indices(values, dim)
-        slices = list(slices)
-        slices.append(indices)
-        slices = tuple(slices)
+        if dim is not None:
+            slices = get_indices(values, dim)
+            slices = list(slices)
+            slices.append(indices)
+            slices = tuple(slices)
+        else:
+            slices = np.unravel_index(indices, values.shape)
 
         selected[slices] = 1
         
         return selected
     
     
-    def max(self, dim:int=None, keepdims=False, return_selected=False) -> tuple['Tensor',...]:
+    def sum(self, dim:int=None, keepdims=False) -> 'Tensor':
+        out = Tensor(self.data.sum(axis=dim, keepdims=keepdims), (self,), '<Sum>', requires_grad=self.requires_grad)
+        
+        def _backward():
+            if self.requires_grad:
+                self._grad += out._grad
+            
+        out._backward = _backward
+        
+        return out
+    
+    
+    def mean(self, dim:int=None, keepdims=False) -> 'Tensor':
+        out = Tensor(self.data.mean(axis=dim, keepdims=keepdims), (self,), '<Mean>', requires_grad=self.requires_grad)
+        
+        def _backward():
+            if self.requires_grad:
+                if dim is None:
+                    size = self.data.size
+                elif isinstance(dim, int):
+                    size = self.data.shape[dim]
+                elif isinstance(dim, tuple):
+                    size = 1
+                    for d in dim: size *= self.data.shape[d]
+                self._grad += (np.ones(self.shape) / size) * out._grad
+            
+        out._backward = _backward
+        
+        return out
+
+    
+    def max(self, dim:int=None, keepdims=False, return_indices=None, return_selected=False) -> tuple['Tensor',...]:
         max_values = self.data.max(axis=dim, keepdims=keepdims)
         max_indices = self.data.argmax(axis=dim)
         selected = self.__get_selected_from_indices(self.data, max_indices, dim)
@@ -541,20 +539,24 @@ class Tensor:
         def _backward():
             if self.requires_grad:
                 grad = out._grad
-                if not keepdims:
+                if not keepdims and dim is not None:
                     grad = np.expand_dims(grad, axis=dim)
                 self._grad += selected * grad
             
         out._backward = _backward
         
-        out_tuple = (out, max_indices)
+        out_tuple = (out,)
+        
+        if return_indices is not False and dim is not None:
+            out_tuple += (max_indices,)
+        
         if return_selected:
             out_tuple += (selected,)
         
-        return out_tuple
+        return out_tuple if len(out_tuple) > 1 else out_tuple[0]
     
     
-    def min(self, dim:int=None, keepdims=False, return_selected=False) -> tuple['Tensor',...]:
+    def min(self, dim:int=None, keepdims=False, return_indices=None, return_selected=False) -> tuple['Tensor',...]:
         min_values = self.data.min(axis=dim, keepdims=keepdims)
         min_indices = self.data.argmin(axis=dim)
         selected = self.__get_selected_from_indices(self.data, min_indices, dim)
@@ -564,17 +566,21 @@ class Tensor:
         def _backward():
             if self.requires_grad:
                 grad = out._grad
-                if not keepdims:
+                if not keepdims and dim is not None:
                     grad = np.expand_dims(grad, axis=dim)
                 self._grad += selected * grad
             
         out._backward = _backward
         
-        out_tuple = (out, min_indices)
+        out_tuple = (out,)
+        
+        if return_indices is not False and dim is not None:
+            out_tuple += (min_indices,)
+        
         if return_selected:
             out_tuple += (selected,)
         
-        return out_tuple
+        return out_tuple if len(out_tuple) > 1 else out_tuple[0]
     
     
     def transpose(self, dim0:int, dim1:int) -> 'Tensor':
