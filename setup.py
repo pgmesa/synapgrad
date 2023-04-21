@@ -11,7 +11,7 @@ with open("requirements.txt", "r", encoding='utf-8') as fh:
 
 setuptools.setup(
     name='synapgrad',  
-    version='0.3.0',
+    version='0.2.9',
     author="Pablo García Mesa",
     author_email="pgmesa.sm@gmail.com",
     description="An autograd Tensor-based engine with a deep learning library built on top of it made from scratch",

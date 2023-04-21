@@ -3,10 +3,8 @@ import numpy as np
 from synapgrad import Tensor
 import warnings
 
-rtol = 0.00001
-atol = 1e-8
 
-def check_tensors(t1:'Tensor | np.ndarray', t2:torch.Tensor) -> bool:
+def check_tensors(t1:'Tensor | np.ndarray', t2:torch.Tensor, atol=1e-8, rtol=0.00001) -> bool:
     """Returns if 2 tensors have the same values and shape
 
     Args:

@@ -46,7 +46,7 @@ def tensor(data, requires_grad=False, dtype=None) -> 'Tensor':
 
 class Tensor:
     
-    def __init__(self, data, _children=(), _operation=None, requires_grad=False, dtype=None) -> None:
+    def __init__(self, data, _children=(), _operation=None, requires_grad=False, dtype=None, name=None) -> None:
         """
         Creates a Tensor object from the given data, which is always transformed internally into a numpy array.
 
@@ -74,7 +74,8 @@ class Tensor:
         self._is_leaf = True
         self._retain_grad = False
         self._children = _children
-        self._operation = _operation # Operation that produced this node, for graphviz / debugging         
+        self._operation = _operation # Operation that produced this node, for graphviz / debugging
+        self._name = name        
     
     
     @staticmethod
@@ -109,7 +110,7 @@ class Tensor:
         if tensor.grad.matches_shape(grad) or sum_axis is None: 
             if sum_axis is None and not tensor.grad.matches_shape(grad):
                 not_compatible_dims = get_incompatible_dims(tensor_shape, grad_shape)
-                tensor += grad.sum(axis=not_compatible_dims, keepdims=True)
+                tensor._grad += grad.sum(axis=not_compatible_dims, keepdims=True)
             else:
                 tensor._grad += grad
         else:
@@ -721,7 +722,13 @@ class Tensor:
             if n1 != n2: return False
         
         return True
-                
+        
+        
+    @property
+    def name(self) -> str:
+        return "" if self._name is None else str(self._name)
+        
+        
     @property
     def shape(self) -> tuple:
         return self.data.shape
@@ -828,8 +835,12 @@ class Tensor:
             string += f", req_grad={self.requires_grad}"
             
         if self._operation is not None:
-            string += f", op={self._operation})"
+            string += f", op={self._operation}"
             
-        string += ")"
+        if self._name is not None:
+            string += f", name={self._operation}"
+            
+            
+        string += f", dtype={self.dtype})"
             
         return string

@@ -25,9 +25,10 @@ def draw(root, format='svg', rankdir='LR'):
     
     for n in nodes:
         nid = str(id(n))
-        data_str = Tensor.pretty_numpy(n.data, decimals=2)
-        grad_str = 'None' if n._grad is None else Tensor.pretty_numpy(n._grad, decimals=2)
-        dot.node(name=nid, label=f"<<b>Tensor</b> | data={data_str} | req_grad={n.requires_grad}   is_leaf={n.is_leaf} | grad={grad_str}>", shape='record')
+        data_str = Tensor.pretty_numpy(n.data, precision=2)
+        grad_str = 'None' if n._grad is None else Tensor.pretty_numpy(n._grad, precision=2)
+        header = f"Tensor ({n.name})" if n.name != "" else "Tensor"
+        dot.node(name=nid, label=f"<<b>{header}</b> | data={data_str} | req_grad={n.requires_grad}   is_leaf={n.is_leaf} | grad={grad_str}>", shape='record')
         if n._operation:
             dot.node(name=nid + n._operation, label=n._operation)
             dot.edge(nid + n._operation, nid)

@@ -65,7 +65,8 @@ def test_engine_v2():
     
     
 def test_engine_v3():
-    l1 = np.random.randint(0, 10, size=(1,2,4,6)).astype(np.float32)
+    l1 = np.random.rand(4,64,16,16).astype(np.float32)
+    print(l1, l1.mean(axis=(0,2,3)))
     
     # synapgrad
     a = Tensor(l1, requires_grad=True)
@@ -82,6 +83,47 @@ def test_engine_v3():
     
     assert check_tensors(c, c_t)
     assert check_tensors(a.grad, a_t.grad)
+    
+""" 
+TODO: 
+There is an issue with this test (manual batch norm 2d). The output differs from pytorch and synapgrad. It seems to be triggered
+with channels > 1 and with H and W greater than 8 (could be an issue computing the mean or variance across the channels?)
+"""
+
+# def test_engine_v4():
+#     l1 = np.random.rand(1,64,16,16).astype(np.float32)
+#     print(np.min(l1), np.max(l1), np.mean(l1, axis=(0,2,3)), np.var(l1, axis=(0,2,3)))
+    
+#     eps = 1e-5
+
+#     # synapgrad
+#     x = Tensor(l1, requires_grad=True)
+#     mu = x.mean(dim=(0,2,3), keepdims=True)
+#     var = ((x - mu)**2).mean(dim=(0,2,3), keepdims=True)
+#     std = (var + eps).sqrt()
+#     x_norm = (x - mu) / std 
+#     x_norm = x_norm * 1000
+#     x_norm.sum().backward()
+    
+#     # torch
+#     x_t = torch.tensor(l1, requires_grad=True)
+#     mu_t = x_t.mean(dim=(0,2,3), keepdims=True)
+#     var_t = ((x_t - mu_t)**2).mean(dim=(0,2,3), keepdims=True)
+#     std_t = (var_t + eps).sqrt()
+#     x_norm_t = (x_t - mu_t) / std_t
+#     x_norm_t = x_norm_t * 1000
+#     x_norm_t.sum().backward()
+    
+#     # print(x_norm)
+#     # print(x_norm_t)
+    
+#     # print(x.grad)
+#     # print(x_t.grad)
+    
+#     print(x_norm.data - x_norm_t.detach().numpy())
+    
+#     assert check_tensors(x_norm, x_norm_t, atol=eps)
+#     #assert check_tensors(x.grad, x_t.grad, atol=eps)
     
 
 def test_engine_unfold():
