@@ -4,7 +4,7 @@ from synapgrad import Tensor
 import warnings
 
 
-def check_tensors(t1:'Tensor | np.ndarray', t2:torch.Tensor, atol=1e-8, rtol=0.00001) -> bool:
+def check_tensors(t1:'Tensor | np.ndarray', t2:torch.Tensor, atol=1e-8, rtol=1e-5, as_np_array=False) -> bool:
     """Returns if 2 tensors have the same values and shape
 
     Args:
@@ -16,6 +16,8 @@ def check_tensors(t1:'Tensor | np.ndarray', t2:torch.Tensor, atol=1e-8, rtol=0.0
     
     if isinstance(t1, Tensor):
         t1 = t1.data
+    elif not as_np_array:
+        warnings.warn(f"\nt1 was not type synapgrad.Tensor", stacklevel=0) 
     t1_t = torch.from_numpy(t1)
     
     if t1_t.dtype != t2.dtype:

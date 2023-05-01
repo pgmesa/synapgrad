@@ -25,5 +25,5 @@ def test_fold_unfold():
     print(f_t)
     print(f)
     
-    check_tensors(unf, unf_t)
-    check_tensors(f, f_t)
+    check_tensors(unf, unf_t, as_np_array=True)
+    check_tensors(f, f_t, as_np_array=True)

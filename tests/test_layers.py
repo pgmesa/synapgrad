@@ -138,40 +138,6 @@ def test_conv2d():
         print(p_t.grad); print(p.grad)
         check_tensors(p.grad, p_t.grad)
     
-    
-# def test_batchnorm2d():
-#     l = np.random.randn(1,2,4,4).astype(np.float32)
-#     momentum = 0.1; affine = False;  track_running_stats = False
-
-#     bnorm_t = torch.nn.BatchNorm2d(l.shape[1], momentum=momentum, affine=affine, track_running_stats=track_running_stats)
-
-#     inp_t = torch.tensor(l, requires_grad=True)
-#     out_t = bnorm_t(inp_t)
-#     out_t.sum().backward()
-
-#     inp = Tensor(l, requires_grad=True)
-#     bnorm = nn.BatchNorm2d(inp.shape[1], momentum=momentum, affine=affine, track_running_stats=track_running_stats)
-#     out = bnorm(inp)
-#     out.sum().backward()
-
-#     print(out_t)
-#     print(out)
-
-#     print(inp_t.grad)
-#     print(inp.grad)
-    
-#     check_tensors(out, out_t)
-#     check_tensors(inp.grad, inp_t.grad)
-
-#     params_t = list(bnorm_t.parameters())
-#     params = list(bnorm.parameters())
-#     for i, (p_t, p) in enumerate(zip(params_t, params)):
-#         print(f"Param {i+1}")
-#         print(p_t); print(p)
-#         print(p_t.grad); print(p.grad)
-#         check_tensors(p, p_t)
-#         check_tensors(p.grad, p_t.grad)
-    
 
 def test_dropout():
     l = np.random.randn(32,5,28,28).astype(np.float32)
@@ -191,3 +157,101 @@ def test_dropout():
         
     assert out.matches_shape(Tensor(out_t.detach().numpy()))
     assert check_tensors(out, torch.tensor(out2.data))
+    
+    
+def test_batchnorm1d():
+    for _ in range(5):
+        l = np.random.randn(5,64).astype(np.float32)*10000
+        momentum = 0.5; affine = True; track_running_stats = True; eps = 1e-5
+
+        bnorm_t = torch.nn.BatchNorm1d(
+            l.shape[1], momentum=momentum, affine=affine,
+            track_running_stats=track_running_stats, eps=eps)
+
+        inp_t = torch.tensor(l.copy(), requires_grad=True)
+        out_t = bnorm_t(inp_t)
+        out_t.sum().backward()
+
+        inp = Tensor(l.copy(), requires_grad=True)
+        bnorm = nn.BatchNorm1d(
+            inp.shape[1], momentum=momentum, affine=affine,
+            track_running_stats=track_running_stats, eps=eps)
+        out = bnorm(inp)
+        out.sum().backward()
+
+        print(out_t)
+        print(out)
+
+        print(inp_t.grad)
+        print(inp.grad)
+        
+        check_tensors(out, out_t, atol=eps, rtol=1e-3)
+        check_tensors(inp.grad, inp_t.grad, atol=eps, rtol=1e-3)
+        
+        if track_running_stats:
+            print("TRACKED STATS")
+            print(bnorm_t.running_mean)
+            print(bnorm.running_mean)
+            print(bnorm_t.running_var)
+            print(bnorm.running_var)
+            print("=============")
+            check_tensors(bnorm.running_mean, bnorm_t.running_mean)
+            check_tensors(bnorm.running_var, bnorm_t.running_var)
+
+        params_t = list(bnorm_t.parameters())
+        params = list(bnorm.parameters())
+        for i, (p_t, p) in enumerate(zip(params_t, params)):
+            print(f"Param {i+1}")
+            print(p_t); print(p)
+            print(p_t.grad); print(p.grad)
+            check_tensors(p, p_t)
+            check_tensors(p.grad, p_t.grad)
+
+
+def test_batchnorm2d():
+    for _ in range(5):
+        l = np.random.randn(5,64,28,28).astype(np.float32)*10000
+        momentum = 0.5; affine = True; track_running_stats = True; eps = 1e-5
+
+        bnorm_t = torch.nn.BatchNorm2d(
+            l.shape[1], momentum=momentum, affine=affine,
+            track_running_stats=track_running_stats, eps=eps)
+
+        inp_t = torch.tensor(l.copy(), requires_grad=True)
+        out_t = bnorm_t(inp_t)
+        out_t.sum().backward()
+
+        inp = Tensor(l.copy(), requires_grad=True)
+        bnorm = nn.BatchNorm2d(
+            inp.shape[1], momentum=momentum, affine=affine,
+            track_running_stats=track_running_stats, eps=eps)
+        out = bnorm(inp)
+        out.sum().backward()
+
+        print(out_t)
+        print(out)
+
+        print(inp_t.grad)
+        print(inp.grad)
+        
+        check_tensors(out, out_t, atol=eps, rtol=1e-3)
+        check_tensors(inp.grad, inp_t.grad, atol=eps, rtol=1e-3)
+        
+        if track_running_stats:
+            print("TRACKED STATS")
+            print(bnorm_t.running_mean)
+            print(bnorm.running_mean)
+            print(bnorm_t.running_var)
+            print(bnorm.running_var)
+            print("=============")
+            check_tensors(bnorm.running_mean, bnorm_t.running_mean)
+            check_tensors(bnorm.running_var, bnorm_t.running_var)
+
+        params_t = list(bnorm_t.parameters())
+        params = list(bnorm.parameters())
+        for i, (p_t, p) in enumerate(zip(params_t, params)):
+            print(f"Param {i+1}")
+            print(p_t); print(p)
+            print(p_t.grad); print(p.grad)
+            check_tensors(p, p_t)
+            check_tensors(p.grad, p_t.grad)

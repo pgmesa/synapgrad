@@ -700,6 +700,9 @@ class Tensor:
             raise RuntimeError("Can't call numpy() on Tensor that requires grad. Use tensor.detach().numpy() instead")
         return self.data
     
+    def numel(self) -> int:
+        return self.data.size
+    
     def item(self) -> float:
         squeezed = self.data.squeeze()
         if len(squeezed.shape) > 0:
@@ -796,7 +799,7 @@ class Tensor:
         return len(self.data)
     
     def __neg__(self) -> 'Tensor': # -self
-        return self * -1
+        return self * -1.0
 
     def __radd__(self, other) -> 'Tensor': # other + self
         return self + other
@@ -838,7 +841,7 @@ class Tensor:
             string += f", op={self._operation}"
             
         if self._name is not None:
-            string += f", name={self._operation}"
+            string += f", name={self._name}"
             
             
         string += f", dtype={self.dtype})"

@@ -14,18 +14,18 @@ class Linear(nn.Module):
         
         self.weight_init_method = weight_init_method
         weight_values = init_weights((output_size, input_size), weight_init_method).astype(np.float32)
-        self.weights = Tensor(weight_values, requires_grad=True)
+        self.weight = Tensor(weight_values, requires_grad=True)
         self.bias = Tensor(np.zeros((output_size,), dtype=np.float32), requires_grad=True)
         
     def forward(self, x:Tensor) -> Tensor:
         assert x.shape[1] == self.input_size, f"Expected input size '{self.input_size}' but received '{x.shape[1]}'"
 
-        out = (x @ self.weights.transpose(0,-1)) + self.bias
+        out = (x @ self.weight.transpose(0,-1)) + self.bias
         
         return out
     
     def parameters(self) -> list[Tensor]:
-        return [self.weights, self.bias]
+        return [self.weight, self.bias]
     
     def __repr__(self) -> str:
         return f"Linear(input_size={self.input_size}, neurons={len(self.output_size)})"
@@ -223,7 +223,7 @@ class Conv2d(nn.Module):
         
         self.weight_init_method = weight_init_method
         weight_values = init_weights((out_channels, in_channels, *kernel_size), weight_init_method).astype(np.float32)
-        self.weights = Tensor(weight_values, requires_grad=True)
+        self.weight = Tensor(weight_values, requires_grad=True)
         self.bias = Tensor(np.zeros((out_channels,), dtype=np.float32), requires_grad=True)
     
     def forward(self, x: Tensor) -> Tensor:
@@ -234,93 +234,20 @@ class Conv2d(nn.Module):
         unfolded = Unfold(kernel_size=self.kernel_size, stride=self.stride, dilation=self.dilation,
                            padding=self.padding, pad_value=0)(x)
         
-        weights = self.weights.view(self.weights.shape[0], -1).transpose(0,1) 
-        mult = unfolded.transpose(1,2) @ weights
+        weight = self.weight.view(self.weight.shape[0], -1).transpose(0,1) 
+        mult = unfolded.transpose(1,2) @ weight
         convolved = (mult) + self.bias
         out = convolved.transpose(1,2).view(N, self.out_channels, lH, lW)
 
         return out
         
     def parameters(self) -> list['Tensor']:
-        return [self.weights, self.bias]
+        return [self.weight, self.bias]
     
     def __repr__(self) -> str:
         return (f"Conv2d(in_channels={self.in_channels}, out_channels={self.out_channels}, " + 
                 f"kernel_size={self.kernel_size}, stride={self.stride}, padding={self.padding}, " + 
                 f"dilation={self.dilation}")
-    
-    
-class BatchNorm2d(nn.Module):
-    """
-    TODO: This layer is not working properly yet
-    Reference:
-        https://pytorch.org/docs/stable/generated/torch.nn.BatchNorm2d.html
-    """
-    
-    def __init__(self, num_features:int, eps:float=1e-5, momentum:float=0.1, affine:bool=True,
-                 track_running_stats:bool=True) -> None:
-        """
-        Computes the batchnorm2d of a 4-dimensional tensor and its gradient.
-
-        Arguments:
-        x: tensor of shape (N, C, H, W) representing a batch of images.
-        gamma: tensor of shape (C,) representing the normalization scale.
-        beta: tensor of shape (C,) representing the normalization bias.
-        eps: small constant to avoid division by zero in variance computation.
-        momentum: exponential moving average factor for the mean and variance.
-        track_running_stats: 
-        """
-        super().__init__()
-        self.num_features = num_features
-        self.eps = eps
-        self.momentum = momentum
-        self.affine = affine
-        self.track_running_stats = track_running_stats
-        
-        self.running_mean = None
-        self.running_var = None
-        
-        if affine:
-            self.gamma = Tensor(np.ones(num_features), requires_grad=True, dtype=np.float32, name="gamma")
-            self.beta = Tensor(np.zeros(num_features), requires_grad=True, dtype=np.float32, name="beta")
-            
-            
-    def forward(self, x: Tensor) -> Tensor:
-        N, C, H, W = x.shape
-        num_examples = N*H*W
-        assert C == self.num_features, f"Expected {self.num_features} channels, got {C}."
-        # Compute the mean of each channel
-        mu = x.mean(dim=(0,2,3), keepdims=True)
-
-        # Compute the variance of each channel
-        var = ((x - mu)**2).mean(dim=(0,2,3), keepdims=True)
-        std = (var + self.eps).sqrt()
-
-        # Update the running average of mean and variance
-        if self.track_running_stats:
-            if self.running_mean is None:
-                self.running_mean = mu
-            else:
-                self.running_mean = (self.momentum * self.running_mean + (1 - self.momentum) * mu)
-            
-            if self.running_var is None:
-                self.running_var = var
-            else:
-                self.running_var = (self.momentum * self.running_var + (1 - self.momentum) * var)
-
-        # Normalize the input tensor
-        x_norm = (x - mu) / std
-
-        # Scale and shift the normalization
-        if self.affine:
-            out = self.gamma.view(1,C,1,1) * x_norm + self.beta.view(1,C,1,1)
-        else:
-            out = x_norm
-        
-        return out
-
-    def parameters(self) -> list[Tensor]:
-        return [self.gamma, self.beta] if self.affine else []    
     
 
 class Dropout(nn.Module):
@@ -329,7 +256,7 @@ class Dropout(nn.Module):
         https://pytorch.org/docs/stable/generated/torch.nn.Dropout.html
     
     """
-    
+
     def __init__(self, p=0.5, inplace=False) -> None:
         super().__init__()
         self.p = p
@@ -344,3 +271,155 @@ class Dropout(nn.Module):
         random_t = Tensor(random_data)
         
         return x*random_t
+    
+    
+class BatchNorm(nn.Module):
+    
+    def __init__(self, mode:str, num_features:int, eps:float=1e-5, momentum:float=0.1, affine:bool=True,
+                 track_running_stats:bool=True, dtype=None) -> None:
+        super().__init__()
+        self.num_features = num_features
+        self.eps = eps
+        self.momentum = momentum
+        self.affine = affine
+        self.track_running_stats = track_running_stats
+        
+        valid_modes = ['1d', '2d']
+        
+        if mode not in valid_modes:
+            raise ValueError(f"'{mode}' is not a valid mode, expected one of {valid_modes}")
+        self.mode = mode
+        
+        if dtype is None:
+            dtype = np.float32
+        
+        if self.track_running_stats:
+            self.running_mean = Tensor(np.zeros(num_features, dtype=dtype))
+            self.running_var = Tensor(np.ones(num_features, dtype=dtype))
+        else:
+            self.running_mean = None
+            self.running_var = None
+        
+        if affine:
+            # gamma
+            self.weight = Tensor(np.ones(num_features), requires_grad=True, dtype=dtype, name="gamma")
+            # beta
+            self.bias = Tensor(np.zeros(num_features), requires_grad=True, dtype=dtype, name="beta")
+                
+    def forward(self, x: Tensor) -> Tensor:
+        if self.mode == '2d':
+            if len(x.shape) == 4:
+                N, C, H, W = x.shape
+                n = N*H*W # num_samples
+                dims = (0,2,3)
+                view_shape = (1,C,1,1)
+            else: raise RuntimeError(f"Expected 4D tensor, but got {len(x.shape)}D")
+        elif self.mode == '1d':
+            if len(x.shape) == 3:
+                N, C, L = x.shape
+                n = N*L # num_samples
+                dims = (0,2)
+                view_shape = (1,C,1)
+            elif len(x.shape) == 2:
+                N, C = x.shape
+                n = N # num_samples
+                dims = (0,)
+                view_shape = (1,C)
+            else: raise RuntimeError(f"Expected 2D or 3D tensor, but got {len(x.shape)}D")
+        assert C == self.num_features, f"Expected {self.num_features} channels, got {C}."
+        
+        if self.training or not self.track_running_stats:
+            # Compute the mean of each channel
+            mu = x.mean(dim=dims, keepdims=True)
+            # Compute the variance of each channel
+            var_sum = ((x-mu)**2).sum(dim=dims, keepdims=True)
+            var = var_sum / n
+            std = (var + self.eps).sqrt()
+            
+            # Normalize the input tensor
+            x_norm = (x - mu) / std
+            
+            # Update the running average of mean and variance
+            if self.training and self.track_running_stats:
+                r_mu = (self.momentum * mu.data.reshape(-1) + (1 - self.momentum) * self.running_mean.data)
+                self.running_mean = Tensor(r_mu)
+                
+                unbiased_var = var_sum.data.reshape(-1) / (n - 1)
+                r_var = (self.momentum * unbiased_var + (1 - self.momentum) * self.running_var.data)
+                self.running_var = Tensor(r_var.squeeze())
+        else:
+            x_norm = (x - self.running_mean.view(*view_shape)) / (self.running_var.view(*view_shape) + self.eps).sqrt()
+
+        # Scale and shift the normalization
+        if self.affine:
+            out = self.weight.view(*view_shape) * x_norm + self.bias.view(*view_shape)
+        else:
+            out = x_norm
+        
+        return out
+
+    def parameters(self) -> list[Tensor]:
+        return [self.weight, self.bias] if self.affine else []
+
+
+class BatchNorm1d(BatchNorm):
+    """
+    Reference:
+        https://pytorch.org/docs/stable/generated/torch.nn.BatchNorm1d.html
+    """
+    
+    def __init__(self, num_features:int, eps:float=1e-5, momentum:float=0.1, affine:bool=True,
+                 track_running_stats:bool=True, dtype=None) -> None:
+        """
+        Computes the batchnorm of a 2 or 3 dimensional tensor (N, C) or (N, C, L) 
+
+        Arguments:
+        num_features (int): C from an expected input size (N, C) or (N, C, L).
+        eps (float): small constant to avoid division by zero in variance computation.
+        momentum (float): the value used for the running_mean and running_var computation.
+            Can be set to None for cumulative moving average (i.e. simple average).
+            Default: 0.1.
+        affine (bool): a boolean value that when set to True, this module has 
+            learnable affine parameters. Default: True
+        track_running_stats (bool): a boolean value that when set to True, this module 
+            tracks the running mean and variance, and when set to False, this 
+            module does not track such statistics, and initializes statistics buffers
+            running_mean and running_var as None. When these buffers are None, this 
+            module always uses batch statistics. in both training and eval modes. 
+            Default: True
+        """
+        super().__init__('1d', num_features, eps, momentum, affine, track_running_stats, dtype)
+
+    
+class BatchNorm2d(BatchNorm):
+    """
+    Reference:
+        https://pytorch.org/docs/stable/generated/torch.nn.BatchNorm2d.html
+    """
+    
+    def __init__(self, num_features:int, eps:float=1e-5, momentum:float=0.1, affine:bool=True,
+                 track_running_stats:bool=True, dtype=None) -> None:
+        """
+        Computes the batchnorm of a 4-dimensional tensor (N, C, H, W) 
+
+        Arguments:
+        num_features (int): C from an expected input size (N, C, H, W).
+        eps (float): small constant to avoid division by zero in variance computation.
+        momentum (float): the value used for the running_mean and running_var computation.
+            Can be set to None for cumulative moving average (i.e. simple average).
+            Default: 0.1.
+        affine (bool): a boolean value that when set to True, this module has 
+            learnable affine parameters. Default: True
+        track_running_stats (bool): a boolean value that when set to True, this module 
+            tracks the running mean and variance, and when set to False, this 
+            module does not track such statistics, and initializes statistics buffers
+            running_mean and running_var as None. When these buffers are None, this 
+            module always uses batch statistics. in both training and eval modes. 
+            Default: True
+        """
+        super().__init__('2d', num_features, eps, momentum, affine, track_running_stats, dtype)
+        
+        
+
+        
+    
