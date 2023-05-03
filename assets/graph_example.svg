@@ -8,195 +8,81 @@
  viewBox="0.00 0.00 1153.59 434.00" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
 <g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(4 430)">
 <polygon fill="white" stroke="none" points="-4,4 -4,-430 1149.59,-430 1149.59,4 -4,4"/>
-<!-- 2075808243568 -->
+<!-- 2447619733200 -->
 <g id="node1" class="node">
-<title>2075808243568</title>
-<polygon fill="none" stroke="black" points="335.59,-333.5 335.59,-425.5 521.59,-425.5 521.59,-333.5 335.59,-333.5"/>
-<text text-anchor="start" x="406.59" y="-411.3" font-family="Times New Roman,serif" font-weight="bold" font-size="14.00">Tensor</text>
-<polyline fill="none" stroke="black" points="335.59,-402.5 521.59,-402.5"/>
-<text text-anchor="start" x="407.09" y="-387.3" font-family="Times New Roman,serif" font-size="14.00">data=3.</text>
-<polyline fill="none" stroke="black" points="335.59,-379.5 521.59,-379.5"/>
-<text text-anchor="start" x="343.59" y="-364.3" font-family="Times New Roman,serif" font-size="14.00">req_grad=False &#160;&#160;is_leaf=True</text>
-<polyline fill="none" stroke="black" points="335.59,-356.5 521.59,-356.5"/>
-<text text-anchor="start" x="396.59" y="-341.3" font-family="Times New Roman,serif" font-size="14.00">grad=None</text>
-</g>
-<!-- 2075808241024&lt;Add&gt; -->
-<g id="node11" class="node">
-<title>2075808241024&lt;Add&gt;</title>
-<ellipse fill="none" stroke="black" cx="584.59" cy="-268.5" rx="27" ry="18"/>
-<text text-anchor="start" x="572.09" y="-264.8" font-family="Times New Roman,serif" font-size="14.00">Add</text>
-</g>
-<!-- 2075808243568&#45;&gt;2075808241024&lt;Add&gt; -->
-<g id="edge9" class="edge">
-<title>2075808243568&#45;&gt;2075808241024&lt;Add&gt;</title>
-<path fill="none" stroke="black" d="M508.56,-333.7C513.03,-330.68 517.4,-327.6 521.59,-324.5 535.48,-314.23 549.87,-301.4 561.28,-290.61"/>
-<polygon fill="black" stroke="black" points="563.23,-293.63 568.02,-284.18 558.38,-288.58 563.23,-293.63"/>
-</g>
-<!-- 2075808185984 -->
-<g id="node2" class="node">
-<title>2075808185984</title>
-<polygon fill="none" stroke="black" points="335.59,-0.5 335.59,-92.5 521.59,-92.5 521.59,-0.5 335.59,-0.5"/>
-<text text-anchor="start" x="406.59" y="-78.3" font-family="Times New Roman,serif" font-weight="bold" font-size="14.00">Tensor</text>
-<polyline fill="none" stroke="black" points="335.59,-69.5 521.59,-69.5"/>
-<text text-anchor="start" x="383.59" y="-54.3" font-family="Times New Roman,serif" font-size="14.00">data=[0.2 ,0.33]</text>
-<polyline fill="none" stroke="black" points="335.59,-46.5 521.59,-46.5"/>
-<text text-anchor="start" x="343.59" y="-31.3" font-family="Times New Roman,serif" font-size="14.00">req_grad=True &#160;&#160;is_leaf=False</text>
-<polyline fill="none" stroke="black" points="335.59,-23.5 521.59,-23.5"/>
-<text text-anchor="start" x="389.59" y="-8.3" font-family="Times New Roman,serif" font-size="14.00">grad=[6. ,0.4]</text>
-</g>
-<!-- 2075808186176&lt;Mul&gt; -->
-<g id="node8" class="node">
-<title>2075808186176&lt;Mul&gt;</title>
-<ellipse fill="none" stroke="black" cx="584.59" cy="-157.5" rx="27" ry="18"/>
-<text text-anchor="start" x="573.59" y="-153.8" font-family="Times New Roman,serif" font-size="14.00">Mul</text>
-</g>
-<!-- 2075808185984&#45;&gt;2075808186176&lt;Mul&gt; -->
-<g id="edge8" class="edge">
-<title>2075808185984&#45;&gt;2075808186176&lt;Mul&gt;</title>
-<path fill="none" stroke="black" d="M508.56,-92.3C513.03,-95.32 517.4,-98.4 521.59,-101.5 535.48,-111.77 549.87,-124.6 561.28,-135.39"/>
-<polygon fill="black" stroke="black" points="558.38,-137.42 568.02,-141.82 563.23,-132.37 558.38,-137.42"/>
-</g>
-<!-- 2075808185984&lt;Pow(&#45;1)&gt; -->
-<g id="node3" class="node">
-<title>2075808185984&lt;Pow(&#45;1)&gt;</title>
-<ellipse fill="none" stroke="black" cx="259.3" cy="-130.5" rx="40.09" ry="18"/>
-<text text-anchor="start" x="236.3" y="-126.8" font-family="Times New Roman,serif" font-size="14.00">Pow(&#45;1)</text>
-</g>
-<!-- 2075808185984&lt;Pow(&#45;1)&gt;&#45;&gt;2075808185984 -->
-<g id="edge1" class="edge">
-<title>2075808185984&lt;Pow(&#45;1)&gt;&#45;&gt;2075808185984</title>
-<path fill="none" stroke="black" d="M286.81,-117.19C298.07,-111.54 311.97,-104.55 326.62,-97.2"/>
-<polygon fill="black" stroke="black" points="327.97,-99.93 335.34,-92.32 324.83,-93.68 327.97,-99.93"/>
-</g>
-<!-- 2075808240400 -->
-<g id="node4" class="node">
-<title>2075808240400</title>
-<polygon fill="none" stroke="black" points="0,-111.5 0,-203.5 183,-203.5 183,-111.5 0,-111.5"/>
-<text text-anchor="start" x="69.5" y="-189.3" font-family="Times New Roman,serif" font-weight="bold" font-size="14.00">Tensor</text>
-<polyline fill="none" stroke="black" points="0,-180.5 183,-180.5"/>
-<text text-anchor="start" x="58.5" y="-165.3" font-family="Times New Roman,serif" font-size="14.00">data=[5.,3.]</text>
-<polyline fill="none" stroke="black" points="0,-157.5 183,-157.5"/>
-<text text-anchor="start" x="8" y="-142.3" font-family="Times New Roman,serif" font-size="14.00">req_grad=True &#160;&#160;is_leaf=True</text>
-<polyline fill="none" stroke="black" points="0,-134.5 183,-134.5"/>
-<text text-anchor="start" x="37.5" y="-119.3" font-family="Times New Roman,serif" font-size="14.00">grad=[74.76,26.96]</text>
-</g>
-<!-- 2075808240400&#45;&gt;2075808185984&lt;Pow(&#45;1)&gt; -->
-<g id="edge11" class="edge">
-<title>2075808240400&#45;&gt;2075808185984&lt;Pow(&#45;1)&gt;</title>
-<path fill="none" stroke="black" d="M182.68,-142.81C192.18,-141.27 201.56,-139.74 210.3,-138.32"/>
-<polygon fill="black" stroke="black" points="210.69,-141.64 220,-136.57 209.57,-134.73 210.69,-141.64"/>
-</g>
-<!-- 2075808241936&lt;Pow(3)&gt; -->
-<g id="node6" class="node">
-<title>2075808241936&lt;Pow(3)&gt;</title>
-<ellipse fill="none" stroke="black" cx="259.3" cy="-226.5" rx="37.89" ry="18"/>
-<text text-anchor="start" x="238.3" y="-222.8" font-family="Times New Roman,serif" font-size="14.00">Pow(3)</text>
-</g>
-<!-- 2075808240400&#45;&gt;2075808241936&lt;Pow(3)&gt; -->
-<g id="edge10" class="edge">
-<title>2075808240400&#45;&gt;2075808241936&lt;Pow(3)&gt;</title>
-<path fill="none" stroke="black" d="M182.68,-195.03C195.82,-200.5 208.71,-205.86 220.03,-210.57"/>
-<polygon fill="black" stroke="black" points="218.36,-214.09 228.94,-214.7 221.05,-207.62 218.36,-214.09"/>
-</g>
-<!-- 2075808241936 -->
-<g id="node5" class="node">
-<title>2075808241936</title>
-<polygon fill="none" stroke="black" points="335.59,-222.5 335.59,-314.5 521.59,-314.5 521.59,-222.5 335.59,-222.5"/>
-<text text-anchor="start" x="406.59" y="-300.3" font-family="Times New Roman,serif" font-weight="bold" font-size="14.00">Tensor</text>
-<polyline fill="none" stroke="black" points="335.59,-291.5 521.59,-291.5"/>
-<text text-anchor="start" x="383.59" y="-276.3" font-family="Times New Roman,serif" font-size="14.00">data=[125., 27.]</text>
-<polyline fill="none" stroke="black" points="335.59,-268.5 521.59,-268.5"/>
-<text text-anchor="start" x="343.59" y="-253.3" font-family="Times New Roman,serif" font-size="14.00">req_grad=True &#160;&#160;is_leaf=False</text>
-<polyline fill="none" stroke="black" points="335.59,-245.5 521.59,-245.5"/>
-<text text-anchor="start" x="395.09" y="-230.3" font-family="Times New Roman,serif" font-size="14.00">grad=[1.,1.]</text>
-</g>
-<!-- 2075808241936&#45;&gt;2075808241024&lt;Add&gt; -->
-<g id="edge7" class="edge">
-<title>2075808241936&#45;&gt;2075808241024&lt;Add&gt;</title>
-<path fill="none" stroke="black" d="M521.4,-268.5C530.14,-268.5 538.62,-268.5 546.36,-268.5"/>
-<polygon fill="black" stroke="black" points="546.11,-272 556.11,-268.5 546.11,-265 546.11,-272"/>
-</g>
-<!-- 2075808241936&lt;Pow(3)&gt;&#45;&gt;2075808241936 -->
-<g id="edge2" class="edge">
-<title>2075808241936&lt;Pow(3)&gt;&#45;&gt;2075808241936</title>
-<path fill="none" stroke="black" d="M293.35,-234.8C302.9,-237.2 313.86,-239.95 325.31,-242.82"/>
-<polygon fill="black" stroke="black" points="324.39,-246.45 334.94,-245.49 326.09,-239.66 324.39,-246.45"/>
-</g>
-<!-- 2075808186176 -->
-<g id="node7" class="node">
-<title>2075808186176</title>
+<title>2447619733200</title>
 <polygon fill="none" stroke="black" points="647.59,-111.5 647.59,-203.5 833.59,-203.5 833.59,-111.5 647.59,-111.5"/>
 <text text-anchor="start" x="718.59" y="-189.3" font-family="Times New Roman,serif" font-weight="bold" font-size="14.00">Tensor</text>
 <polyline fill="none" stroke="black" points="647.59,-180.5 833.59,-180.5"/>
-<text text-anchor="start" x="695.59" y="-165.3" font-family="Times New Roman,serif" font-size="14.00">data=[1.2 ,0.13]</text>
+<text text-anchor="start" x="695.59" y="-165.3" font-family="Times New Roman,serif" font-size="14.00">data=[128., 30.]</text>
 <polyline fill="none" stroke="black" points="647.59,-157.5 833.59,-157.5"/>
 <text text-anchor="start" x="655.59" y="-142.3" font-family="Times New Roman,serif" font-size="14.00">req_grad=True &#160;&#160;is_leaf=False</text>
 <polyline fill="none" stroke="black" points="647.59,-134.5 833.59,-134.5"/>
 <text text-anchor="start" x="707.09" y="-119.3" font-family="Times New Roman,serif" font-size="14.00">grad=[1.,1.]</text>
 </g>
-<!-- 2075808185840&lt;Add&gt; -->
-<g id="node13" class="node">
-<title>2075808185840&lt;Add&gt;</title>
+<!-- 2447618189536&lt;Add&gt; -->
+<g id="node6" class="node">
+<title>2447618189536&lt;Add&gt;</title>
 <ellipse fill="none" stroke="black" cx="896.59" cy="-212.5" rx="27" ry="18"/>
 <text text-anchor="start" x="884.09" y="-208.8" font-family="Times New Roman,serif" font-size="14.00">Add</text>
 </g>
-<!-- 2075808186176&#45;&gt;2075808185840&lt;Add&gt; -->
+<!-- 2447619733200&#45;&gt;2447618189536&lt;Add&gt; -->
 <g id="edge12" class="edge">
-<title>2075808186176&#45;&gt;2075808185840&lt;Add&gt;</title>
+<title>2447619733200&#45;&gt;2447618189536&lt;Add&gt;</title>
 <path fill="none" stroke="black" d="M833.4,-190.29C843.45,-193.88 853.16,-197.34 861.79,-200.43"/>
 <polygon fill="black" stroke="black" points="860.51,-204.04 871.1,-204.11 862.86,-197.45 860.51,-204.04"/>
 </g>
-<!-- 2075808186176&lt;Mul&gt;&#45;&gt;2075808186176 -->
-<g id="edge3" class="edge">
-<title>2075808186176&lt;Mul&gt;&#45;&gt;2075808186176</title>
+<!-- 2447619733200&lt;Add&gt; -->
+<g id="node2" class="node">
+<title>2447619733200&lt;Add&gt;</title>
+<ellipse fill="none" stroke="black" cx="584.59" cy="-157.5" rx="27" ry="18"/>
+<text text-anchor="start" x="572.09" y="-153.8" font-family="Times New Roman,serif" font-size="14.00">Add</text>
+</g>
+<!-- 2447619733200&lt;Add&gt;&#45;&gt;2447619733200 -->
+<g id="edge1" class="edge">
+<title>2447619733200&lt;Add&gt;&#45;&gt;2447619733200</title>
 <path fill="none" stroke="black" d="M612.07,-157.5C619.42,-157.5 627.88,-157.5 636.86,-157.5"/>
 <polygon fill="black" stroke="black" points="636.62,-161 646.62,-157.5 636.62,-154 636.62,-161"/>
 </g>
-<!-- 2075808240496 -->
-<g id="node9" class="node">
-<title>2075808240496</title>
-<polygon fill="none" stroke="black" points="337.09,-111.5 337.09,-203.5 520.09,-203.5 520.09,-111.5 337.09,-111.5"/>
-<text text-anchor="start" x="406.59" y="-189.3" font-family="Times New Roman,serif" font-weight="bold" font-size="14.00">Tensor</text>
-<polyline fill="none" stroke="black" points="337.09,-180.5 520.09,-180.5"/>
-<text text-anchor="start" x="390.59" y="-165.3" font-family="Times New Roman,serif" font-size="14.00">data=[6. ,0.4]</text>
-<polyline fill="none" stroke="black" points="337.09,-157.5 520.09,-157.5"/>
-<text text-anchor="start" x="345.09" y="-142.3" font-family="Times New Roman,serif" font-size="14.00">req_grad=True &#160;&#160;is_leaf=True</text>
-<polyline fill="none" stroke="black" points="337.09,-134.5 520.09,-134.5"/>
-<text text-anchor="start" x="383.09" y="-119.3" font-family="Times New Roman,serif" font-size="14.00">grad=[0.2 ,0.33]</text>
+<!-- 2447619682016 -->
+<g id="node3" class="node">
+<title>2447619682016</title>
+<polygon fill="none" stroke="black" points="335.59,-333.5 335.59,-425.5 521.59,-425.5 521.59,-333.5 335.59,-333.5"/>
+<text text-anchor="start" x="406.59" y="-411.3" font-family="Times New Roman,serif" font-weight="bold" font-size="14.00">Tensor</text>
+<polyline fill="none" stroke="black" points="335.59,-402.5 521.59,-402.5"/>
+<text text-anchor="start" x="383.59" y="-387.3" font-family="Times New Roman,serif" font-size="14.00">data=[0.2 ,0.33]</text>
+<polyline fill="none" stroke="black" points="335.59,-379.5 521.59,-379.5"/>
+<text text-anchor="start" x="343.59" y="-364.3" font-family="Times New Roman,serif" font-size="14.00">req_grad=True &#160;&#160;is_leaf=False</text>
+<polyline fill="none" stroke="black" points="335.59,-356.5 521.59,-356.5"/>
+<text text-anchor="start" x="389.59" y="-341.3" font-family="Times New Roman,serif" font-size="14.00">grad=[6. ,0.4]</text>
 </g>
-<!-- 2075808240496&#45;&gt;2075808186176&lt;Mul&gt; -->
+<!-- 2447619681632&lt;Mul&gt; -->
+<g id="node11" class="node">
+<title>2447619681632&lt;Mul&gt;</title>
+<ellipse fill="none" stroke="black" cx="584.59" cy="-268.5" rx="27" ry="18"/>
+<text text-anchor="start" x="573.59" y="-264.8" font-family="Times New Roman,serif" font-size="14.00">Mul</text>
+</g>
+<!-- 2447619682016&#45;&gt;2447619681632&lt;Mul&gt; -->
 <g id="edge13" class="edge">
-<title>2075808240496&#45;&gt;2075808186176&lt;Mul&gt;</title>
-<path fill="none" stroke="black" d="M520.07,-157.5C529.23,-157.5 538.14,-157.5 546.24,-157.5"/>
-<polygon fill="black" stroke="black" points="546.09,-161 556.09,-157.5 546.09,-154 546.09,-161"/>
+<title>2447619682016&#45;&gt;2447619681632&lt;Mul&gt;</title>
+<path fill="none" stroke="black" d="M507.07,-333.75C512.05,-330.38 516.93,-326.94 521.59,-323.5 535.19,-313.46 549.36,-301.05 560.72,-290.56"/>
+<polygon fill="black" stroke="black" points="562.54,-293.71 567.45,-284.32 557.76,-288.61 562.54,-293.71"/>
 </g>
-<!-- 2075808241024 -->
-<g id="node10" class="node">
-<title>2075808241024</title>
-<polygon fill="none" stroke="black" points="647.59,-222.5 647.59,-314.5 833.59,-314.5 833.59,-222.5 647.59,-222.5"/>
-<text text-anchor="start" x="718.59" y="-300.3" font-family="Times New Roman,serif" font-weight="bold" font-size="14.00">Tensor</text>
-<polyline fill="none" stroke="black" points="647.59,-291.5 833.59,-291.5"/>
-<text text-anchor="start" x="695.59" y="-276.3" font-family="Times New Roman,serif" font-size="14.00">data=[128., 30.]</text>
-<polyline fill="none" stroke="black" points="647.59,-268.5 833.59,-268.5"/>
-<text text-anchor="start" x="655.59" y="-253.3" font-family="Times New Roman,serif" font-size="14.00">req_grad=True &#160;&#160;is_leaf=False</text>
-<polyline fill="none" stroke="black" points="647.59,-245.5 833.59,-245.5"/>
-<text text-anchor="start" x="707.09" y="-230.3" font-family="Times New Roman,serif" font-size="14.00">grad=[1.,1.]</text>
+<!-- 2447619682016&lt;Pow(&#45;1)&gt; -->
+<g id="node4" class="node">
+<title>2447619682016&lt;Pow(&#45;1)&gt;</title>
+<ellipse fill="none" stroke="black" cx="259.3" cy="-337.5" rx="40.09" ry="18"/>
+<text text-anchor="start" x="236.3" y="-333.8" font-family="Times New Roman,serif" font-size="14.00">Pow(&#45;1)</text>
 </g>
-<!-- 2075808241024&#45;&gt;2075808185840&lt;Add&gt; -->
-<g id="edge6" class="edge">
-<title>2075808241024&#45;&gt;2075808185840&lt;Add&gt;</title>
-<path fill="none" stroke="black" d="M833.4,-235.12C843.66,-231.39 853.55,-227.79 862.31,-224.6"/>
-<polygon fill="black" stroke="black" points="863.19,-227.64 871.39,-220.94 860.8,-221.07 863.19,-227.64"/>
+<!-- 2447619682016&lt;Pow(&#45;1)&gt;&#45;&gt;2447619682016 -->
+<g id="edge2" class="edge">
+<title>2447619682016&lt;Pow(&#45;1)&gt;&#45;&gt;2447619682016</title>
+<path fill="none" stroke="black" d="M294.96,-346.2C304.1,-348.5 314.44,-351.09 325.22,-353.8"/>
+<polygon fill="black" stroke="black" points="324.12,-357.38 334.67,-356.42 325.82,-350.59 324.12,-357.38"/>
 </g>
-<!-- 2075808241024&lt;Add&gt;&#45;&gt;2075808241024 -->
-<g id="edge4" class="edge">
-<title>2075808241024&lt;Add&gt;&#45;&gt;2075808241024</title>
-<path fill="none" stroke="black" d="M612.07,-268.5C619.42,-268.5 627.88,-268.5 636.86,-268.5"/>
-<polygon fill="black" stroke="black" points="636.62,-272 646.62,-268.5 636.62,-265 636.62,-272"/>
-</g>
-<!-- 2075808185840 -->
-<g id="node12" class="node">
-<title>2075808185840</title>
+<!-- 2447618189536 -->
+<g id="node5" class="node">
+<title>2447618189536</title>
 <polygon fill="none" stroke="black" points="959.59,-166.5 959.59,-258.5 1145.59,-258.5 1145.59,-166.5 959.59,-166.5"/>
 <text text-anchor="start" x="1030.59" y="-244.3" font-family="Times New Roman,serif" font-weight="bold" font-size="14.00">Tensor</text>
 <polyline fill="none" stroke="black" points="959.59,-235.5 1145.59,-235.5"/>
@@ -206,11 +92,125 @@
 <polyline fill="none" stroke="black" points="959.59,-189.5 1145.59,-189.5"/>
 <text text-anchor="start" x="1019.09" y="-174.3" font-family="Times New Roman,serif" font-size="14.00">grad=[1.,1.]</text>
 </g>
-<!-- 2075808185840&lt;Add&gt;&#45;&gt;2075808185840 -->
-<g id="edge5" class="edge">
-<title>2075808185840&lt;Add&gt;&#45;&gt;2075808185840</title>
+<!-- 2447618189536&lt;Add&gt;&#45;&gt;2447618189536 -->
+<g id="edge3" class="edge">
+<title>2447618189536&lt;Add&gt;&#45;&gt;2447618189536</title>
 <path fill="none" stroke="black" d="M924.07,-212.5C931.42,-212.5 939.88,-212.5 948.86,-212.5"/>
 <polygon fill="black" stroke="black" points="948.62,-216 958.62,-212.5 948.62,-209 948.62,-216"/>
+</g>
+<!-- 2447619733776 -->
+<g id="node7" class="node">
+<title>2447619733776</title>
+<polygon fill="none" stroke="black" points="337.09,-222.5 337.09,-314.5 520.09,-314.5 520.09,-222.5 337.09,-222.5"/>
+<text text-anchor="start" x="406.59" y="-300.3" font-family="Times New Roman,serif" font-weight="bold" font-size="14.00">Tensor</text>
+<polyline fill="none" stroke="black" points="337.09,-291.5 520.09,-291.5"/>
+<text text-anchor="start" x="390.59" y="-276.3" font-family="Times New Roman,serif" font-size="14.00">data=[6. ,0.4]</text>
+<polyline fill="none" stroke="black" points="337.09,-268.5 520.09,-268.5"/>
+<text text-anchor="start" x="345.09" y="-253.3" font-family="Times New Roman,serif" font-size="14.00">req_grad=True &#160;&#160;is_leaf=True</text>
+<polyline fill="none" stroke="black" points="337.09,-245.5 520.09,-245.5"/>
+<text text-anchor="start" x="383.09" y="-230.3" font-family="Times New Roman,serif" font-size="14.00">grad=[0.2 ,0.33]</text>
+</g>
+<!-- 2447619733776&#45;&gt;2447619681632&lt;Mul&gt; -->
+<g id="edge6" class="edge">
+<title>2447619733776&#45;&gt;2447619681632&lt;Mul&gt;</title>
+<path fill="none" stroke="black" d="M520.07,-268.5C529.23,-268.5 538.14,-268.5 546.24,-268.5"/>
+<polygon fill="black" stroke="black" points="546.09,-272 556.09,-268.5 546.09,-265 546.09,-272"/>
+</g>
+<!-- 2447619733296 -->
+<g id="node8" class="node">
+<title>2447619733296</title>
+<polygon fill="none" stroke="black" points="335.59,-0.5 335.59,-92.5 521.59,-92.5 521.59,-0.5 335.59,-0.5"/>
+<text text-anchor="start" x="406.59" y="-78.3" font-family="Times New Roman,serif" font-weight="bold" font-size="14.00">Tensor</text>
+<polyline fill="none" stroke="black" points="335.59,-69.5 521.59,-69.5"/>
+<text text-anchor="start" x="407.09" y="-54.3" font-family="Times New Roman,serif" font-size="14.00">data=3.</text>
+<polyline fill="none" stroke="black" points="335.59,-46.5 521.59,-46.5"/>
+<text text-anchor="start" x="343.59" y="-31.3" font-family="Times New Roman,serif" font-size="14.00">req_grad=False &#160;&#160;is_leaf=True</text>
+<polyline fill="none" stroke="black" points="335.59,-23.5 521.59,-23.5"/>
+<text text-anchor="start" x="396.59" y="-8.3" font-family="Times New Roman,serif" font-size="14.00">grad=None</text>
+</g>
+<!-- 2447619733296&#45;&gt;2447619733200&lt;Add&gt; -->
+<g id="edge10" class="edge">
+<title>2447619733296&#45;&gt;2447619733200&lt;Add&gt;</title>
+<path fill="none" stroke="black" d="M508.56,-92.3C513.03,-95.32 517.4,-98.4 521.59,-101.5 535.48,-111.77 549.87,-124.6 561.28,-135.39"/>
+<polygon fill="black" stroke="black" points="558.38,-137.42 568.02,-141.82 563.23,-132.37 558.38,-137.42"/>
+</g>
+<!-- 2447619732816 -->
+<g id="node9" class="node">
+<title>2447619732816</title>
+<polygon fill="none" stroke="black" points="0,-222.5 0,-314.5 183,-314.5 183,-222.5 0,-222.5"/>
+<text text-anchor="start" x="69.5" y="-300.3" font-family="Times New Roman,serif" font-weight="bold" font-size="14.00">Tensor</text>
+<polyline fill="none" stroke="black" points="0,-291.5 183,-291.5"/>
+<text text-anchor="start" x="58.5" y="-276.3" font-family="Times New Roman,serif" font-size="14.00">data=[5.,3.]</text>
+<polyline fill="none" stroke="black" points="0,-268.5 183,-268.5"/>
+<text text-anchor="start" x="8" y="-253.3" font-family="Times New Roman,serif" font-size="14.00">req_grad=True &#160;&#160;is_leaf=True</text>
+<polyline fill="none" stroke="black" points="0,-245.5 183,-245.5"/>
+<text text-anchor="start" x="37.5" y="-230.3" font-family="Times New Roman,serif" font-size="14.00">grad=[74.76,26.96]</text>
+</g>
+<!-- 2447619732816&#45;&gt;2447619682016&lt;Pow(&#45;1)&gt; -->
+<g id="edge11" class="edge">
+<title>2447619732816&#45;&gt;2447619682016&lt;Pow(&#45;1)&gt;</title>
+<path fill="none" stroke="black" d="M182.68,-306.03C195.45,-311.35 208,-316.57 219.08,-321.18"/>
+<polygon fill="black" stroke="black" points="217.65,-324.79 228.23,-325.4 220.34,-318.33 217.65,-324.79"/>
+</g>
+<!-- 2447619733968&lt;Pow(3)&gt; -->
+<g id="node13" class="node">
+<title>2447619733968&lt;Pow(3)&gt;</title>
+<ellipse fill="none" stroke="black" cx="259.3" cy="-241.5" rx="37.89" ry="18"/>
+<text text-anchor="start" x="238.3" y="-237.8" font-family="Times New Roman,serif" font-size="14.00">Pow(3)</text>
+</g>
+<!-- 2447619732816&#45;&gt;2447619733968&lt;Pow(3)&gt; -->
+<g id="edge9" class="edge">
+<title>2447619732816&#45;&gt;2447619733968&lt;Pow(3)&gt;</title>
+<path fill="none" stroke="black" d="M182.68,-253.81C192.83,-252.16 202.83,-250.53 212.07,-249.03"/>
+<polygon fill="black" stroke="black" points="212.62,-252.32 221.93,-247.26 211.5,-245.41 212.62,-252.32"/>
+</g>
+<!-- 2447619681632 -->
+<g id="node10" class="node">
+<title>2447619681632</title>
+<polygon fill="none" stroke="black" points="647.59,-222.5 647.59,-314.5 833.59,-314.5 833.59,-222.5 647.59,-222.5"/>
+<text text-anchor="start" x="718.59" y="-300.3" font-family="Times New Roman,serif" font-weight="bold" font-size="14.00">Tensor</text>
+<polyline fill="none" stroke="black" points="647.59,-291.5 833.59,-291.5"/>
+<text text-anchor="start" x="695.59" y="-276.3" font-family="Times New Roman,serif" font-size="14.00">data=[1.2 ,0.13]</text>
+<polyline fill="none" stroke="black" points="647.59,-268.5 833.59,-268.5"/>
+<text text-anchor="start" x="655.59" y="-253.3" font-family="Times New Roman,serif" font-size="14.00">req_grad=True &#160;&#160;is_leaf=False</text>
+<polyline fill="none" stroke="black" points="647.59,-245.5 833.59,-245.5"/>
+<text text-anchor="start" x="707.09" y="-230.3" font-family="Times New Roman,serif" font-size="14.00">grad=[1.,1.]</text>
+</g>
+<!-- 2447619681632&#45;&gt;2447618189536&lt;Add&gt; -->
+<g id="edge7" class="edge">
+<title>2447619681632&#45;&gt;2447618189536&lt;Add&gt;</title>
+<path fill="none" stroke="black" d="M833.4,-235.12C843.66,-231.39 853.55,-227.79 862.31,-224.6"/>
+<polygon fill="black" stroke="black" points="863.19,-227.64 871.39,-220.94 860.8,-221.07 863.19,-227.64"/>
+</g>
+<!-- 2447619681632&lt;Mul&gt;&#45;&gt;2447619681632 -->
+<g id="edge4" class="edge">
+<title>2447619681632&lt;Mul&gt;&#45;&gt;2447619681632</title>
+<path fill="none" stroke="black" d="M612.07,-268.5C619.42,-268.5 627.88,-268.5 636.86,-268.5"/>
+<polygon fill="black" stroke="black" points="636.62,-272 646.62,-268.5 636.62,-265 636.62,-272"/>
+</g>
+<!-- 2447619733968 -->
+<g id="node12" class="node">
+<title>2447619733968</title>
+<polygon fill="none" stroke="black" points="335.59,-111.5 335.59,-203.5 521.59,-203.5 521.59,-111.5 335.59,-111.5"/>
+<text text-anchor="start" x="406.59" y="-189.3" font-family="Times New Roman,serif" font-weight="bold" font-size="14.00">Tensor</text>
+<polyline fill="none" stroke="black" points="335.59,-180.5 521.59,-180.5"/>
+<text text-anchor="start" x="383.59" y="-165.3" font-family="Times New Roman,serif" font-size="14.00">data=[125., 27.]</text>
+<polyline fill="none" stroke="black" points="335.59,-157.5 521.59,-157.5"/>
+<text text-anchor="start" x="343.59" y="-142.3" font-family="Times New Roman,serif" font-size="14.00">req_grad=True &#160;&#160;is_leaf=False</text>
+<polyline fill="none" stroke="black" points="335.59,-134.5 521.59,-134.5"/>
+<text text-anchor="start" x="395.09" y="-119.3" font-family="Times New Roman,serif" font-size="14.00">grad=[1.,1.]</text>
+</g>
+<!-- 2447619733968&#45;&gt;2447619733200&lt;Add&gt; -->
+<g id="edge8" class="edge">
+<title>2447619733968&#45;&gt;2447619733200&lt;Add&gt;</title>
+<path fill="none" stroke="black" d="M521.4,-157.5C530.14,-157.5 538.62,-157.5 546.36,-157.5"/>
+<polygon fill="black" stroke="black" points="546.11,-161 556.11,-157.5 546.11,-154 546.11,-161"/>
+</g>
+<!-- 2447619733968&lt;Pow(3)&gt;&#45;&gt;2447619733968 -->
+<g id="edge5" class="edge">
+<title>2447619733968&lt;Pow(3)&gt;&#45;&gt;2447619733968</title>
+<path fill="none" stroke="black" d="M286.07,-228.56C297.35,-222.9 311.38,-215.85 326.19,-208.42"/>
+<polygon fill="black" stroke="black" points="327.65,-211.1 335.01,-203.48 324.5,-204.84 327.65,-211.1"/>
 </g>
 </g>
 </svg>

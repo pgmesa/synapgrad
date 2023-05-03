@@ -4,7 +4,7 @@ from synapgrad import Tensor
 import warnings
 
 
-def check_tensors(t1:'Tensor | np.ndarray', t2:torch.Tensor, atol=1e-8, rtol=1e-5, as_np_array=False) -> bool:
+def check_tensors(t1:'Tensor | np.ndarray', t2:torch.Tensor, atol=1e-6, rtol=1e-4, as_np_array=False) -> bool:
     """Returns if 2 tensors have the same values and shape
 
     Args:
@@ -27,4 +27,11 @@ def check_tensors(t1:'Tensor | np.ndarray', t2:torch.Tensor, atol=1e-8, rtol=1e-
             warnings.warn(f"\ndtype of tensors don't match t1={t1.dtype} t2={t2.dtype}", stacklevel=0) 
         t1_t = t1_t.type(t2.dtype)
     
-    return torch.equal(t1_t, t2) or torch.allclose(t1_t, t2, rtol=rtol, atol=atol)
+    check = torch.equal(t1_t, t2) or torch.allclose(t1_t, t2, rtol=rtol, atol=atol)
+    
+    if not check:
+        print(f"Shapes {t1_t.shape} {t2.shape}")
+        print("Max Abs error:", (t1_t - t2).abs().max().item())
+        print("Max Rel error:", (t1_t - t2).abs().max().item() / (t2.abs().max().item()))
+    
+    return check

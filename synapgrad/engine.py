@@ -282,6 +282,16 @@ class Tensor:
         return out
     
     
+    @staticmethod
+    def ones(shape, dtype=None, requires_grad=False, name=None):
+        return Tensor(np.ones(shape), dtype=dtype, requires_grad=requires_grad, name=name)
+    
+    
+    @staticmethod
+    def zeros(shape, dtype=None, requires_grad=False, name=None):
+        return Tensor(np.zeros(shape), dtype=dtype, requires_grad=requires_grad, name=name)
+    
+    
     def add(self, t2:'Tensor') -> 'Tensor':
         return self + t2
     
@@ -292,6 +302,18 @@ class Tensor:
     
     def matmul(self, t2:'Tensor') -> 'Tensor':
         return self @ t2
+    
+    
+    def reshape(self, shape:tuple) -> 'Tensor':
+        out = Tensor(self.data.reshape(shape), (self,), '<Reshape>', requires_grad=self.requires_grad)
+        
+        def _backward():
+            if self.requires_grad:
+                self._grad += out._grad.reshape(self.shape)
+            
+        out._backward = _backward
+        
+        return out
     
     
     def view(self, *shape:tuple) -> 'Tensor':
@@ -504,7 +526,12 @@ class Tensor:
         
         def _backward():
             if self.requires_grad:
-                self._grad += out._grad
+                out_grad = out._grad
+                if not keepdims and dim is not None:
+                    s = list(self.shape)
+                    for d in dim: s[d] = 1
+                    out_grad = out._grad.reshape(s) 
+                self._grad += np.ones(self.shape) * out_grad
             
         out._backward = _backward
         
@@ -523,7 +550,12 @@ class Tensor:
                 elif isinstance(dim, tuple):
                     size = 1
                     for d in dim: size *= self.data.shape[d]
-                self._grad += (np.ones(self.shape) / size) * out._grad
+                out_grad = out._grad
+                if not keepdims and dim is not None:
+                    s = list(self.shape)
+                    for d in dim: s[d] = 1
+                    out_grad = out._grad.reshape(s) 
+                self._grad += (np.ones(self.shape) / size) * out_grad
             
         out._backward = _backward
         

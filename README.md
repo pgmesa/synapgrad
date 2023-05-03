@@ -64,17 +64,17 @@ Example 1 (synapgrad MLP solution)     |  Example 2 and 3
 ![Image 1](/assets/example_moons.png) | ![Image 2](/assets/example_mnist.png) 
 
 ## Comparisons with other frameworks
-In order to see the efficiency of synapgrad, it is compared with other existing engines (in this case torch and micrograd).
+In order to see the efficiency of synapgrad, it is compared with other existing engines (in this case torch and micrograd). All trainings have been runned on a laptop with an Intel Core i7 10th generation processor.
 
 | Training Example | synapgrad | torch | micrograd |
 |     :---:        |  :---:  |  :---:  |   :---:   |  
 | 1 | 1.7 s | 1.5 s | 1 min 43 s |
-| 2 | 2 min 30 s | 53 s | - |
+| 2 | 2 min 8 s | 53 s | - |
 | 3 |  25 min 10 s  |  2 min 5 s  | - |
 | 2 (without batchnorm) | 52 s |  31 s | - |
 | 3 (without batchnorm) |  16 min 7 s  |  1 min 52 s  | - |
 
-As can be observed, conv2d and batchnorm are currently much more optimized in Pytorch. I will attempt to optimize these layers in a future version.
+As can be observed, conv2d and batchnorm are currently much more optimized in Pytorch. I may attempt to optimize these layers in a future version.
 
 ## Graph Visualization
 In the `examples/trace_graph.ipynb` notebook there is an example of how to display the graph that synapgrad creates in the background as operations are chained.

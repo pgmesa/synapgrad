@@ -15,13 +15,13 @@ class Linear(nn.Module):
         self.weight_init_method = weight_init_method
         weight_values = init_weights((output_size, input_size), weight_init_method).astype(np.float32)
         self.weight = Tensor(weight_values, requires_grad=True)
-        self.bias = Tensor(np.zeros((output_size,), dtype=np.float32), requires_grad=True)
+        self.bias = Tensor.zeros((output_size,), dtype=np.float32, requires_grad=True)
         
     def forward(self, x:Tensor) -> Tensor:
         assert x.shape[1] == self.input_size, f"Expected input size '{self.input_size}' but received '{x.shape[1]}'"
 
-        out = (x @ self.weight.transpose(0,-1)) + self.bias
-        
+        out = (x @ self.weight.transpose(0,1)) + self.bias
+
         return out
     
     def parameters(self) -> list[Tensor]:
@@ -224,7 +224,7 @@ class Conv2d(nn.Module):
         self.weight_init_method = weight_init_method
         weight_values = init_weights((out_channels, in_channels, *kernel_size), weight_init_method).astype(np.float32)
         self.weight = Tensor(weight_values, requires_grad=True)
-        self.bias = Tensor(np.zeros((out_channels,), dtype=np.float32), requires_grad=True)
+        self.bias = Tensor.zeros((out_channels,), dtype=np.float32, requires_grad=True)
     
     def forward(self, x: Tensor) -> Tensor:
         N, C, H, W = x.shape
@@ -238,7 +238,7 @@ class Conv2d(nn.Module):
         mult = unfolded.transpose(1,2) @ weight
         convolved = (mult) + self.bias
         out = convolved.transpose(1,2).view(N, self.out_channels, lH, lW)
-
+                
         return out
         
     def parameters(self) -> list['Tensor']:
@@ -294,17 +294,17 @@ class BatchNorm(nn.Module):
             dtype = np.float32
         
         if self.track_running_stats:
-            self.running_mean = Tensor(np.zeros(num_features, dtype=dtype))
-            self.running_var = Tensor(np.ones(num_features, dtype=dtype))
+            self.running_mean = Tensor.zeros(num_features, dtype=dtype, name='running_mean')
+            self.running_var = Tensor.ones(num_features, dtype=dtype, name='running_var')
         else:
             self.running_mean = None
             self.running_var = None
         
         if affine:
             # gamma
-            self.weight = Tensor(np.ones(num_features), requires_grad=True, dtype=dtype, name="gamma")
+            self.weight = Tensor.ones(num_features, requires_grad=True, dtype=dtype, name="gamma")
             # beta
-            self.bias = Tensor(np.zeros(num_features), requires_grad=True, dtype=dtype, name="beta")
+            self.bias = Tensor.zeros(num_features, requires_grad=True, dtype=dtype, name="beta")
                 
     def forward(self, x: Tensor) -> Tensor:
         if self.mode == '2d':
@@ -330,34 +330,46 @@ class BatchNorm(nn.Module):
         
         if self.training or not self.track_running_stats:
             # Compute the mean of each channel
-            mu = x.mean(dim=dims, keepdims=True)
+            mu = x.mean(dim=dims)
             # Compute the variance of each channel
-            var_sum = ((x-mu)**2).sum(dim=dims, keepdims=True)
+            var_sum = ((x-mu.reshape(view_shape))**2).sum(dim=dims)
             var = var_sum / n
-            std = (var + self.eps).sqrt()
             
-            # Normalize the input tensor
-            x_norm = (x - mu) / std
-            
+            x_norm = self.__normalize(x, mu, var)
+
             # Update the running average of mean and variance
             if self.training and self.track_running_stats:
-                r_mu = (self.momentum * mu.data.reshape(-1) + (1 - self.momentum) * self.running_mean.data)
+                r_mu = (self.momentum * mu.data + (1 - self.momentum) * self.running_mean.data)
                 self.running_mean = Tensor(r_mu)
                 
-                unbiased_var = var_sum.data.reshape(-1) / (n - 1)
+                unbiased_var = var_sum.data / (n - 1)
                 r_var = (self.momentum * unbiased_var + (1 - self.momentum) * self.running_var.data)
-                self.running_var = Tensor(r_var.squeeze())
+                self.running_var = Tensor(r_var)
         else:
-            x_norm = (x - self.running_mean.view(*view_shape)) / (self.running_var.view(*view_shape) + self.eps).sqrt()
+            x_norm = self.__normalize(x, self.running_mean, self.running_var)
 
         # Scale and shift the normalization
         if self.affine:
-            out = self.weight.view(*view_shape) * x_norm + self.bias.view(*view_shape)
+            out = (x_norm * self.weight.reshape(view_shape)) + self.bias.reshape(view_shape)
         else:
             out = x_norm
         
         return out
+    
+    def __normalize(self, x:Tensor, mean:Tensor, var:Tensor, channel_dim=1) -> Tensor:
+        """Normalize a Tensor with mean and variance over the channel dimension
 
+            Args:
+                x (Tensor): Input
+                mean (Tensor): Computed batch mean
+                var (Tensor): Computed batch var
+            
+            Returns:
+                Tensor: Normalized tensor
+        """
+        shape = [1,]*len(x.shape); shape[channel_dim] = x.shape[channel_dim]
+        return (x - mean.reshape(shape)) / ((var + self.eps).reshape(shape).sqrt())
+        
     def parameters(self) -> list[Tensor]:
         return [self.weight, self.bias] if self.affine else []
 

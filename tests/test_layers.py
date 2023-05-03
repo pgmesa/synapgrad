@@ -5,7 +5,7 @@ import numpy as np
     
     
 def test_linear():
-    list_ = [[0.2, 1, 4, 2, -1, 4], [0.2, 1, 4, 2, -1, 4]]
+    list_ = np.random.randn(10,6).astype(np.float32)
     
     # synapgrad
     inp = Tensor(list_, requires_grad=True)
@@ -17,6 +17,8 @@ def test_linear():
     # torch
     inp_t = torch.tensor(list_, requires_grad=True)
     linear_t = torch.nn.Linear(6,3)
+    linear_t.weight = torch.nn.parameter.Parameter(torch.tensor(linear.weight.data))
+    linear_t.bias = torch.nn.parameter.Parameter(torch.tensor(linear.bias.data))
     out_t = linear_t(inp_t)
     out_t = out_t.sum()
     out_t.backward()
@@ -26,7 +28,11 @@ def test_linear():
 
     assert len(params) == len(params_t)
     for p, p_t in zip(params, params_t):
+        assert check_tensors(p, p_t)
         assert check_tensors(p.grad, p_t.grad)
+        
+    assert check_tensors(out, out_t)
+    assert check_tensors(inp.grad, inp_t.grad)
         
         
 def test_flatten():
@@ -78,9 +84,9 @@ def test_fold_unfold():
     print(inp.grad)
     print(inp_t.grad)
     
-    check_tensors(unf, unf_t)
-    check_tensors(f, f_t)
-    check_tensors(inp.grad, inp_t.grad)
+    assert check_tensors(unf, unf_t)
+    assert check_tensors(f, f_t)
+    assert check_tensors(inp.grad, inp_t.grad)
     
     
 def test_maxpool2d():
@@ -112,31 +118,35 @@ def test_maxpool2d():
     
 
 def test_conv2d():
-    l = np.random.rand(2,3,4,4).astype(np.float32)
-    out_channels = 5; kernel_size = 3; stride = 1; padding = 'same'
+    l = np.random.rand(64,16,28,28).astype(np.float32)
+    out_channels = 32; kernel_size = 3; stride = 1; padding = 'same'
+    
+    conv = nn.Conv2d(l.shape[1], out_channels, kernel_size, stride, padding)
+    conv_t = torch.nn.Conv2d(l.shape[1], out_channels, kernel_size, stride, padding)
+    conv_t.weight = torch.nn.parameter.Parameter(torch.tensor(conv.weight.data))
+    conv_t.bias = torch.nn.parameter.Parameter(torch.tensor(conv.bias.data))
+    print("Bias", conv_t.bias.shape)
 
     inp = Tensor(l, requires_grad=True)
-    conv = nn.Conv2d(l.shape[1], out_channels, kernel_size, stride, padding)
     out = conv(inp)
     out.sum().backward()
     
     inp_t = torch.tensor(l, requires_grad=True)
-    conv_t = torch.nn.Conv2d(l.shape[1], out_channels, kernel_size, stride, padding)
     out_t = conv_t(inp_t)
     out_t.sum().backward()
 
     print(out_t.shape)
     print(out.shape)
-    
-    assert out.matches_shape(out_t.detach().numpy())
 
     params_t = list(conv_t.parameters())
     params = list(conv.parameters())
     for i, (p_t, p) in enumerate(zip(params_t, params)):
         print(f"Param {i+1}")
-        print(p_t); print(p)
-        print(p_t.grad); print(p.grad)
-        check_tensors(p.grad, p_t.grad)
+        assert check_tensors(p, p_t)
+        assert check_tensors(p.grad, p_t.grad)
+    
+    assert check_tensors(out, out_t, atol=1e-5)
+    assert check_tensors(inp.grad, inp_t.grad)
     
 
 def test_dropout():
@@ -178,39 +188,18 @@ def test_batchnorm1d():
             track_running_stats=track_running_stats, eps=eps)
         out = bnorm(inp)
         out.sum().backward()
-
-        print(out_t)
-        print(out)
-
-        print(inp_t.grad)
-        print(inp.grad)
         
-        check_tensors(out, out_t, atol=eps, rtol=1e-3)
-        check_tensors(inp.grad, inp_t.grad, atol=eps, rtol=1e-3)
+        assert check_tensors(out, out_t)
+        assert check_tensors(inp.grad, inp_t.grad)
         
         if track_running_stats:
-            print("TRACKED STATS")
-            print(bnorm_t.running_mean)
-            print(bnorm.running_mean)
-            print(bnorm_t.running_var)
-            print(bnorm.running_var)
-            print("=============")
-            check_tensors(bnorm.running_mean, bnorm_t.running_mean)
-            check_tensors(bnorm.running_var, bnorm_t.running_var)
-
-        params_t = list(bnorm_t.parameters())
-        params = list(bnorm.parameters())
-        for i, (p_t, p) in enumerate(zip(params_t, params)):
-            print(f"Param {i+1}")
-            print(p_t); print(p)
-            print(p_t.grad); print(p.grad)
-            check_tensors(p, p_t)
-            check_tensors(p.grad, p_t.grad)
+            assert check_tensors(bnorm.running_mean, bnorm_t.running_mean)
+            assert check_tensors(bnorm.running_var, bnorm_t.running_var)
 
 
 def test_batchnorm2d():
     for _ in range(5):
-        l = np.random.randn(5,64,28,28).astype(np.float32)*10000
+        l = np.random.randn(30,22,28,28).astype(np.float32)*10000
         momentum = 0.5; affine = True; track_running_stats = True; eps = 1e-5
 
         bnorm_t = torch.nn.BatchNorm2d(
@@ -227,31 +216,10 @@ def test_batchnorm2d():
             track_running_stats=track_running_stats, eps=eps)
         out = bnorm(inp)
         out.sum().backward()
-
-        print(out_t)
-        print(out)
-
-        print(inp_t.grad)
-        print(inp.grad)
         
-        check_tensors(out, out_t, atol=eps, rtol=1e-3)
-        check_tensors(inp.grad, inp_t.grad, atol=eps, rtol=1e-3)
+        assert check_tensors(out, out_t)
+        assert check_tensors(inp.grad, inp_t.grad)
         
         if track_running_stats:
-            print("TRACKED STATS")
-            print(bnorm_t.running_mean)
-            print(bnorm.running_mean)
-            print(bnorm_t.running_var)
-            print(bnorm.running_var)
-            print("=============")
-            check_tensors(bnorm.running_mean, bnorm_t.running_mean)
-            check_tensors(bnorm.running_var, bnorm_t.running_var)
-
-        params_t = list(bnorm_t.parameters())
-        params = list(bnorm.parameters())
-        for i, (p_t, p) in enumerate(zip(params_t, params)):
-            print(f"Param {i+1}")
-            print(p_t); print(p)
-            print(p_t.grad); print(p.grad)
-            check_tensors(p, p_t)
-            check_tensors(p.grad, p_t.grad)
+            assert check_tensors(bnorm.running_mean, bnorm_t.running_mean)
+            assert check_tensors(bnorm.running_var, bnorm_t.running_var)

@@ -136,8 +136,8 @@ def test_engine_unfold():
     unf_t.sum().backward()
     print("Gradient\n", inp_t.grad)
     
-    check_tensors(unf, unf_t)
-    check_tensors(inp.grad, inp_t.grad)
+    assert check_tensors(unf, unf_t)
+    assert check_tensors(inp.grad, inp_t.grad)
     
     
 def test_engine_maxpool2d():
@@ -167,9 +167,9 @@ def test_engine_maxpool2d():
     print(inp.grad); print(inp_t.grad)
     print(indices); print(indices_t)
     
-    check_tensors(out, out_t)
-    check_tensors(inp.grad, inp_t.grad)
-    check_tensors(indices, indices_t, as_np_array=True)
+    assert check_tensors(out, out_t)
+    assert check_tensors(inp.grad, inp_t.grad)
+    assert check_tensors(indices, indices_t, as_np_array=True)
     
     
 def test_engine_minpool2d():
@@ -195,6 +195,6 @@ def test_engine_minpool2d():
     print(inp.grad); print(inp_t.grad)
     print(indices); print(indices_t)
     
-    check_tensors(out, out_t)
-    check_tensors(inp.grad, inp_t.grad)
-    check_tensors(indices, indices_t, as_np_array=True)
+    assert check_tensors(out, out_t)
+    assert check_tensors(inp.grad, inp_t.grad)
+    assert check_tensors(indices, indices_t, as_np_array=True)

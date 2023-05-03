@@ -1,29 +1,29 @@
 digraph {
 	graph [rankdir=LR]
-	2075808243568 [label=<<b>Tensor</b> | data=3. | req_grad=False   is_leaf=True | grad=None> shape=record]
-	2075808185984 [label=<<b>Tensor</b> | data=[0.2 ,0.33] | req_grad=True   is_leaf=False | grad=[6. ,0.4]> shape=record]
-	"2075808185984<Pow(-1)>" [label=<Pow(-1)>]
-	"2075808185984<Pow(-1)>" -> 2075808185984
-	2075808240400 [label=<<b>Tensor</b> | data=[5.,3.] | req_grad=True   is_leaf=True | grad=[74.76,26.96]> shape=record]
-	2075808241936 [label=<<b>Tensor</b> | data=[125., 27.] | req_grad=True   is_leaf=False | grad=[1.,1.]> shape=record]
-	"2075808241936<Pow(3)>" [label=<Pow(3)>]
-	"2075808241936<Pow(3)>" -> 2075808241936
-	2075808186176 [label=<<b>Tensor</b> | data=[1.2 ,0.13] | req_grad=True   is_leaf=False | grad=[1.,1.]> shape=record]
-	"2075808186176<Mul>" [label=<Mul>]
-	"2075808186176<Mul>" -> 2075808186176
-	2075808240496 [label=<<b>Tensor</b> | data=[6. ,0.4] | req_grad=True   is_leaf=True | grad=[0.2 ,0.33]> shape=record]
-	2075808241024 [label=<<b>Tensor</b> | data=[128., 30.] | req_grad=True   is_leaf=False | grad=[1.,1.]> shape=record]
-	"2075808241024<Add>" [label=<Add>]
-	"2075808241024<Add>" -> 2075808241024
-	2075808185840 [label=<<b>Tensor</b> | data=[129.2 , 30.13] | req_grad=True   is_leaf=False | grad=[1.,1.]> shape=record]
-	"2075808185840<Add>" [label=<Add>]
-	"2075808185840<Add>" -> 2075808185840
-	2075808241024 -> "2075808185840<Add>"
-	2075808241936 -> "2075808241024<Add>"
-	2075808185984 -> "2075808186176<Mul>"
-	2075808243568 -> "2075808241024<Add>"
-	2075808240400 -> "2075808241936<Pow(3)>"
-	2075808240400 -> "2075808185984<Pow(-1)>"
-	2075808186176 -> "2075808185840<Add>"
-	2075808240496 -> "2075808186176<Mul>"
+	2447619733200 [label=<<b>Tensor</b> | data=[128., 30.] | req_grad=True   is_leaf=False | grad=[1.,1.]> shape=record]
+	"2447619733200<Add>" [label=<Add>]
+	"2447619733200<Add>" -> 2447619733200
+	2447619682016 [label=<<b>Tensor</b> | data=[0.2 ,0.33] | req_grad=True   is_leaf=False | grad=[6. ,0.4]> shape=record]
+	"2447619682016<Pow(-1)>" [label=<Pow(-1)>]
+	"2447619682016<Pow(-1)>" -> 2447619682016
+	2447618189536 [label=<<b>Tensor</b> | data=[129.2 , 30.13] | req_grad=True   is_leaf=False | grad=[1.,1.]> shape=record]
+	"2447618189536<Add>" [label=<Add>]
+	"2447618189536<Add>" -> 2447618189536
+	2447619733776 [label=<<b>Tensor</b> | data=[6. ,0.4] | req_grad=True   is_leaf=True | grad=[0.2 ,0.33]> shape=record]
+	2447619733296 [label=<<b>Tensor</b> | data=3. | req_grad=False   is_leaf=True | grad=None> shape=record]
+	2447619732816 [label=<<b>Tensor</b> | data=[5.,3.] | req_grad=True   is_leaf=True | grad=[74.76,26.96]> shape=record]
+	2447619681632 [label=<<b>Tensor</b> | data=[1.2 ,0.13] | req_grad=True   is_leaf=False | grad=[1.,1.]> shape=record]
+	"2447619681632<Mul>" [label=<Mul>]
+	"2447619681632<Mul>" -> 2447619681632
+	2447619733968 [label=<<b>Tensor</b> | data=[125., 27.] | req_grad=True   is_leaf=False | grad=[1.,1.]> shape=record]
+	"2447619733968<Pow(3)>" [label=<Pow(3)>]
+	"2447619733968<Pow(3)>" -> 2447619733968
+	2447619733776 -> "2447619681632<Mul>"
+	2447619681632 -> "2447618189536<Add>"
+	2447619733968 -> "2447619733200<Add>"
+	2447619732816 -> "2447619733968<Pow(3)>"
+	2447619733296 -> "2447619733200<Add>"
+	2447619732816 -> "2447619682016<Pow(-1)>"
+	2447619733200 -> "2447618189536<Add>"
+	2447619682016 -> "2447619681632<Mul>"
 }
