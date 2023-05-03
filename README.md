@@ -4,10 +4,15 @@ An autograd Tensor-based engine with a deep learning library built on top of it 
 
 [![Downloads](https://static.pepy.tech/personalized-badge/synapgrad?period=total&units=international_system&left_color=black&right_color=blue&left_text=Downloads)](https://pepy.tech/project/synapgrad)
 
+## Installation
+```bash
+pip install synapgrad
+```
+
 ## Technical Description
 This project implements a completely functional engine for tracking operations between Tensors, by dynamically building a Directed Acyclic Graph (DAG), and an automatic backpropagation algorithm (reverse-mode autodiff) over this DAG.
 
-Built on top of the engine, the deep learning library implements the most common functions, layers, losses and optimizers in order to create MLPs and CNNs able to solve AI problems
+Built on top of the engine, the deep learning library implements the most common functions, layers, losses and optimizers in order to create AI models able to solve real problems.
 
 This library tries to mimic Pytorch in a simplified way, but with similar functions and behaviour. 
 
@@ -23,11 +28,6 @@ However, some of these external frameworks have been used for the following reas
 This project stems from the amazing educational project `micrograd` by `karpathy` (https://github.com/karpathy/micrograd)
 
 Note: Supporting GPU execution is out of the scope of this project
-
-## Installation
-```bash
-pip install synapgrad
-```
 
 ## Autograd Example
 Below is a random example of some of the operations that can be tracked with synapgrad.Tensor
