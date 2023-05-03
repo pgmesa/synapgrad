@@ -74,7 +74,7 @@ In order to see the efficiency of synapgrad, it is compared with other existing 
 | 2 (without batchnorm) | 52 s |  31 s | - |
 | 3 (without batchnorm) |  16 min 7 s  |  1 min 52 s  | - |
 
-As can be observed, conv2d and batchnorm are currently much more optimized in Pytorch. I may attempt to optimize these layers in a future version.
+As can be observed, conv2d and batchnorm are currently much better optimized in Pytorch. I may attempt to optimize these layers in a future version.
 
 ## Graph Visualization
 In the `examples/trace_graph.ipynb` notebook there is an example of how to display the graph that synapgrad creates in the background as operations are chained.
