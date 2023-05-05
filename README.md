@@ -96,7 +96,7 @@ with synapgrad.retain_grads():
 utils.graph.draw(z)
 ```
 
-![Graph Image](/assets/graph_example.svg)
+![Graph Image](/.github/graph_example.svg)
 
 ## Running tests
 To run the unit tests you will have to install PyTorch. In these tests, gradients calculation as well as losses, layers, etc, are assessed with pytorch to check everything is working fine. To run the tests:
