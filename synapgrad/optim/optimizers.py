@@ -9,6 +9,8 @@ class Optimizer(ABC):
     
     def __init__(self, parameters:list[Tensor], lr=0.001) -> None:
         super().__init__()
+        if len(parameters) == 0:
+            raise ValueError("optimizer got an empty parameter list")
         self.parameters = parameters
         self.lr = lr
         self.t = 0
