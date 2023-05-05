@@ -63,7 +63,7 @@ This project comes with 3 jupyter notebooks (in `examples/`) that solve 3 beginn
 
 Example 1 (synapgrad MLP solution)     |  Example 2 and 3
 :-------------------------:|:-------------------------:
-![Image 1](/assets/example_moons.png) | ![Image 2](/assets/example_mnist.png) 
+![Image 1](/.github/example_moons.png) | ![Image 2](/.github/example_mnist.png) 
 
 ## Comparisons with other frameworks
 In order to see the efficiency of synapgrad, it is compared with other existing engines (in this case torch and micrograd). All trainings have been runned on a laptop with an Intel Core i7 10th generation processor.
