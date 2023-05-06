@@ -1,5 +1,5 @@
 import numpy as np
-from .. import nn, Tensor
+from .. import nn, Tensor, engine
 from .neurons import init_weights
 from .functional import unfold, fold
 from .initializations import init_weights
@@ -283,6 +283,7 @@ class BatchNorm(nn.Module):
         self.momentum = momentum
         self.affine = affine
         self.track_running_stats = track_running_stats
+        self.num_batches_tracked = 0
         
         valid_modes = ['1d', '2d']
         
@@ -328,47 +329,38 @@ class BatchNorm(nn.Module):
             else: raise RuntimeError(f"Expected 2D or 3D tensor, but got {len(x.shape)}D")
         assert C == self.num_features, f"Expected {self.num_features} channels, got {C}."
         
-        if self.training or not self.track_running_stats:
-            # Compute the mean of each channel
-            mu = x.mean(dim=dims)
-            # Compute the variance of each channel
-            var_sum = ((x-mu.reshape(view_shape))**2).sum(dim=dims)
+        exponential_average_factor = 0.0
+
+        if self.training and self.track_running_stats:
+            if self.num_batches_tracked is not None:
+                self.num_batches_tracked += 1
+                if self.momentum is None:  # use cumulative moving average
+                    exponential_average_factor = 1.0 / float(self.num_batches_tracked)
+                else:  # use exponential moving average
+                    exponential_average_factor = self.momentum
+
+        # calculate running estimates
+        if self.training:
+            mean = x.mean(dim=dims)
+            # use biased var in train
+            var_sum = ((x - mean.reshape(view_shape))**2).sum(dim=dims)
             var = var_sum / n
             
-            x_norm = self.__normalize(x, mu, var)
-
-            # Update the running average of mean and variance
-            if self.training and self.track_running_stats:
-                r_mu = (self.momentum * mu.data + (1 - self.momentum) * self.running_mean.data)
-                self.running_mean = Tensor(r_mu)
-                
-                unbiased_var = var_sum.data / (n - 1)
-                r_var = (self.momentum * unbiased_var + (1 - self.momentum) * self.running_var.data)
-                self.running_var = Tensor(r_var)
-        else:
-            x_norm = self.__normalize(x, self.running_mean, self.running_var)
-
-        # Scale and shift the normalization
-        if self.affine:
-            out = (x_norm * self.weight.reshape(view_shape)) + self.bias.reshape(view_shape)
-        else:
-            out = x_norm
-        
-        return out
-    
-    def __normalize(self, x:Tensor, mean:Tensor, var:Tensor, channel_dim=1) -> Tensor:
-        """Normalize a Tensor with mean and variance over the channel dimension
-
-            Args:
-                x (Tensor): Input
-                mean (Tensor): Computed batch mean
-                var (Tensor): Computed batch var
+            r_mu = (exponential_average_factor * mean.data + (1 - exponential_average_factor) * self.running_mean.data)
+            self.running_mean = Tensor(r_mu, dtype=x.dtype)
             
-            Returns:
-                Tensor: Normalized tensor
-        """
-        shape = [1,]*len(x.shape); shape[channel_dim] = x.shape[channel_dim]
-        return (x - mean.reshape(shape)) / ((var + self.eps).reshape(shape).sqrt())
+            unbiased_var = var_sum.data / (n - 1)
+            r_var = (exponential_average_factor * unbiased_var + (1 - exponential_average_factor) * self.running_var.data)
+            self.running_var = Tensor(r_var, dtype=x.dtype)
+        else:
+            mean = self.running_mean
+            var = self.running_var
+
+        out = (x - mean.reshape(view_shape)) / (var.reshape(view_shape) + self.eps).sqrt()
+        if self.affine:
+            out = out * self.weight.reshape(view_shape) + self.bias.reshape(view_shape)
+
+        return out
         
     def parameters(self) -> list[Tensor]:
         return [self.weight, self.bias] if self.affine else []

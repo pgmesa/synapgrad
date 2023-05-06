@@ -111,8 +111,8 @@ def test_engine_batchnorm():
         assert check_tensors(mu, mu_t)
         assert check_tensors(var, var_t)
         assert check_tensors(std, std_t)
-        assert check_tensors(x_norm, x_norm_t, atol=eps, rtol=1e-3)
-        assert check_tensors(x.grad, x_t.grad, atol=eps, rtol=1e-3)
+        assert check_tensors(x_norm, x_norm_t, atol=eps)
+        assert check_tensors(x.grad, x_t.grad, atol=eps)
     
 
 def test_engine_unfold():

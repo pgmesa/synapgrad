@@ -171,7 +171,9 @@ def test_dropout():
     
 def test_batchnorm1d():
     for _ in range(5):
-        l = np.random.randn(5,64).astype(np.float32)*10000
+        scale = np.random.randint(1, 10, (1,)).astype(np.float32)
+        bias = np.random.randint(-10, 10, (1,)).astype(np.float32)
+        l = np.random.randn(10, 64).astype(np.float32) * scale + bias
         momentum = 0.5; affine = True; track_running_stats = True; eps = 1e-5
 
         bnorm_t = torch.nn.BatchNorm1d(
@@ -199,7 +201,10 @@ def test_batchnorm1d():
 
 def test_batchnorm2d():
     for _ in range(5):
-        l = np.random.randn(30,22,28,28).astype(np.float32)*10000
+        scale = np.random.randint(1, 10, (1,)).astype(np.float32)
+        bias = np.random.randint(-10, 10, (1,)).astype(np.float32)
+        l = np.random.randn(10, 3, 100, 100).astype(np.float32) * scale + bias
+        
         momentum = 0.5; affine = True; track_running_stats = True; eps = 1e-5
 
         bnorm_t = torch.nn.BatchNorm2d(
@@ -223,3 +228,5 @@ def test_batchnorm2d():
         if track_running_stats:
             assert check_tensors(bnorm.running_mean, bnorm_t.running_mean, atol=eps)
             assert check_tensors(bnorm.running_var, bnorm_t.running_var, atol=eps)
+            
+        
