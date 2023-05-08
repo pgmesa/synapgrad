@@ -1,6 +1,6 @@
 import numpy as np
 from .. import Tensor, nn
-from .functional import relu_fn, tanh_fn, sigmoid_fn, softmax_fn,  log_softmax_fn, epsilon
+# from .functional import relu_fn, tanh_fn, sigmoid_fn, softmax_fn,  log_softmax_fn, epsilon
 
 
 # ----------------------------- Modules -----------------------------

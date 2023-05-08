@@ -1,7 +1,9 @@
 import random
 import numpy as np
+import importlib
 from typing import Iterable, Union
 
+from .device import Device
 
 gradient__ = True
 retain_grads__ = False
@@ -46,7 +48,7 @@ def tensor(data, requires_grad=False, dtype=None) -> 'Tensor':
 
 class Tensor:
     
-    def __init__(self, data, _children=(), _operation=None, requires_grad=False, dtype=None, name=None) -> None:
+    def __init__(self, data, _children=(), _operation=None, requires_grad=False, dtype=None, name=None, device=Device.CPU) -> None:
         """
         Creates a Tensor object from the given data, which is always transformed internally into a numpy array.
 
@@ -64,6 +66,7 @@ class Tensor:
         assert isinstance(data, np.ndarray), "data must be a list or numpy array"
         
         self.data = data
+        self.device = device
         # Internal variables used for autograd graph construction
         self._grad = None
         self._grad_fn = None
@@ -75,145 +78,91 @@ class Tensor:
         self._retain_grad = False
         self._children = _children
         self._operation = _operation # Operation that produced this node, for graphviz / debugging
-        self._name = name        
-    
-    
-    @staticmethod
-    def __add_grad(tensor:'Tensor', grad:np.ndarray):
-        """Function that ensures that the gradient that wants to be added is compatible
-        with the tensor gradient. It is a useful function for operations like __add__ and __mul__
-        when opertions like v1:(3,) (+ or *) v2:(2,3) pop up. In this case the incomming gradient
-        would be shape (2,3) and the gradient of v1 is (3,), so a sum() operation over axis 0 is required.
-        This function calculates the necessary axes in which to perform the sum() operation.
-
-        Args:
-            tensor (Tensor): Tensor whose gradient is going to be updated
-            grad (np.ndarray): Gradient array to add
-        """
-        def get_incompatible_dims(tensor_shape, grad_shape) -> tuple:
-            not_compatible_dims = []
-            for i, (tdim, gdim) in enumerate(zip(tensor_shape[::-1], grad_shape[::-1])):
-                if gdim != 1 and tdim != gdim:
-                    not_compatible_dims.append(len(grad_shape)-1-i)
-            not_compatible_dims = tuple(not_compatible_dims)
-            return not_compatible_dims
-            
+        self._name = name
         
-        if len(tensor.data.squeeze().shape) == 0:
-            tensor._grad += grad.sum()
-            return
-        
-        tensor_shape = tensor.data.shape; grad_shape = grad.data.shape
-        diff_axis = len(grad_shape)-len(tensor_shape)
-        sum_axis = None if diff_axis <= 0 else tuple(np.arange(abs(diff_axis), dtype=np.int8).tolist())
-        
-        if tensor.grad.matches_shape(grad) or sum_axis is None: 
-            if sum_axis is None and not tensor.grad.matches_shape(grad):
-                not_compatible_dims = get_incompatible_dims(tensor_shape, grad_shape)
-                tensor._grad += grad.sum(axis=not_compatible_dims, keepdims=True)
-            else:
-                tensor._grad += grad
-        else:
-            tensor._grad += grad.sum(axis=sum_axis)
+        # Import inside tensor in order to avoid circular import issue
+        self.F = importlib.import_module('.functional', 'synapgrad')
+        self.autograd = importlib.import_module('.autograd', 'synapgrad')
     
+    # *************************
+    # ******* Basic ops *******
+    # *************************
     
     def __add__(self, summand:'Tensor') -> 'Tensor':
-        summand = summand if isinstance(summand, Tensor) else Tensor(summand)
-        r_grad = self.requires_grad or summand.requires_grad
-        
-        out = Tensor(self.data + summand.data, (self, summand), '<Add>', requires_grad=r_grad)
-        
-        def _backward():
-            if self.requires_grad:
-                self.__add_grad(self, out._grad)
-                
-            if summand.requires_grad:
-                self.__add_grad(summand, out._grad)
-    
-        out._backward = _backward 
-        
-        return out
+        summand = summand if isinstance(summand, Tensor) else Tensor(summand, device=self.device)
+        from . import functional as F
+        return  self.F.add(self, summand)
         
         
     def __mul__(self, factor:'Tensor') -> 'Tensor':
-        factor = factor if isinstance(factor, Tensor) else Tensor(factor)
-        r_grad = self.requires_grad or factor.requires_grad
-        out = Tensor(self.data * factor.data, (self, factor), '<Mul>', requires_grad=r_grad)
-        
-        def _backward():
-            if self.requires_grad:
-                self.__add_grad(self, factor.data * out._grad)
-            
-            if factor.requires_grad:
-                self.__add_grad(factor, self.data * out._grad)
-            
-        out._backward = _backward 
-        
-        return out
+        factor = factor if isinstance(factor, Tensor) else Tensor(factor, device=self.device)
+        from . import functional as F
+        return self.F.mul(self, factor)
     
     
     def __matmul__(self, tensor:'Tensor') -> 'Tensor':
-        tensor = tensor if isinstance(tensor, Tensor) else Tensor(tensor)
-        r_grad = self.requires_grad or tensor.requires_grad
-        assert len(self.data.shape) > 1 and len(tensor.data.shape) > 1, "Both inputs should have dimension > 1"
-        out = Tensor(self.data @ tensor.data, (self, tensor), '<Matmul>', requires_grad=r_grad)
-        
-        def _backward():
-            if self.requires_grad:
-                grad = out._grad @ np.moveaxis(tensor.data, -2, -1)
-                self.__add_grad(self, grad)
-            
-            if tensor.requires_grad:
-                grad = np.moveaxis(out._grad, -2,-1) @ self.data
-                grad = np.moveaxis(grad, -2,-1)
-                self.__add_grad(tensor, grad)
-                    
-        out._backward = _backward
-        
-        return out
+        tensor = tensor if isinstance(tensor, Tensor) else Tensor(tensor, device=self.device)
+        return self.F.matmul(self, tensor)
     
     
     def __rmatmul__(self, tensor:'Tensor') -> 'Tensor':
-        tensor = tensor if isinstance(tensor, Tensor) else Tensor(tensor)
-        r_grad = self.requires_grad or tensor.requires_grad
-        assert len(self.data.shape) > 1 and len(tensor.data.shape) > 1, "Both inputs should have dimension > 1"
-        out = Tensor(tensor.data @ self.data, (self, tensor), '<Matmul>', requires_grad=r_grad)
-        
-        def _backward():
-            if self.requires_grad:
-                self._grad += np.dot(tensor.data.T, out._grad)
-            
-            if tensor.requires_grad:
-                tensor._grad += np.dot(self.data, out._grad.T).T
-                    
-        out._backward = _backward
+        tensor = tensor if isinstance(tensor, Tensor) else Tensor(tensor, device=self.device)
+        return self.F.matmul(tensor, self)
     
     
     def __pow__(self, power) -> 'Tensor':
-        assert isinstance(power, (int, float)), f"Power of type '{type(power)}' not supported"
-        out = Tensor(self.data**power, (self,), f'<Pow({power})>', requires_grad=self.requires_grad)
-        
-        def _backward():
-            if self.requires_grad:
-                self._grad += (power * self.data**(power-1)) * out._grad
-                    
-        out._backward = _backward
-        
-        return out
+        return self.F.pow(self, power)
     
-    
+
     def __rpow__(self, power) -> 'Tensor':
-        assert isinstance(power, (int, float)), f"Power of type '{type(power)}' not supported"
-        out = Tensor(np.power(power, self.data), (self,), f'<rPow({power})>', requires_grad=self.requires_grad)
-        
-        def _backward():
-            if self.requires_grad:
-                self._grad += (power**self.data * np.log(power)) * out._grad
-                    
-        out._backward = _backward
-        
-        return out
+        return self.F.rpow(self, power)
     
+    
+    def __neg__(self) -> 'Tensor': # -self
+        return self * -1.0
+
+
+    def __radd__(self, other) -> 'Tensor': # other + self
+        return self + other
+
+
+    def __sub__(self, other) -> 'Tensor': # self - other
+        return self + (-other)
+
+
+    def __rsub__(self, other) -> 'Tensor': # other - self
+        return other + (-self)
+
+
+    def __rmul__(self, other) -> 'Tensor': # other * self
+        return self * other
+
+
+    def __truediv__(self, other) -> 'Tensor': # self / other
+        return self * other**-1
+
+
+    def __rtruediv__(self, other) -> 'Tensor': # other / self
+        return other * self**-1
+    
+    # ************************
+    # ******* Iter ops *******
+    # ************************
+    
+    def __iter__(self):
+        self._current_idx = 0
+        return self
+    
+    def __next__(self) -> 'Tensor':
+        if self._current_idx >= len(self):
+            raise StopIteration
+        else:
+            val = self[self._current_idx]
+            self._current_idx += 1
+            return val
+    
+    def __len__(self) -> int:
+        return len(self.data)
     
     def __getitem__(self, key) -> 'Tensor':
         new_data = self.data[key]
@@ -225,6 +174,55 @@ class Tensor:
         
         out._backward = _backward
 
+        return out
+    
+    # *************************
+    # ******* Other ops *******
+    # *************************
+    def exp(self) -> 'Tensor':
+        return np.e**self
+    
+    
+    def log(self) -> 'Tensor':
+        out = Tensor(np.log(self.data), (self,), '<Log>', requires_grad=self.requires_grad)
+        
+        def _backward():
+            if self.requires_grad:
+                self._grad += (out._grad / (self.data + 1e-10)) 
+                
+        out._backward = _backward
+        
+        return out
+    
+    
+    def sqrt(self) -> 'Tensor':
+        out = Tensor(np.sqrt(self.data), (self,), '<Sqrt>', requires_grad=self.requires_grad)
+        
+        def _backward():
+            if self.requires_grad:
+                self._grad += out._grad / (2 * out.data)
+                
+        out._backward = _backward
+        
+        return out
+    
+    
+    def flatten(self, start_dim=0, end_dim=-1) -> 'Tensor':
+        shape = self.shape
+        start = start_dim if start_dim != -1 else len(shape)
+        end = end_dim if end_dim != -1 else len(shape)
+        if start > end:
+            raise RuntimeError("flatten() has invalid args: start_dim cannot come after end_dim")
+        if start < end:
+            shape = self.shape[:start] + (-1,) + self.shape[end+1:]
+        out = Tensor(self.data.reshape(shape), (self,), '<Flatten>', requires_grad=self.requires_grad)
+        
+        def _backward():
+            if self.requires_grad:
+                self._grad += out._grad.reshape(self.shape)
+                
+        out._backward = _backward
+        
         return out
     
     
@@ -290,18 +288,6 @@ class Tensor:
     @staticmethod
     def zeros(shape, dtype=None, requires_grad=False, name=None):
         return Tensor(np.zeros(shape), dtype=dtype, requires_grad=requires_grad, name=name)
-    
-    
-    def add(self, t2:'Tensor') -> 'Tensor':
-        return self + t2
-    
-    
-    def mul(self, t2:'Tensor') -> 'Tensor':
-        return self * t2
-    
-    
-    def matmul(self, t2:'Tensor') -> 'Tensor':
-        return self @ t2
     
     
     def reshape(self, shape:tuple) -> 'Tensor':
@@ -454,6 +440,16 @@ class Tensor:
 
         return out
     
+    def copy(self) -> 'Tensor':
+        """
+        Returns a copy of the tensor.
+
+        Returns
+        -------
+        Tensor
+            The copy.
+        """
+        return Tensor(self.data, device=self.device)
     
     def contiguous(self) -> 'Tensor':
         """
@@ -629,95 +625,10 @@ class Tensor:
         return out
     
     
-    def flatten(self, start_dim=0, end_dim=-1) -> 'Tensor':
-        shape = self.shape
-        start = start_dim if start_dim != -1 else len(shape)
-        end = end_dim if end_dim != -1 else len(shape)
-        if start > end:
-            raise RuntimeError("flatten() has invalid args: start_dim cannot come after end_dim")
-        if start < end:
-            shape = self.shape[:start] + (-1,) + self.shape[end+1:]
-        out = Tensor(self.data.reshape(shape), (self,), '<Flatten>', requires_grad=self.requires_grad)
-        
-        def _backward():
-            if self.requires_grad:
-                self._grad += out._grad.reshape(self.shape)
-                
-        out._backward = _backward
-        
-        return out
-    
-    
-    def exp(self) -> 'Tensor':
-        return np.e**self
-    
-    
-    def log(self) -> 'Tensor':
-        out = Tensor(np.log(self.data), (self,), '<Log>', requires_grad=self.requires_grad)
-        
-        def _backward():
-            if self.requires_grad:
-                self._grad += (out._grad / (self.data + 1e-10)) 
-                
-        out._backward = _backward
-        
-        return out
-    
-    
-    def sqrt(self) -> 'Tensor':
-        out = Tensor(np.sqrt(self.data), (self,), '<Sqrt>', requires_grad=self.requires_grad)
-        
-        def _backward():
-            if self.requires_grad:
-                self._grad += out._grad / (2 * out.data)
-                
-        out._backward = _backward
-        
-        return out
-    
-    
     @staticmethod
     def is_floating_point(array) -> bool:
         return array.dtype == np.float16 or array.dtype == np.float32 or array.dtype == np.float64
-    
-    
-    def backward(self, grad:np.ndarray=None):
-        if not self.requires_grad:
-            raise RuntimeError("Trying to call backward on Tensor with requires_grad=False")
-
-        if grad is None:
-            if self.data.size > 1:
-                raise RuntimeError("grad must be specified for non-scalar tensors")
-            else:
-                grad = np.array(1.0, dtype=self.data.dtype)
         
-        assert self.is_floating_point(grad), "expected float dtype for grad, got %s" % grad.dtype
-          
-        if not isinstance(grad, np.ndarray):
-            raise ValueError("Gradient parameter must be a numpy array")
-        
-        # Topological order all of the children in the graph 
-        # (init gradients for those who are going to need it)
-        ordered_nodes = []
-        visited_nodes = set()
-        def visit_node(node):
-            if node not in visited_nodes:
-                visited_nodes.add(node)
-                for child in node._children:
-                    if child.requires_grad and child._grad is None:
-                        child.zero_()
-                    visit_node(child)
-                ordered_nodes.append(node)
-        visit_node(self)
-
-        # Go one tensor at a time and apply the chain rule to get its gradient
-        self._grad = grad
-        for i, node in enumerate(reversed(ordered_nodes)):
-            if node.grad_fn is not None:
-                node.grad_fn()
-            if node is not self and not node.is_leaf and not node._retain_grad and not retain_grads__:
-                del node._grad
-                node._grad = None
     
     def zero_(self):
         self._grad = np.zeros_like(self.data)
@@ -804,52 +715,38 @@ class Tensor:
                   "during autograd.backward(). If you indeed want the .grad field to be populated " + 
                   "for a non-leaf Tensor, use .retain_grad() on the non-leaf Tensor")
         return Tensor(self._grad) if self._grad is not None else None
+
+    @grad.setter
+    def grad(self, grad:'Tensor'):
+        self._grad = grad.data
     
     @property
     def grad_fn(self) -> 'Tensor':
         return self._grad_fn
     
     @grad_fn.setter
-    def _backward(self, grad_fn):
+    def grad_fn(self, grad_fn):
         if gradient__ and self.requires_grad:
             self._grad_fn = grad_fn
+            
+            
+    def backward(self, grad:'Tensor'=None):
+        if not self.requires_grad:
+            raise RuntimeError("Trying to call backward on Tensor with requires_grad=False")
+
+        if grad is None:
+            if self.data.size > 1:
+                raise RuntimeError("grad must be specified for non-scalar tensors")
+            else:
+                grad = Tensor(1.0, dtype=self.dtype)
+        
+        assert self.is_floating_point(grad), "expected float dtype for grad, got %s" % grad.dtype
+          
+        if not isinstance(grad, Tensor):
+            raise ValueError("Gradient parameter must be a Tensor")
+        
+        self.autograd.backward(self.grad_fn, grad)
     
-    
-    def __iter__(self):
-        self._current_idx = 0
-        return self
-    
-    def __next__(self) -> 'Tensor':
-        if self._current_idx >= len(self):
-            raise StopIteration
-        else:
-            val = self[self._current_idx]
-            self._current_idx += 1
-            return val
-    
-    def __len__(self) -> int:
-        return len(self.data)
-    
-    def __neg__(self) -> 'Tensor': # -self
-        return self * -1.0
-
-    def __radd__(self, other) -> 'Tensor': # other + self
-        return self + other
-
-    def __sub__(self, other) -> 'Tensor': # self - other
-        return self + (-other)
-
-    def __rsub__(self, other) -> 'Tensor': # other - self
-        return other + (-self)
-
-    def __rmul__(self, other) -> 'Tensor': # other * self
-        return self * other
-
-    def __truediv__(self, other) -> 'Tensor': # self / other
-        return self * other**-1
-
-    def __rtruediv__(self, other) -> 'Tensor': # other / self
-        return other * self**-1
     
     @staticmethod
     def pretty_numpy(array:np.ndarray, precision=4, separator=',') -> str: 
@@ -867,10 +764,10 @@ class Tensor:
         string = f"{beggining}{data_str}, shape={self.shape}"
         
         if self.requires_grad:
-            string += f", req_grad={self.requires_grad}"
-            
-        if self._operation is not None:
-            string += f", op={self._operation}"
+            if self.grad_fn is not None:
+                string += f", grad_fn={self.grad_fn}"
+            else:
+                string += f", requires_grad={self.requires_grad}"
             
         if self._name is not None:
             string += f", name={self._name}"

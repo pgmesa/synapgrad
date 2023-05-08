@@ -1,10 +1,10 @@
 from typing import Any
 from abc import ABC, abstractmethod
 from .. import Tensor
-from .functional import (
-    mse_loss, nll_loss, cross_entropy_loss, bce_loss, softmax_fn,
-    bce_with_logits_loss, relu_fn, epsilon
-)
+# from .functional import (
+#     mse_loss, nll_loss, cross_entropy_loss, bce_loss, softmax_fn,
+#     bce_with_logits_loss, relu_fn, epsilon
+# )
 import numpy as np
 
 

@@ -1,7 +1,7 @@
 
 from abc import ABC, abstractmethod
 
-from .. import engine, Tensor
+from .. import Tensor, tensor
 import numpy as np
 
 
@@ -58,7 +58,7 @@ class SGD(Optimizer):
     
     def step(self):
         super().step()
-        with engine.no_grad():
+        with tensor.no_grad():
             for i, p in enumerate(self.parameters):
                 grad = p._grad
                 
@@ -119,7 +119,7 @@ class Adam(Optimizer):
     
     def step(self):
         super().step()
-        with engine.no_grad():
+        with tensor.no_grad():
             for i, p in enumerate(self.parameters):
                 grad = -p._grad if self.maximize else p._grad   
                     

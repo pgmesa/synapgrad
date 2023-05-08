@@ -1,7 +1,7 @@
 import numpy as np
-from .. import nn, Tensor, engine
+from .. import nn, Tensor, tensor
 from .neurons import init_weights
-from .functional import unfold, fold
+# from .functional import unfold, fold
 from .initializations import init_weights
 
 
