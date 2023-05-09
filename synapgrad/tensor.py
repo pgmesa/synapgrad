@@ -48,7 +48,7 @@ def tensor(data, requires_grad=False, dtype=None) -> 'Tensor':
 
 class Tensor:
     
-    def __init__(self, data, _children=(), _operation=None, requires_grad=False, dtype=None, name=None, device=Device.CPU) -> None:
+    def __init__(self, data, _children=(), _operation=None, requires_grad=False, dtype=None, name=None, device=None) -> None:
         """
         Creates a Tensor object from the given data, which is always transformed internally into a numpy array.
 
@@ -66,7 +66,7 @@ class Tensor:
         assert isinstance(data, np.ndarray), "data must be a list or numpy array"
         
         self.data = data
-        self.device = device
+        self.device = device if device is not None else Device.CPU
         # Internal variables used for autograd graph construction
         self._grad = None
         self._grad_fn = None
@@ -145,9 +145,8 @@ class Tensor:
     def __rtruediv__(self, other) -> 'Tensor': # other / self
         return other * self**-1
     
-    # ************************
-    # ******* Iter ops *******
-    # ************************
+    def __getitem__(self, key) -> 'Tensor':
+        return self.F.slice(self, key)
     
     def __iter__(self):
         self._current_idx = 0
@@ -163,22 +162,11 @@ class Tensor:
     
     def __len__(self) -> int:
         return len(self.data)
-    
-    def __getitem__(self, key) -> 'Tensor':
-        new_data = self.data[key]
-        out = Tensor(new_data, (self,), _operation='<Slice>', requires_grad=self.requires_grad)
 
-        def _backward():
-            if self.requires_grad:
-                self._grad[key] = out._grad
-        
-        out._backward = _backward
-
-        return out
-    
     # *************************
     # ******* Other ops *******
     # *************************
+    
     def exp(self) -> 'Tensor':
         return np.e**self
     
@@ -281,13 +269,21 @@ class Tensor:
     
     
     @staticmethod
-    def ones(shape, dtype=None, requires_grad=False, name=None):
-        return Tensor(np.ones(shape), dtype=dtype, requires_grad=requires_grad, name=name)
+    def ones(shape, dtype=None, requires_grad=False, name=None, device=None):
+        return Tensor(np.ones(shape), dtype=dtype, requires_grad=requires_grad, name=name, device=device)
+    
+    @staticmethod
+    def ones_like(tensor:'Tensor', dtype=None, requires_grad=False, name=None, device=None):
+        return Tensor(np.ones_like(tensor.data), dtype=dtype, requires_grad=requires_grad, name=name, device=device)
     
     
     @staticmethod
-    def zeros(shape, dtype=None, requires_grad=False, name=None):
+    def zeros(shape, dtype=None, requires_grad=False, name=None, device=None):
         return Tensor(np.zeros(shape), dtype=dtype, requires_grad=requires_grad, name=name)
+    
+    @staticmethod
+    def zeros_like(tensor:'Tensor', dtype=None, requires_grad=False, name=None, device=None):
+        return Tensor(np.zeros_like(tensor.data), dtype=dtype, requires_grad=requires_grad, name=name, device=device)
     
     
     def reshape(self, shape:tuple) -> 'Tensor':
@@ -718,6 +714,8 @@ class Tensor:
 
     @grad.setter
     def grad(self, grad:'Tensor'):
+        if not self.matches_shape(grad):
+            raise RuntimeError(f"Attempt to assign grad ({grad.shape}) to  a Tensor ({self.shape}) that has a different shape")
         self._grad = grad.data
     
     @property

@@ -72,7 +72,7 @@ class Mul(Function):
             raise RuntimeError(f"Mul: {x1.device} not supported")
             
         out = Tensor(out_data, device=x1.device, requires_grad=requires_grad, _children=(x1,x2), _operation="<Mul>")
-        
+
         ctx.save_for_backward(x1, x2)
         
         return out
@@ -112,9 +112,6 @@ class MatMul(Function):
     def forward(ctx, x1:Tensor, x2:Tensor):
         if x1.device != x2.device:
             raise RuntimeError("Matmul: x and y must be on the same device")
-        
-        if x1.shape[1] != x2.shape[0]:
-            raise Exception(f"Shapes don't match: {x1.shape}, {x2.shape}")
         
         requires_grad = x1.requires_grad or x2.requires_grad
         
@@ -172,18 +169,18 @@ class Pow(Function):
             
         out = Tensor(out_data, device=x.device, requires_grad=x.requires_grad, _children=(x,), _operation="<Pow>")
         
-        ctx.save_for_backward(out)
+        ctx.save_for_backward(x)
         ctx.n = n
         
         return out
 
     @staticmethod
     def backward(ctx, grad_output:Tensor):
-        out, = ctx.saved_tensors
+        x, = ctx.saved_tensors
         n = ctx.n
         
         if grad_output.device == Device.CPU:
-            a_grad = ops_cpu.pow_backward(grad_output.data, out.data, n)
+            a_grad = ops_cpu.pow_backward(grad_output.data, x.data, n)
         else:
             raise RuntimeError(f"Pow: {grad_output.device} not supported")
             
@@ -231,7 +228,7 @@ class RPow(Function):
         n = ctx.n
         
         if grad_output.device == Device.CPU:
-            a_grad = ops_cpu.pow_backward(grad_output.data, out.data, n)
+            a_grad = ops_cpu.rpow_backward(grad_output.data, out.data, n)
         else:
             raise RuntimeError(f"RPow: {grad_output.device} not supported")
             
@@ -290,3 +287,53 @@ def neg(x:Tensor):
         Tensor: The result of the negation.
     """
     return Neg.apply(x)
+
+
+class Slice(Function):
+    
+    @staticmethod
+    def forward(ctx, x:Tensor, s:slice):
+        if x.device == Device.CPU:
+            out_data = ops_cpu.slice_forward(x.data, s)
+        else:
+            raise RuntimeError(f"Slice: {x.device} not supported")
+            
+        out = Tensor(out_data, device=x.device, requires_grad=x.requires_grad, _children=(x,), _operation="<RPow>")
+        
+        ctx.x_shape = x.shape
+        ctx.slice = s
+        
+        return out
+
+    @staticmethod
+    def backward(ctx, grad_output:Tensor):
+        x_shape = ctx.x_shape
+        s = ctx.slice
+        
+        if grad_output.device == Device.CPU:
+            a_grad = ops_cpu.slice_backward(grad_output.data, x_shape, s)
+        else:
+            raise RuntimeError(f"Neg: {grad_output.device} not supported")
+            
+        x_grad = Tensor(a_grad, device=grad_output.device)
+
+        return x_grad
+
+
+def slice(x:Tensor, s:slice):
+    """ 
+    Slice a tensor
+
+    Args:
+        x (Tensor): First tensor.
+        s (slice): Slice.
+
+    Returns:
+        Tensor: The result of the slice.
+    """
+    return Slice.apply(x, s)
+
+
+# *************************
+# ******* Other ops *******
+# *************************

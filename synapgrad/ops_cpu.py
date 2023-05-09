@@ -6,11 +6,14 @@ epsilon = 1e-12
 # ----------------------------- Helpers -----------------------------
 # -------------------------------------------------------------------
 def unbroadcast(grad:np.ndarray, shape:tuple, to_keep:int=0) -> np.ndarray:
-    while len(grad.shape) != len(shape):
-        grad = grad.sum(axis=0)
-    for i in range(len(shape) - to_keep):
-        if grad.shape[i] != shape[i]:
-            grad = grad.sum(axis=i, keepdims=True)
+    if len(grad.shape) < len(shape):
+        grad = np.zeros(shape) + grad
+    else:
+        while len(grad.shape) > len(shape):
+            grad = grad.sum(axis=0)
+        for i in range(len(shape) - to_keep):
+            if grad.shape[i] != shape[i]:
+                grad = grad.sum(axis=i, keepdims=True)
     return grad
 
 
@@ -56,9 +59,10 @@ def matmul_forward(a, b):
     return a @ b
 
 def matmul_backward(grad, a, b):
-    grad_a = np.matmul(grad, b.T)
-    grad_b = np.matmul(a.T, grad)
-    return grad_a, grad_b
+    print(grad.shape, a.shape, b.shape)
+    grad_a = grad @ np.moveaxis(b, -2, -1)
+    grad_b = np.moveaxis(a, -2, -1) @ grad
+    return unbroadcast(grad_a, a.shape), unbroadcast(grad_b, b.shape)
 
 
 @check_inputs
@@ -84,6 +88,15 @@ def neg_forward(a):
 def neg_backward(grad):
     return -grad
 
+
+@check_inputs
+def slice_forward(a, s):
+    return a[s]
+
+def slice_backward(grad, a_shape, s):
+    grad_a = np.zeros(a_shape)
+    grad_a[s] = grad
+    return grad_a
 
 # *************************
 # ******* Other ops *******

@@ -4,15 +4,29 @@ from .device import Device
 
 
 def backward(grad_fn, grad_output):
+    """ 
+    Recursively calculate the gradients of the computational graph 
+    
+    Args:
+        grad_fn (Function): The function that computes the gradients. BackwardFunction or AccumulatedGrad
+        grad_output (Tensor): The gradient of the output.
+    
+    Returns:
+        None
+    """
     if grad_fn:
         gradients = grad_fn.apply(grad_output)
-        functions = grad_fn.next_functions
-        for i in range(len(functions)):
-            if functions[i]:
-                backward(functions[i], gradients[i])
+        next_functions = grad_fn.next_functions
+        for i in range(len(next_functions)):
+            if next_functions[i]:
+                backward(next_functions[i], gradients[i])
     
 
 class Context:
+    """
+    Context class for the autograd functions. It allows to save tensors and variables in the forward pass
+    that are needed for the backward pass.
+    """
     
     def __init__(self) -> None:
         self.saved_tensors = []
@@ -31,6 +45,11 @@ class Context:
     
 
 class Function:
+    """
+    Superclass for all autograd functions. 
+    
+    All autograd functions must subclass this class.  
+    """
     
     def __call__(self, *args: Any, **kwds: Any) -> Any:
         self.apply(*args, **kwds)
@@ -53,14 +72,15 @@ class Function:
         
         for t in inputs:
             if isinstance(t, Tensor):
-                if t.requires_grad and (t.is_leaf or t._retain_grad):
-                    t.grad_fn = AccumulateGrad(t)
-                elif t.requires_grad and not t.is_leaf:
-                    t.grad_fn = BackwardFunction(cls)
-                elif not t.requires_grad and t.is_leaf:
-                    t.grad_fn = None
-                else:
-                    raise Exception("Leaf Tensors should ha")
+                if t.grad_fn is None:
+                    if t.requires_grad and (t.is_leaf or t._retain_grad):
+                        t.grad_fn = AccumulateGrad(t)
+                    elif t.requires_grad and not t.is_leaf:
+                        t.grad_fn = BackwardFunction(cls)
+                    elif not t.requires_grad and t.is_leaf:
+                        t.grad_fn = None
+                    else:
+                        raise Exception("Tensor requires_grad is False but is_leaf is also False")
         
                 backward_function.next_functions.append(t.grad_fn)
             else:
@@ -72,6 +92,9 @@ class Function:
         
     
 class AccumulateGrad:
+    """
+    Node where the gradient is accumulated. 
+    """
     
     def __init__(self, tensor:Tensor) -> None:
         self.tensor = tensor
@@ -83,17 +106,19 @@ class AccumulateGrad:
             self.tensor.grad = Tensor(grad_tensor.data, device=self.tensor.device)
         else:
             if self.tensor.device is Device.CPU:
-                self.variable.grad.data += grad_tensor.data
+                self.tensor.grad.data += grad_tensor.data
     
     
 class BackwardFunction:
-    """ Function to be passed to :attr:`Tensor.grad_fn` to compute the gradient of a :class:`Tensor`.
-        This funcition does not accumulate the gradient in the tensor"""
+    """ 
+    Function to be passed to :attr:`Tensor.grad_fn` to compute the gradient of a :class:`Tensor`.
+    This funcition does not accumulate the gradient in the tensor
+    """
     
     def __init__(self, function:Function) -> None:
+        self.ctx = Context()
         self.function = function
         self.next_functions = []
-        self.ctx = Context()
         self.name = function.__name__ + "Backward"
     
     def apply(self, *gradients):
