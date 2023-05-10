@@ -1,4 +1,6 @@
 
-from .tensor import Tensor, tensor, no_grad, manual_seed, retain_grads
-from . import autograd, ops_cpu, device, functional
+from . import autograd, ops_cpu, device, tensor, utils
+
+from .autograd import no_grad, retain_grads, manual_seed, Tensor
+from .tensor.autograd_functions import *
 from .nn.functional import *

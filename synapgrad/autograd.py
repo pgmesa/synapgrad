@@ -3,6 +3,37 @@ from .tensor import Tensor
 from .device import Device
 
 
+gradient__ = True
+retain_grads__ = False
+
+
+class no_grad:
+    
+    def __init__(self) -> None:
+        self.prev = gradient__
+    
+    def __enter__(self):
+        global gradient__
+        gradient__ = False
+        
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        global gradient__
+        gradient__ = self.prev
+        
+
+class retain_grads:
+    def __init__(self) -> None:
+        self.prev = retain_grads__
+    
+    def __enter__(self):
+        global retain_grads__
+        retain_grads__ = True
+        
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        global retain_grads__
+        retain_grads__ = self.prev
+
+
 def backward(grad_fn, grad_output):
     """ 
     Recursively calculate the gradients of the computational graph 
@@ -73,7 +104,7 @@ class Function:
         for t in inputs:
             if isinstance(t, Tensor):
                 if t.grad_fn is None:
-                    if t.requires_grad and (t.is_leaf or t._retain_grad):
+                    if t.requires_grad and (t.is_leaf or t._retain_grad or retain_grads__):
                         t.grad_fn = AccumulateGrad(t)
                     elif t.requires_grad and not t.is_leaf:
                         t.grad_fn = BackwardFunction(cls)
