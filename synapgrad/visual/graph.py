@@ -1,5 +1,4 @@
-
-from .. import Tensor
+from synapgrad.tensor import Tensor
 from graphviz import Digraph
 
 

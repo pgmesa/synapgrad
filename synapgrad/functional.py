@@ -1,7 +1,7 @@
-from ..autograd import Function
-from .tensor import Tensor
-from .. import cpu_ops
-from ..device import Device
+from synapgrad import cpu_ops
+from synapgrad.tensor import Tensor
+from synapgrad.autograd import Function
+from synapgrad.device import Device
 
 """
 Tensor autograd functions.
@@ -147,7 +147,15 @@ class MatMul(Function):
     
 def matmul(x1:Tensor, x2:Tensor):
     """ 
-    Matrix multiplication between tensors
+    Matrix multiplication between tensors. To multiply 2 different n dimensional tensors, with n > 2,
+    dimension -1 of first tensor and -2 of second tensor must agree. Furthermore, dimensions [0 to -3]
+    must also agree or one of them be equal to 1. If tensors are not of the same shape, the missing 
+    dimensions are filled with 1.
+    
+    Examples:
+        [2,2,4,5] @ [1,5,20] = [2,2,4,20]
+        but
+        [2,2,4,5] @ [3,1,5,20] = Error (3 != 2 at dimension 0)
 
     Args:
         x1 (Tensor): First tensor.
@@ -190,7 +198,7 @@ class Pow(Function):
             
         x_grad = Tensor(a_grad, device=grad_output.device)
 
-        return x_grad, None
+        return x_grad
 
 
 def pow(x:Tensor, n:'int | float'):
@@ -238,7 +246,7 @@ class RPow(Function):
             
         x_grad = Tensor(a_grad, device=grad_output.device)
 
-        return x_grad, None
+        return x_grad
     
     
 def rpow(x:Tensor, n:'int | float'):
@@ -341,3 +349,40 @@ def slice(x:Tensor, s:slice):
 # *************************
 # ******* Other ops *******
 # *************************
+
+class Clone(Function):
+    
+    @staticmethod
+    def forward(ctx, x:Tensor):
+        if x.device == Device.CPU:
+            out_data = cpu_ops.clone_forward(x.data)
+        else:
+            raise RuntimeError(f"Clone: {x.device} not supported")
+        
+        out = Tensor(out_data, device=x.device, requires_grad=x.requires_grad, children=(x,), operation="<Clone>")
+        
+        return out
+    
+    @staticmethod
+    def backward(ctx, grad_output:Tensor):
+        if grad_output.device == Device.CPU:
+            a_grad = cpu_ops.clone_backward(grad_output.data)
+        else:
+            raise RuntimeError(f"Clone: {grad_output.device} not supported")
+        
+        x_grad = Tensor(a_grad, device=grad_output.device)
+        
+        return x_grad
+   
+    
+def clone(x:Tensor):
+    """ 
+    Clone a tensor
+
+    Args:
+        x (Tensor): First tensor.
+
+    Returns:
+        Tensor: The result of the clone.
+    """
+    return Clone.apply(x)

@@ -1,6 +1,6 @@
 from typing import Any
-from .tensor import Tensor
-from .device import Device
+from synapgrad.tensor import Tensor
+from synapgrad.device import Device
 
 
 gradient__ = True
@@ -48,6 +48,10 @@ def backward(grad_fn, grad_output):
     if grad_fn:
         gradients = grad_fn.apply(grad_output)
         next_functions = grad_fn.next_functions
+        
+        if isinstance(gradients, Tensor):
+            gradients = [gradients]
+        
         for i in range(len(next_functions)):
             if next_functions[i]:
                 backward(next_functions[i], gradients[i])
@@ -70,9 +74,10 @@ class Context:
         
         for t in tensors:
             if not isinstance(t, Tensor):
-                raise Exception(f"Got type {t} but only Tensors should be saved in save_for_backward")
+                tp_t = type(t).__name__
+                raise RuntimeError(f"Got type {tp_t} but only Tensors should be saved in save_for_backward")
 
-            self.saved_tensors.append(t.copy())
+            self.saved_tensors.append(t.detach().clone())
     
 
 class Function:
@@ -95,29 +100,31 @@ class Function:
     
     @classmethod
     def apply(cls, *inputs):
-        """ Applies the function to the given inputs. For example Add, Mul, Matmul, ... """
+        """ 
+        Applies the function to the given inputs and associates its backward function.
+        For example Add, Mul, Matmul, ...
+        """
         
         backward_function = BackwardFunction(cls)
         
         output_tensor = cls.forward(backward_function.ctx, *inputs)
         
-        for t in inputs:
-            if isinstance(t, Tensor):
-                if t.grad_fn is None:
-                    if t.requires_grad and (t.is_leaf or t._retain_grad or retain_grads__):
-                        t.grad_fn = AccumulateGrad(t)
-                    elif t.requires_grad and not t.is_leaf:
-                        t.grad_fn = BackwardFunction(cls)
-                    elif not t.requires_grad and t.is_leaf:
-                        t.grad_fn = None
-                    else:
-                        raise Exception("Tensor requires_grad is False but is_leaf is also False")
-        
-                backward_function.next_functions.append(t.grad_fn)
-            else:
-                backward_function.next_functions.append(None)
+        if output_tensor.requires_grad:
+            for t in inputs:
+                if isinstance(t, Tensor):
+                    if t.grad_fn is None:
+                        if t.requires_grad and (t.is_leaf or t._retain_grad or retain_grads__):
+                            t.grad_fn = AccumulateGrad(t)
+                        elif t.requires_grad and not t.is_leaf:
+                            t.grad_fn = BackwardFunction(cls)
+                        elif not t.requires_grad and t.is_leaf:
+                            t.grad_fn = None
+                        else:
+                            raise Exception("Tensor requires_grad is False but is_leaf is also False")
             
-        output_tensor.grad_fn = backward_function
+                    backward_function.next_functions.append(t.grad_fn)
+                
+            output_tensor.grad_fn = backward_function
         
         return output_tensor    
         

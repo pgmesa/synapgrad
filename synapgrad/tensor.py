@@ -1,12 +1,21 @@
-import random
-import numpy as np
 import importlib
-from typing import Union
+from typing import Iterable, Union
 
-from ..device import Device
-from ..utils import tools
+import numpy as np
 
-        
+from synapgrad.device import Device
+from synapgrad import tools
+
+
+F = None
+autograd = None
+
+def lazy_import():
+    global F, autograd, tools
+    F = importlib.import_module("synapgrad.functional")
+    autograd = importlib.import_module("synapgrad.autograd")
+
+
 default_type__ = np.float32
 
 
@@ -36,22 +45,20 @@ class Tensor:
             >>> Tensor([0.0], dtype=np.float64, requires_grad=True, name="bias", device=Device.GPU)
             
         """
+        if F is None: lazy_import()
+        
         if not isinstance(data, np.ndarray):
             data = np.array(data, dtype=default_type__)
         if dtype is not None and data.dtype != dtype: data = data.astype(dtype)
         assert isinstance(data, np.ndarray), "data must be a list or numpy array"
-        
-        # Import inside tensor in order to avoid circular import issue
-        self.F = importlib.import_module('.autograd_functions', 'synapgrad.tensor')
-        self.autograd = importlib.import_module('.autograd', 'synapgrad')
         
         self.data = data
         self.device = device if device is not None else Device.CPU
         # Internal variables used for autograd graph construction
         self._grad = None
         self._grad_fn = None
-        req_grad = requires_grad and self.autograd.gradient__
-        if req_grad and not self.is_floating_point(data):
+        req_grad = requires_grad and autograd.gradient__
+        if req_grad and not self.is_floating_point:
             raise RuntimeError("Only floating point Tensors can require gradients")
         self._requires_grad = req_grad
         self._is_leaf = True
@@ -99,7 +106,7 @@ class Tensor:
                     "If you want to use a computed variable in a subgraph that doesn't require " + 
                     "differentiation use var_no_grad = var.detach()")
         
-        if value and not self.is_floating_point(self.data):
+        if value and not self.is_floating_point:
             raise RuntimeError("Only floating point Tensors can require gradients")
         
         self._requires_grad = value
@@ -125,7 +132,7 @@ class Tensor:
     
     @grad_fn.setter
     def grad_fn(self, grad_fn):
-        if not self.requires_grad:
+        if grad_fn is not None and not self.requires_grad:
             raise RuntimeError("Cannot set grad_fn for a Tensor that doesn't require grad")
         self._grad_fn = grad_fn
     
@@ -177,7 +184,7 @@ class Tensor:
         """ 
         Clones a tensor
         """
-        return self.F.clone(self)
+        return F.clone(self)
     
     def contiguous(self) -> 'Tensor':
         """
@@ -223,12 +230,12 @@ class Tensor:
             else:
                 grad = Tensor(1.0, dtype=self.dtype)
         
-        assert self.is_floating_point(grad), "expected float dtype for grad, got %s" % grad.dtype
+        assert tools.is_floating_point(grad), "expected float dtype for grad, got %s" % grad.dtype
           
         if not isinstance(grad, Tensor):
             raise ValueError("Gradient parameter must be a Tensor")
         
-        self.autograd.backward(self.grad_fn, grad)
+        autograd.backward(self.grad_fn, grad)
         
         
     def zero_(self):
@@ -259,30 +266,30 @@ class Tensor:
     def __add__(self, summand:'Tensor') -> 'Tensor':
         summand = summand if isinstance(summand, Tensor) else Tensor(summand, device=self.device)
         from . import functional as F
-        return  self.F.add(self, summand)
+        return  F.add(self, summand)
         
         
     def __mul__(self, factor:'Tensor') -> 'Tensor':
         factor = factor if isinstance(factor, Tensor) else Tensor(factor, device=self.device)
         from . import functional as F
-        return self.F.mul(self, factor)
+        return F.mul(self, factor)
     
     
     def __matmul__(self, tensor:'Tensor') -> 'Tensor':
         tensor = tensor if isinstance(tensor, Tensor) else Tensor(tensor, device=self.device)
-        return self.F.matmul(self, tensor)
+        return F.matmul(self, tensor)
     
     
     def __rmatmul__(self, tensor:'Tensor') -> 'Tensor':
         tensor = tensor if isinstance(tensor, Tensor) else Tensor(tensor, device=self.device)
-        return self.F.matmul(tensor, self)
+        return F.matmul(tensor, self)
     
     
     def __pow__(self, power) -> 'Tensor':
-        return self.F.pow(self, power)
+        return F.pow(self, power)
 
     def __rpow__(self, power) -> 'Tensor':
-        return self.F.rpow(self, power)
+        return F.rpow(self, power)
 
     def __neg__(self) -> 'Tensor': # -self
         return self * -1.0
@@ -306,7 +313,7 @@ class Tensor:
         return other * self**-1
     
     def __getitem__(self, key) -> 'Tensor':
-        return self.F.slice(self, key)
+        return F.slice(self, key)
     
     def __iter__(self):
         self._current_idx = 0
@@ -661,3 +668,123 @@ class Tensor:
         string += f", dtype={self.dtype})"
             
         return string
+    
+    
+# ****************************
+# ******* Initializers *******
+# ****************************
+
+def tensor(data, requires_grad=False, dtype=None, device=None) -> 'Tensor':
+    """
+    Creates a Tensor from a numpy array
+    """
+    return Tensor(data.astype(default_type__), requires_grad=requires_grad, dtype=dtype, device=device)
+
+def ones(shape, dtype=None, requires_grad=False, name=None, device=None):
+    """
+    Creates a Tensor filled with ones
+    """
+    return Tensor(np.ones(shape).astype(default_type__), dtype=dtype, requires_grad=requires_grad, name=name, device=device)
+
+def ones_like(tensor:'Tensor', dtype=None, requires_grad=False, name=None, device=None):
+    """
+    Creates a Tensor filled with ones
+    """
+    return Tensor(np.ones_like(tensor.data), dtype=dtype, requires_grad=requires_grad, name=name, device=device)
+
+def zeros(shape, dtype=None, requires_grad=False, name=None, device=None):
+    """
+    Creates a Tensor filled with zeros
+    """
+    return Tensor(np.zeros(shape).astype(default_type__), dtype=dtype, requires_grad=requires_grad, name=name, device=device)
+
+def zeros_like(tensor:'Tensor', dtype=None, requires_grad=False, name=None, device=None):
+    """
+    Creates a Tensor filled with zeros
+    """
+    return Tensor(np.zeros_like(tensor.data), dtype=dtype, requires_grad=requires_grad, name=name, device=device)
+
+def arange(*interval, dtype=None, requires_grad=False, name=None, device=None):
+    """
+    Creates a Tensor filled with values in range
+    """
+    return Tensor(np.arange(*interval).astype(default_type__), dtype=dtype, requires_grad=requires_grad, name=name, device=device)
+
+def randn(*shape, dtype=None, requires_grad=False, name=None, device=None):
+    """
+    Creates a Tensor filled with values drawn from the standard Gaussian distribution
+    """
+    return Tensor(np.random.randn(*shape).astype(default_type__), dtype=dtype, requires_grad=requires_grad, name=name, device=device)
+
+def normal(loc, scale, *shape, dtype=None, requires_grad=False, name=None, device=None):
+    """
+    Creates a Tensor filled with values drawn from a custom Gaussian distribution
+    """
+    return Tensor(np.random.normal(loc, scale, *shape).astype(default_type__), dtype=dtype, requires_grad=requires_grad, name=name, device=device)
+
+def randint(low, high, *shape,  dtype=None, requires_grad=False, name=None, device=None):
+    """
+    Creates a Tensor filled with integer values drawn in the range between low and high
+    """
+    return Tensor(np.random.randint(low, high, *shape).astype(default_type__), dtype=dtype, requires_grad=requires_grad, name=name, device=device)
+
+def eye(dim, dtype=None, requires_grad=False, name=None, device=None):
+    """
+    Creates a 2-dimensional Tensor (matrix) equal to the identity matrix.
+    """
+    return Tensor(np.eye(dim).astype(default_type__), dtype=dtype, requires_grad=requires_grad, name=name, device=device)
+
+# ***********************************
+# ******* Tensor manipulation *******
+# ***********************************
+
+def concat(tensors:Iterable['Tensor'], dim=0) -> 'Tensor':
+    r_grad = False
+    for t in tensors:
+        if not isinstance(t, Tensor):
+            raise ValueError("All elements must be Tensors")
+        r_grad = r_grad or t.requires_grad
+    
+    # Check that all tensors have the same shape along the specified dim
+    dim_sizes = [tensor.shape[dim] for tensor in tensors]
+    assert all(size == dim_sizes[0] for size in dim_sizes), f"Shapes along dim {dim} don't match: {[tensor.shape for tensor in tensors]}"
+
+    # Concatenate the sections along the specified dim
+    new_data = np.concatenate([tensor.data for tensor in tensors], axis=dim)
+
+    out = Tensor(new_data, tensors, _operation='<Concat>', requires_grad=r_grad)
+
+    def _backward():
+        # Split the gradient along the concatenated dim and backpropagate to each input tensor
+        grads = np.split(out._grad, len(tensors), axis=dim)
+        for tensor, grad in zip(tensors, grads):
+            if not tensor.requires_grad: continue
+            tensor._grad += grad
+
+    out._backward = _backward
+    
+    return out
+
+
+def stack(tensors:Iterable['Tensor'], dim=0) -> 'Tensor':
+    r_grad = False
+    for t in tensors:
+        if not isinstance(t, Tensor):
+            raise ValueError("All elements must be Tensors")
+        r_grad = r_grad or t.requires_grad
+
+    # Stack data along the specified dim
+    new_data = np.stack([tensor.data for tensor in tensors], axis=dim)
+
+    out = Tensor(new_data, tensors, _operation='<Stack>', requires_grad=r_grad)
+
+    def _backward():
+        # Split the gradient along the concatenated dim and backpropagate to each input tensor
+        grads = np.rollaxis(out._grad, axis=dim)
+        for tensor, grad in zip(tensors, grads):
+            if not tensor.requires_grad: continue
+            tensor._grad += grad
+
+    out._backward = _backward
+    
+    return out

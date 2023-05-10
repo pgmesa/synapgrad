@@ -1,5 +1,5 @@
 import numpy as np
-from . import Tensor
+from synapgrad.tensor import Tensor
 
 epsilon = 1e-12
 
@@ -101,6 +101,14 @@ def slice_backward(grad, a_shape, s):
 # *************************
 # ******* Other ops *******
 # *************************
+
+@check_inputs
+def clone_forward(a):
+    return a.copy()
+
+def clone_backward(grad):
+    return grad
+
 
 @check_inputs
 def log_forward(a):
