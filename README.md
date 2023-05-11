@@ -14,7 +14,7 @@ This project implements a completely functional engine for tracking operations b
 
 Built on top of the engine, the deep learning library implements the most common functions, layers, losses and optimizers in order to create AI models able to solve real problems.
 
-This library tries to mimic Pytorch in a simplified way, but with similar functions and behaviour. 
+This library tries to mimic Pytorch (version used: 1.12.1) in a simplified way, but with similar functions and behaviour. 
 
 ## Aim of the project
 The aim of this project is to create a deep learning library from scratch, without using any existing framework (such as keras, pytorch, tensorflow, sklearn, etc) in order to fully understand the core aspects of how they work. Specifically, this time I have focused on pytorch.

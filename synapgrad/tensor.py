@@ -1,5 +1,5 @@
 import importlib
-from typing import Iterable, Union
+from typing import Iterable, Union, List
 
 import numpy as np
 
@@ -61,7 +61,6 @@ class Tensor:
         if req_grad and not self.is_floating_point:
             raise RuntimeError("Only floating point Tensors can require gradients")
         self._requires_grad = req_grad
-        self._is_leaf = True
         self._retain_grad = False
         self._children = children
         self._operation = operation # Operation that produced this node, for graphviz / debugging
@@ -73,7 +72,11 @@ class Tensor:
     
     @property
     def name(self) -> str:
-        return "" if self._name is None else str(self._name)    
+        return "" if self._name is None else str(self._name)   
+    
+    @name.setter
+    def name(self, name):
+        self._name = name
         
     @property
     def shape(self) -> tuple:
@@ -113,12 +116,12 @@ class Tensor:
     
     @property
     def grad(self) -> 'Tensor':
-        if not self._is_leaf and not self._retain_grad:
+        if not self.is_leaf and not self.has_grad() and not self._retain_grad:
             print("\n[!] WARNING: The .grad attribute of a Tensor that is not a " + 
                   "leaf Tensor is being accessed. Its .grad attribute won't be populated " + 
                   "during autograd.backward(). If you indeed want the .grad field to be populated " + 
                   "for a non-leaf Tensor, use .retain_grad() on the non-leaf Tensor")
-        return Tensor(self._grad) if self._grad is not None else None
+        return Tensor(self._grad, device=self.device) if self._grad is not None else None
 
     @grad.setter
     def grad(self, grad:'Tensor'):
@@ -143,9 +146,14 @@ class Tensor:
     def numel(self) -> int:
         return self.data.size
     
+    def has_grad(self) -> bool:
+        return self._grad is not None
+    
     def retain_grad(self):
         """ Grad is not stored in not leaf tensors by default to avoid extra memory consumption. Call
         this function to enable grad storing"""
+        if not self.requires_grad:
+            raise RuntimeError("Cannot retain_grad() on a Tensor that doesn't require grad")
         self._retain_grad = True
             
     def matches_shape(self, tensor:Union['Tensor', np.ndarray]) -> bool:
@@ -228,7 +236,7 @@ class Tensor:
             if self.data.size > 1:
                 raise RuntimeError("grad must be specified for non-scalar tensors")
             else:
-                grad = Tensor(1.0, dtype=self.dtype)
+                grad = Tensor(1.0, dtype=self.dtype, device=self.device)
         
         assert tools.is_floating_point(grad), "expected float dtype for grad, got %s" % grad.dtype
           
@@ -237,7 +245,7 @@ class Tensor:
         
         autograd.backward(self.grad_fn, grad)
         
-        
+
     def zero_(self):
         self.grad = Tensor(np.zeros_like(self.data), device=self.device)
     
@@ -646,7 +654,7 @@ class Tensor:
         return self.__repr__()
         
     def __repr__(self) -> str:
-        pretty_data_str = tools.pretty_numpy(self.data)
+        pretty_data_str = tools.pretty_numpy(self.data, separator=", ")
         beggining = "Tensor("
         data_str = ""
         for i, line in enumerate(pretty_data_str.splitlines(keepends=True)):
@@ -657,7 +665,7 @@ class Tensor:
         
         if self.requires_grad:
             if self.grad_fn is not None:
-                string += f", grad_fn={self.grad_fn}"
+                string += f", grad_fn=<{self.grad_fn.name()}>"
             else:
                 string += f", requires_grad={self.requires_grad}"
             
@@ -678,7 +686,8 @@ def tensor(data, requires_grad=False, dtype=None, device=None) -> 'Tensor':
     """
     Creates a Tensor from a numpy array
     """
-    return Tensor(data.astype(default_type__), requires_grad=requires_grad, dtype=dtype, device=device)
+    data = np.array(data).astype(default_type__)
+    return Tensor(data, requires_grad=requires_grad, dtype=dtype, device=device)
 
 def ones(shape, dtype=None, requires_grad=False, name=None, device=None):
     """
@@ -788,3 +797,19 @@ def stack(tensors:Iterable['Tensor'], dim=0) -> 'Tensor':
     out._backward = _backward
     
     return out
+
+
+def unbind(tensor:Tensor, dim:int=0) -> List['Tensor']:
+    """
+    Splits a tensor along the specified dim into a list of tensors
+    """
+    ...
+    # if not isinstance(tensor, Tensor):
+    #     raise ValueError("tensor must be a Tensor")
+    # if dim >= tensor.ndim or dim < -tensor.ndim:
+    #     raise ValueError("dim must be between 0 and tensor.ndim")
+    # if dim < 0:
+    #     dim += tensor.ndim
+    
+    # # Split the tensor along the specified dim
+    # return [Tensor(tensor.data[i], (tensor,), _operation='<Unbind>', requires_grad=tensor.requires_grad) for i in range(tensor.shape[dim])]

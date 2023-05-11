@@ -15,17 +15,12 @@ class Add(Function):
 
     @staticmethod
     def forward(ctx, x1:Tensor, x2:Tensor):
-        if x1.device != x2.device:
-            raise RuntimeError("Add: x and y must be on the same device")
-
-        requires_grad = x1.requires_grad or x2.requires_grad
-
         if x1.device == Device.CPU:
             out_data = cpu_ops.add_forward(x1.data, x2.data)
         else:
-            raise RuntimeError(f"Add: {x1.device} not supported")
+            raise RuntimeError(f"{ctx.fn_name}: {x1.device} not supported")
 
-        out = Tensor(out_data, device=x1.device, requires_grad=requires_grad, children=(x1,x2), operation="<Add>")
+        out = Tensor(out_data, device=x1.device)
 
         ctx.x1_shape = x1.shape
         ctx.x2_shape = x2.shape
@@ -39,7 +34,7 @@ class Add(Function):
         if grad_output.device == Device.CPU:
             a_grad, b_grad = cpu_ops.add_backward(grad_output.data, x1_shape, x2_shape)
         else:
-            raise RuntimeError(f"Add: {grad_output.device} not supported")
+            raise RuntimeError(f"{ctx.fn_name}: {grad_output.device} not supported")
         
         x1_grad = Tensor(a_grad, device=grad_output.device)
         x2_grad = Tensor(b_grad, device=grad_output.device)
@@ -65,17 +60,12 @@ class Mul(Function):
 
     @staticmethod
     def forward(ctx, x1:Tensor, x2:Tensor):
-        if x1.device != x2.device:
-            raise RuntimeError("Mul: x and y must be on the same device")
-        
-        requires_grad = x1.requires_grad or x2.requires_grad
-        
         if x1.device == Device.CPU:
             out_data = cpu_ops.mul_forward(x1.data, x2.data)
         else:
-            raise RuntimeError(f"Mul: {x1.device} not supported")
+            raise RuntimeError(f"{ctx.fn_name}: {x1.device} not supported")
             
-        out = Tensor(out_data, device=x1.device, requires_grad=requires_grad, children=(x1,x2), operation="<Mul>")
+        out = Tensor(out_data, device=x1.device)
 
         ctx.save_for_backward(x1, x2)
         
@@ -88,7 +78,7 @@ class Mul(Function):
         if grad_output.device == Device.CPU:
             a_grad, b_grad = cpu_ops.mul_backward(grad_output.data, x1.data, x2.data)
         else:
-            raise RuntimeError(f"Mul: {grad_output.device} not supported")
+            raise RuntimeError(f"{ctx.fn_name}: {grad_output.device} not supported")
         
         x1_grad = Tensor(a_grad, device=grad_output.device)
         x2_grad = Tensor(b_grad, device=grad_output.device)
@@ -114,17 +104,12 @@ class MatMul(Function):
 
     @staticmethod
     def forward(ctx, x1:Tensor, x2:Tensor):
-        if x1.device != x2.device:
-            raise RuntimeError("Matmul: x and y must be on the same device")
-        
-        requires_grad = x1.requires_grad or x2.requires_grad
-        
         if x1.device == Device.CPU:
             out_data = cpu_ops.matmul_forward(x1.data, x2.data)
         else:
-            raise RuntimeError(f"MatMul: {x1.device} not supported")
+            raise RuntimeError(f"{ctx.fn_name}: {x1.device} not supported")
             
-        out = Tensor(out_data, device=x1.device, requires_grad=requires_grad, children=(x1,x2), operation="<Matmul>")
+        out = Tensor(out_data, device=x1.device)
         
         ctx.save_for_backward(x1, x2)
         
@@ -137,7 +122,7 @@ class MatMul(Function):
         if grad_output.device == Device.CPU:
             a_grad, b_grad = cpu_ops.matmul_backward(grad_output.data, x1.data, x2.data)
         else:
-            raise RuntimeError(f"MatMul: {grad_output.device} not supported")
+            raise RuntimeError(f"{ctx.fn_name}: {grad_output.device} not supported")
             
         x1_grad = Tensor(a_grad, device=grad_output.device)
         x2_grad = Tensor(b_grad, device=grad_output.device)
@@ -177,9 +162,9 @@ class Pow(Function):
         if x.device == Device.CPU:
             out_data = cpu_ops.pow_forward(x.data, n)
         else:
-            raise RuntimeError(f"Pow: {x.device} not supported")
+            raise RuntimeError(f"{ctx.fn_name}: {x.device} not supported")
             
-        out = Tensor(out_data, device=x.device, requires_grad=x.requires_grad, children=(x,), operation="<Pow>")
+        out = Tensor(out_data, device=x.device)
         
         ctx.save_for_backward(x)
         ctx.n = n
@@ -194,7 +179,7 @@ class Pow(Function):
         if grad_output.device == Device.CPU:
             a_grad = cpu_ops.pow_backward(grad_output.data, x.data, n)
         else:
-            raise RuntimeError(f"Pow: {grad_output.device} not supported")
+            raise RuntimeError(f"{ctx.fn_name}: {grad_output.device} not supported")
             
         x_grad = Tensor(a_grad, device=grad_output.device)
 
@@ -225,9 +210,9 @@ class RPow(Function):
         if x.device == Device.CPU:
             out_data = cpu_ops.rpow_forward(x.data, n)
         else:
-            raise RuntimeError(f"RPow: {x.device} not supported")
+            raise RuntimeError(f"{ctx.fn_name}: {x.device} not supported")
             
-        out = Tensor(out_data, device=x.device, requires_grad=x.requires_grad, children=(x,), operation="<RPow>")
+        out = Tensor(out_data, device=x.device)
         
         ctx.save_for_backward(out)
         ctx.n = n
@@ -242,7 +227,7 @@ class RPow(Function):
         if grad_output.device == Device.CPU:
             a_grad = cpu_ops.rpow_backward(grad_output.data, out.data, n)
         else:
-            raise RuntimeError(f"RPow: {grad_output.device} not supported")
+            raise RuntimeError(f"{ctx.fn_name}: {grad_output.device} not supported")
             
         x_grad = Tensor(a_grad, device=grad_output.device)
 
@@ -270,9 +255,9 @@ class Neg(Function):
         if x.device == Device.CPU:
             out_data = cpu_ops.neg_forward(x.data)
         else:
-            raise RuntimeError(f"Neg: {x.device} not supported")
+            raise RuntimeError(f"{ctx.fn_name}: {x.device} not supported")
             
-        out = Tensor(out_data, device=x.device, requires_grad=x.requires_grad, children=(x,), operation="<RPow>")
+        out = Tensor(out_data, device=x.device)
         
         return out
 
@@ -281,7 +266,7 @@ class Neg(Function):
         if grad_output.device == Device.CPU:
             a_grad = cpu_ops.neg_backward(grad_output.data)
         else:
-            raise RuntimeError(f"Neg: {grad_output.device} not supported")
+            raise RuntimeError(f"{ctx.fn_name}: {grad_output.device} not supported")
             
         x_grad = Tensor(a_grad, device=grad_output.device)
 
@@ -308,9 +293,9 @@ class Slice(Function):
         if x.device == Device.CPU:
             out_data = cpu_ops.slice_forward(x.data, s)
         else:
-            raise RuntimeError(f"Slice: {x.device} not supported")
+            raise RuntimeError(f"{ctx.fn_name}: {x.device} not supported")
             
-        out = Tensor(out_data, device=x.device, requires_grad=x.requires_grad, children=(x,), operation="<RPow>")
+        out = Tensor(out_data, device=x.device)
         
         ctx.x_shape = x.shape
         ctx.slice = s
@@ -325,7 +310,7 @@ class Slice(Function):
         if grad_output.device == Device.CPU:
             a_grad = cpu_ops.slice_backward(grad_output.data, x_shape, s)
         else:
-            raise RuntimeError(f"Neg: {grad_output.device} not supported")
+            raise RuntimeError(f"{ctx.fn_name}: {grad_output.device} not supported")
             
         x_grad = Tensor(a_grad, device=grad_output.device)
 
@@ -345,6 +330,20 @@ def slice(x:Tensor, s:slice):
     """
     return Slice.apply(x, s)
 
+# ***********************************
+# ******* Tensor manipulation *******
+# ***********************************
+
+class Concat(Function):
+    ...
+    
+    
+class Stack(Function):
+    ...
+    
+    
+class Unbind(Function):
+    ...
 
 # *************************
 # ******* Other ops *******
@@ -357,9 +356,9 @@ class Clone(Function):
         if x.device == Device.CPU:
             out_data = cpu_ops.clone_forward(x.data)
         else:
-            raise RuntimeError(f"Clone: {x.device} not supported")
+            raise RuntimeError(f"{ctx.fn_name}: {x.device} not supported")
         
-        out = Tensor(out_data, device=x.device, requires_grad=x.requires_grad, children=(x,), operation="<Clone>")
+        out = Tensor(out_data, device=x.device)
         
         return out
     
@@ -368,7 +367,7 @@ class Clone(Function):
         if grad_output.device == Device.CPU:
             a_grad = cpu_ops.clone_backward(grad_output.data)
         else:
-            raise RuntimeError(f"Clone: {grad_output.device} not supported")
+            raise RuntimeError(f"{ctx.fn_name}: {grad_output.device} not supported")
         
         x_grad = Tensor(a_grad, device=grad_output.device)
         
