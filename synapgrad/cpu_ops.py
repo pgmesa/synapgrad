@@ -1,5 +1,6 @@
 import numpy as np
 from synapgrad.tensor import Tensor
+from synapgrad.tools import recursively_seek_tensors
 
 epsilon = 1e-12
 
@@ -16,13 +17,12 @@ def unbroadcast(grad:np.ndarray, shape:tuple, to_keep:int=0) -> np.ndarray:
                 grad = grad.sum(axis=i, keepdims=True)
     return grad
 
-
 def check_inputs(func):
     
     def check(*args, **kwargs):
-        for arg in args:
-            if isinstance(arg, Tensor):
-                raise TypeError(f"Tensor is not supported as input in ops_cpu.py")
+        found_tensors = recursively_seek_tensors(*args)
+        if len(found_tensors) > 0:
+            raise TypeError(f"Tensor is not supported as input in cpu_ops.py")
         return func(*args, **kwargs)
     
     return check
@@ -38,9 +38,10 @@ def check_inputs(func):
 def add_forward(a, b):
     return a + b
 
+@check_inputs
 def add_backward(grad, a_shape, b_shape):
-    grad_a = np.ones(a_shape) * grad.data
-    grad_b = np.ones(b_shape) * grad.data
+    grad_a = np.ones(a_shape, dtype=grad.dtype) * grad.data
+    grad_b = np.ones(b_shape, dtype=grad.dtype) * grad.data
     return unbroadcast(grad_a, a_shape), unbroadcast(grad_b, b_shape)
 
 
@@ -48,6 +49,7 @@ def add_backward(grad, a_shape, b_shape):
 def mul_forward(a, b):
     return a * b
 
+@check_inputs
 def mul_backward(grad, a, b):
     grad_a = grad * b
     grad_b = grad * a
@@ -58,6 +60,7 @@ def mul_backward(grad, a, b):
 def matmul_forward(a, b):
     return a @ b
 
+@check_inputs
 def matmul_backward(grad, a, b):
     print(grad.shape, a.shape, b.shape)
     grad_a = grad @ np.moveaxis(b, -2, -1)
@@ -69,6 +72,7 @@ def matmul_backward(grad, a, b):
 def pow_forward(a, n):
     return a ** n
 
+@check_inputs
 def pow_backward(grad, a, n):
     return n * (a ** (n - 1)) * grad
 
@@ -77,6 +81,7 @@ def pow_backward(grad, a, n):
 def rpow_forward(a, n):
     return n ** a
 
+@check_inputs
 def rpow_backward(grad, exp_n_a, n):
     return (exp_n_a * np.log(n)) * grad
 
@@ -85,6 +90,7 @@ def rpow_backward(grad, exp_n_a, n):
 def neg_forward(a):
     return -a
 
+@check_inputs
 def neg_backward(grad):
     return -grad
 
@@ -93,10 +99,45 @@ def neg_backward(grad):
 def slice_forward(a, s):
     return a[s]
 
+@check_inputs
 def slice_backward(grad, a_shape, s):
-    grad_a = np.zeros(a_shape)
+    grad_a = np.zeros(a_shape, dtype=grad.dtype)
     grad_a[s] = grad
     return grad_a
+
+# **********************************
+# ******* Array manipulation *******
+# **********************************
+
+@check_inputs
+def concat_forward(a, axis):
+    return np.concatenate(a, axis=axis)
+
+@check_inputs
+def concat_backward(grad, num_inputs, axis):
+    grads = np.split(grad, num_inputs, axis=axis)
+    return grads
+
+
+@check_inputs
+def stack_forward(a, axis):
+    return np.stack(a, axis=axis)
+
+@check_inputs
+def stack_backward(grad, axis):
+    return unbind_forward(grad, axis)
+
+
+@check_inputs
+def unbind_forward(a, axis):
+    return [np.squeeze(s, axis=axis) for s in np.split(a, a.shape[axis], axis=axis)] 
+
+@check_inputs
+def unbind_backward(grad, a_shape, axis, index):
+    slice_grad = np.zeros(a_shape, dtype=grad.dtype)
+    axes = tuple([slice(None) if i != axis else index for i in range(len(a_shape))])
+    slice_grad[axes] = grad
+    return slice_grad
 
 # *************************
 # ******* Other ops *******
@@ -106,6 +147,7 @@ def slice_backward(grad, a_shape, s):
 def clone_forward(a):
     return a.copy()
 
+@check_inputs
 def clone_backward(grad):
     return grad
 

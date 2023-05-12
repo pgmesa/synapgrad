@@ -1,8 +1,7 @@
 from synapgrad.autograd import no_grad, retain_grads, retain_children, retain_all
 from synapgrad.tensor import (
     Tensor, tensor, ones, ones_like, zeros, zeros_like, 
-    arange, randn, normal, randint, eye,
-    stack, concat, unbind
+    arange, rand, randn, normal, randint, eye
 )
 from synapgrad.functional import *
 from synapgrad.tools import manual_seed

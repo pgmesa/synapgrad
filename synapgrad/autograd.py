@@ -2,6 +2,7 @@ from typing import Any
 from contextlib import contextmanager
 from synapgrad.tensor import Tensor
 from synapgrad.device import Device
+from synapgrad.tools import recursively_seek_tensors
 
 
 # ********************************
@@ -80,8 +81,12 @@ def backward(grad_fn, grad_output):
             gradients = [gradients]
         
         for i in range(len(next_functions)):
-            if next_functions[i]:
-                backward(next_functions[i], gradients[i])
+            next_grad_fn, out_index = next_functions[i]
+            if next_grad_fn:
+                if next_grad_fn.var_out_index != out_index:
+                    raise RuntimeError("Internal backprop error - next_grad_fn.var_out_index " + 
+                        f"{next_grad_fn.var_out_index} != out_index {out_index}")
+                backward(next_grad_fn, gradients[i])
     
 
 class Context:
@@ -136,34 +141,41 @@ class Function:
         Applies the function to the given inputs and associates its backward function.
         For example: Add, Mul, Matmul, ...
         """
-        same_device = all(not isinstance(x, Tensor) or x.device == inputs[0].device for x in inputs)
+        input_tensors = recursively_seek_tensors(*inputs)
+        
+        if len(input_tensors) == 0:
+            raise RuntimeError(f"{cls.__name__}: no input tensors found")
+        same_device = all(x.device == input_tensors[0].device for x in input_tensors)
         if not same_device:
             raise RuntimeError(f"{cls.__name__}: all inputs must be on the same device")
         
         backward_ctx = Context(cls)
-        output_tensor = cls.forward(backward_ctx, *inputs)
+        output_tensors = cls.forward(backward_ctx, *inputs)
         
-        output_tensor.requires_grad = any(isinstance(inp, Tensor) and inp.requires_grad for inp in inputs) and gradient__
-        output_tensor._children = [inp for inp in inputs if isinstance(inp, Tensor)] if retain_children__ else ()
-        output_tensor._operation = cls.__name__
-        output_tensor._retain_grad = retain_grads__
-        
-        if output_tensor.requires_grad:
-            next_functions = []
-            for t in inputs:
-                if isinstance(t, Tensor):
+        if isinstance(output_tensors, Tensor):
+            output_tensors = [output_tensors]
+            
+        for i, output_tensor in enumerate(output_tensors):
+            output_tensor.requires_grad = any(inp.requires_grad for inp in input_tensors) and gradient__
+            output_tensor._children = input_tensors if retain_children__ else ()
+            output_tensor._operation = cls.__name__
+            output_tensor._retain_grad = retain_grads__
+            
+            if output_tensor.requires_grad:
+                next_functions = []
+                for t in input_tensors:
                     grad_fn = t.grad_fn
                     if t.requires_grad and t.is_leaf:
                         grad_fn = AccumulateGrad(t)
 
-                    next_functions.append(grad_fn)
+                    next_functions.append((grad_fn, grad_fn.var_out_index if grad_fn else 0))
 
-            backward_function = BackwardFunction(backward_ctx, output_tensor)
-            backward_function.next_functions = tuple(next_functions)
+                backward_function = BackwardFunction(backward_ctx, output_tensor, i)
+                backward_function.next_functions = tuple(next_functions)
 
-            output_tensor.grad_fn = backward_function
+                output_tensor.grad_fn = backward_function
         
-        return output_tensor    
+        return output_tensors if len(output_tensors) > 1 else output_tensors[0]    
         
     
 class AccumulateGrad:
@@ -171,8 +183,9 @@ class AccumulateGrad:
     Node where the gradient is accumulated. 
     """
     
-    def __init__(self, tensor:Tensor) -> None:
-        self.tensor = tensor
+    def __init__(self, variable:Tensor) -> None:
+        self.variable = variable
+        self.var_out_index = 0
         self.next_functions = ()
         self.__name = "AccumulateGrad"
         
@@ -180,11 +193,11 @@ class AccumulateGrad:
         return self.__name
     
     def apply(self, grad_tensor:Tensor):
-        if not self.tensor.has_grad():
-            self.tensor.zero_()
+        if not self.variable.has_grad():
+            self.variable.zero_()
             
-        if self.tensor.device is Device.CPU:
-            self.tensor.grad.data += grad_tensor.data
+        if self.variable.device is Device.CPU:
+            self.variable.grad.data += grad_tensor.data
         else:
             raise RuntimeError("AccumulateGrad is not supported for GPU tensors")
     
@@ -201,23 +214,25 @@ class BackwardFunction:
     This funcition does not accumulate the gradient in the tensor
     """
     
-    def __init__(self, context:Context, tensor:Tensor) -> None:
+    def __init__(self, context:Context, variable:Tensor, var_out_index:int) -> None:
         """ 
         Args:
-            function (Function): The function that computes the gradients
-            tensor (Tensor): The tensor which will be the owner if this BackwardFunction, stored in .grad_fn attribute
+            variable (Tensor): The tensor which will be the owner if this BackwardFunction, stored in .grad_fn attribute
             context (Context): The context with the necessary data to compute the backward pass.
+            var_out_index (int): The index of this tensor in the list of outputs generated by the function in the forward pass
         """
         self.ctx = context
-        self.tensor = tensor
+        self.variable = variable
+        self.var_out_index = var_out_index
         self.next_functions = ()
     
     def name(self):
         return self.ctx.fn_name + "Backward"
     
     def apply(self, *grad_output):
-        if self.tensor._retain_grad:
-            AccumulateGrad(self.tensor).apply(*grad_output)
+        if self.variable._retain_grad:
+            AccumulateGrad(self.variable).apply(*grad_output)
+        self.ctx.forward_out_index = self.var_out_index
         return self.ctx.function.backward(self.ctx, *grad_output)
     
     def __repr__(self) -> str:

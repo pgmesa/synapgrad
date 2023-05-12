@@ -1,23 +1,97 @@
 import importlib
-from typing import Iterable, Union, List
+from typing import Union
 
 import numpy as np
 
 from synapgrad.device import Device
-from synapgrad import tools
 
+
+default_type__ = np.float32
 
 F = None
 autograd = None
+tools = None
 
 def lazy_import():
     global F, autograd, tools
     F = importlib.import_module("synapgrad.functional")
     autograd = importlib.import_module("synapgrad.autograd")
+    tools = importlib.import_module("synapgrad.tools")
 
+# ****************************
+# ******* Initializers *******
+# ****************************
 
-default_type__ = np.float32
+def tensor(data, requires_grad=False, dtype=None, device=None) -> 'Tensor':
+    """
+    Creates a Tensor from a numpy array
+    """
+    data = np.array(data).astype(default_type__)
+    return Tensor(data, requires_grad=requires_grad, dtype=dtype, device=device)
 
+def ones(shape, dtype=None, requires_grad=False, name=None, device=None):
+    """
+    Creates a Tensor filled with ones
+    """
+    return Tensor(np.ones(shape).astype(default_type__), dtype=dtype, requires_grad=requires_grad, name=name, device=device)
+
+def ones_like(tensor:'Tensor', dtype=None, requires_grad=False, name=None, device=None):
+    """
+    Creates a Tensor filled with ones
+    """
+    return Tensor(np.ones_like(tensor.data), dtype=dtype, requires_grad=requires_grad, name=name, device=device)
+
+def zeros(shape, dtype=None, requires_grad=False, name=None, device=None):
+    """
+    Creates a Tensor filled with zeros
+    """
+    return Tensor(np.zeros(shape).astype(default_type__), dtype=dtype, requires_grad=requires_grad, name=name, device=device)
+
+def zeros_like(tensor:'Tensor', dtype=None, requires_grad=False, name=None, device=None):
+    """
+    Creates a Tensor filled with zeros
+    """
+    return Tensor(np.zeros_like(tensor.data), dtype=dtype, requires_grad=requires_grad, name=name, device=device)
+
+def arange(*interval, dtype=None, requires_grad=False, name=None, device=None):
+    """
+    Creates a Tensor filled with values in range
+    """
+    return Tensor(np.arange(*interval).astype(default_type__), dtype=dtype, requires_grad=requires_grad, name=name, device=device)
+
+def rand(*shape, dtype=None, requires_grad=False, name=None, device=None):
+    """
+    Creates a Tensor filled with values drawn from the uniform distribution
+    """
+    return Tensor(np.random.rand(*shape).astype(default_type__), dtype=dtype, requires_grad=requires_grad, name=name, device=device)
+
+def randn(*shape, dtype=None, requires_grad=False, name=None, device=None):
+    """
+    Creates a Tensor filled with values drawn from the standard Gaussian distribution
+    """
+    return Tensor(np.random.randn(*shape).astype(default_type__), dtype=dtype, requires_grad=requires_grad, name=name, device=device)
+
+def normal(loc, scale, *shape, dtype=None, requires_grad=False, name=None, device=None):
+    """
+    Creates a Tensor filled with values drawn from a custom Gaussian distribution
+    """
+    return Tensor(np.random.normal(loc, scale, *shape).astype(default_type__), dtype=dtype, requires_grad=requires_grad, name=name, device=device)
+
+def randint(low, high, *shape,  dtype=None, requires_grad=False, name=None, device=None):
+    """
+    Creates a Tensor filled with integer values drawn in the range between low and high
+    """
+    return Tensor(np.random.randint(low, high, *shape).astype(default_type__), dtype=dtype, requires_grad=requires_grad, name=name, device=device)
+
+def eye(dim, dtype=None, requires_grad=False, name=None, device=None):
+    """
+    Creates a 2-dimensional Tensor (matrix) equal to the identity matrix.
+    """
+    return Tensor(np.eye(dim).astype(default_type__), dtype=dtype, requires_grad=requires_grad, name=name, device=device)
+
+# ****************************
+# ******* Tensor Class *******
+# ****************************
 
 class Tensor:
     
@@ -41,8 +115,8 @@ class Tensor:
             >>> Tensor(np.array([1, 2, 3]))
             >>> Tensor(np.array([1, 2, 3]), dtype=np.float32)
             >>> Tensor(5.0, requires_grad=True, children=(a,b), operation="<Add>")
-            >>> Tensor(np.array([1, 2, 3]), dtype=np.float32, requires_grad=True, name="weights", device=Device.GPU)
-            >>> Tensor([0.0], dtype=np.float64, requires_grad=True, name="bias", device=Device.GPU)
+            >>> Tensor(np.array([1, 2, 3]), dtype=np.float32, requires_grad=True, name="weights", device=Device.CPU)
+            >>> Tensor([0.0], dtype=np.float64, requires_grad=True, name="bias", device=Device.CPU)
             
         """
         if F is None: lazy_import()
@@ -54,7 +128,7 @@ class Tensor:
         
         self.data = data
         self.device = device if device is not None else Device.CPU
-        # Internal variables used for autograd graph construction
+        # Internal variables
         self._grad = None
         self._grad_fn = None
         req_grad = requires_grad and autograd.gradient__
@@ -63,7 +137,7 @@ class Tensor:
         self._requires_grad = req_grad
         self._retain_grad = False
         self._children = children
-        self._operation = operation # Operation that produced this node, for graphviz / debugging
+        self._operation = operation
         self._name = name
         
     # **************************
@@ -676,140 +750,3 @@ class Tensor:
         string += f", dtype={self.dtype})"
             
         return string
-    
-    
-# ****************************
-# ******* Initializers *******
-# ****************************
-
-def tensor(data, requires_grad=False, dtype=None, device=None) -> 'Tensor':
-    """
-    Creates a Tensor from a numpy array
-    """
-    data = np.array(data).astype(default_type__)
-    return Tensor(data, requires_grad=requires_grad, dtype=dtype, device=device)
-
-def ones(shape, dtype=None, requires_grad=False, name=None, device=None):
-    """
-    Creates a Tensor filled with ones
-    """
-    return Tensor(np.ones(shape).astype(default_type__), dtype=dtype, requires_grad=requires_grad, name=name, device=device)
-
-def ones_like(tensor:'Tensor', dtype=None, requires_grad=False, name=None, device=None):
-    """
-    Creates a Tensor filled with ones
-    """
-    return Tensor(np.ones_like(tensor.data), dtype=dtype, requires_grad=requires_grad, name=name, device=device)
-
-def zeros(shape, dtype=None, requires_grad=False, name=None, device=None):
-    """
-    Creates a Tensor filled with zeros
-    """
-    return Tensor(np.zeros(shape).astype(default_type__), dtype=dtype, requires_grad=requires_grad, name=name, device=device)
-
-def zeros_like(tensor:'Tensor', dtype=None, requires_grad=False, name=None, device=None):
-    """
-    Creates a Tensor filled with zeros
-    """
-    return Tensor(np.zeros_like(tensor.data), dtype=dtype, requires_grad=requires_grad, name=name, device=device)
-
-def arange(*interval, dtype=None, requires_grad=False, name=None, device=None):
-    """
-    Creates a Tensor filled with values in range
-    """
-    return Tensor(np.arange(*interval).astype(default_type__), dtype=dtype, requires_grad=requires_grad, name=name, device=device)
-
-def randn(*shape, dtype=None, requires_grad=False, name=None, device=None):
-    """
-    Creates a Tensor filled with values drawn from the standard Gaussian distribution
-    """
-    return Tensor(np.random.randn(*shape).astype(default_type__), dtype=dtype, requires_grad=requires_grad, name=name, device=device)
-
-def normal(loc, scale, *shape, dtype=None, requires_grad=False, name=None, device=None):
-    """
-    Creates a Tensor filled with values drawn from a custom Gaussian distribution
-    """
-    return Tensor(np.random.normal(loc, scale, *shape).astype(default_type__), dtype=dtype, requires_grad=requires_grad, name=name, device=device)
-
-def randint(low, high, *shape,  dtype=None, requires_grad=False, name=None, device=None):
-    """
-    Creates a Tensor filled with integer values drawn in the range between low and high
-    """
-    return Tensor(np.random.randint(low, high, *shape).astype(default_type__), dtype=dtype, requires_grad=requires_grad, name=name, device=device)
-
-def eye(dim, dtype=None, requires_grad=False, name=None, device=None):
-    """
-    Creates a 2-dimensional Tensor (matrix) equal to the identity matrix.
-    """
-    return Tensor(np.eye(dim).astype(default_type__), dtype=dtype, requires_grad=requires_grad, name=name, device=device)
-
-# ***********************************
-# ******* Tensor manipulation *******
-# ***********************************
-
-def concat(tensors:Iterable['Tensor'], dim=0) -> 'Tensor':
-    r_grad = False
-    for t in tensors:
-        if not isinstance(t, Tensor):
-            raise ValueError("All elements must be Tensors")
-        r_grad = r_grad or t.requires_grad
-    
-    # Check that all tensors have the same shape along the specified dim
-    dim_sizes = [tensor.shape[dim] for tensor in tensors]
-    assert all(size == dim_sizes[0] for size in dim_sizes), f"Shapes along dim {dim} don't match: {[tensor.shape for tensor in tensors]}"
-
-    # Concatenate the sections along the specified dim
-    new_data = np.concatenate([tensor.data for tensor in tensors], axis=dim)
-
-    out = Tensor(new_data, tensors, _operation='<Concat>', requires_grad=r_grad)
-
-    def _backward():
-        # Split the gradient along the concatenated dim and backpropagate to each input tensor
-        grads = np.split(out._grad, len(tensors), axis=dim)
-        for tensor, grad in zip(tensors, grads):
-            if not tensor.requires_grad: continue
-            tensor._grad += grad
-
-    out._backward = _backward
-    
-    return out
-
-
-def stack(tensors:Iterable['Tensor'], dim=0) -> 'Tensor':
-    r_grad = False
-    for t in tensors:
-        if not isinstance(t, Tensor):
-            raise ValueError("All elements must be Tensors")
-        r_grad = r_grad or t.requires_grad
-
-    # Stack data along the specified dim
-    new_data = np.stack([tensor.data for tensor in tensors], axis=dim)
-
-    out = Tensor(new_data, tensors, _operation='<Stack>', requires_grad=r_grad)
-
-    def _backward():
-        # Split the gradient along the concatenated dim and backpropagate to each input tensor
-        grads = np.rollaxis(out._grad, axis=dim)
-        for tensor, grad in zip(tensors, grads):
-            if not tensor.requires_grad: continue
-            tensor._grad += grad
-
-    out._backward = _backward
-    
-    return out
-
-
-def unbind(tensor:Tensor, dim:int=0) -> List['Tensor']:
-    """
-    Splits a tensor along the specified dim into a list of tensors
-    """
-    ...
-    # if not isinstance(tensor, Tensor):
-    #     raise ValueError("tensor must be a Tensor")
-    # if dim >= tensor.ndim or dim < -tensor.ndim:
-    #     raise ValueError("dim must be between 0 and tensor.ndim")
-    # if dim < 0:
-    #     dim += tensor.ndim
-    
-    # # Split the tensor along the specified dim
-    # return [Tensor(tensor.data[i], (tensor,), _operation='<Unbind>', requires_grad=tensor.requires_grad) for i in range(tensor.shape[dim])]

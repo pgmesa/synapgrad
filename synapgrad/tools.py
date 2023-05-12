@@ -1,5 +1,6 @@
 import random
 import numpy as np
+from synapgrad.tensor import Tensor
 
 
 def manual_seed(seed:int):
@@ -119,3 +120,11 @@ def get_selected_from_indices(values:np.ndarray, indices:np.ndarray, dim) -> np.
     selected[slices] = 1
     
     return selected
+
+def recursively_seek_tensors(*inputs):
+    tensors = []
+    for arg in inputs:
+        if isinstance(arg, Tensor): tensors.append(arg)
+        elif isinstance(arg, list) or isinstance(arg, tuple):
+            tensors += recursively_seek_tensors(*arg)
+    return tensors 
