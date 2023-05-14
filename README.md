@@ -9,25 +9,23 @@ An autograd Tensor-based engine with a deep learning library built on top of it 
 pip install synapgrad
 ```
 
+## Synapgrad Requirements
+```r
+numpy==1.23.5 # Core
+graphviz==0.20.1 # Visualize DAG
+```
+
 ## Technical Description
 This project implements a completely functional engine for tracking operations between Tensors, by dynamically building a Directed Acyclic Graph (DAG), and an automatic backpropagation algorithm (reverse-mode autodiff) over this DAG.
 
-Built on top of the engine, the deep learning library implements the most common functions, layers, losses and optimizers in order to create AI models able to solve real problems.
+Built on top of the engine, the deep learning library implements the most common activation functions, layers, losses and optimizers in order to create AI models able to solve real problems.
 
-This library tries to mimic Pytorch (version used: 1.12.1) in a simplified way, but with similar functions and behaviour. 
+This library tries to mimic Pytorch (version used: 1.12.1) in a simplified way, but with similar functions and behaviour.
 
 ## Aim of the project
-The aim of this project is to create a deep learning library from scratch, without using any existing framework (such as keras, pytorch, tensorflow, sklearn, etc) in order to fully understand the core aspects of how they work. Specifically, this time I have focused on pytorch.
+The aim of this project is to create a deep learning library from scratch, without using any existing framework (such as keras, pytorch, tensorflow, sklearn, etc) in order to fully understand the core aspects of how they work. The whole project is inspired by Pytorch.
 
-However, some of these external frameworks have been used for the following reasons:
-
-- (pytorch) to check gradient calculation is correct.
-- (keras) to download handwritten digits MNIST dataset
-- (sklearn) to create 'make_moons' dataset
-
-This project stems from the amazing educational project `micrograd` by `karpathy` (https://github.com/karpathy/micrograd)
-
-Note: Supporting GPU execution is out of the scope of this project
+Note: Currently, GPU execution is not supported. 
 
 ## Autograd Example
 Below is a random example of some of the operations that can be tracked with synapgrad.Tensor
@@ -43,8 +41,8 @@ b = 2**Tensor(l2, requires_grad=True).unsqueeze(0)
 b.retain_grad()
 c = Tensor(4.0, requires_grad=True)
 
-out1 = Tensor.stack((a.squeeze(), b.squeeze()))[0]
-out2 = Tensor.concat((a*c, b), dim=1).transpose(0, 1)[0, :]
+out1 = synapgrad.stack((a.squeeze(), b.squeeze()))[0]
+out2 = synapgrad.concat((a*c, b), dim=1).transpose(0, 1)[0, :]
 out = out1 @ out2.view(3).unsqueeze(1)
 print(out) # outcome of this forward pass
 out.sum().backward()
@@ -78,6 +76,10 @@ In order to see the efficiency of synapgrad, it is compared with other existing 
 
 As can be observed, conv2d and batchnorm are currently much better optimized in Pytorch. I may attempt to optimize these layers in a future version.
 
+## Notebooks Requirements
+...
+
+
 ## Graph Visualization
 In the `examples/trace_graph.ipynb` notebook there is an example of how to display the graph that synapgrad creates in the background as operations are chained.
 
@@ -85,7 +87,7 @@ In the `examples/trace_graph.ipynb` notebook there is an example of how to displ
 import synapgrad
 from synapgrad import nn, utils
 
-with synapgrad.retain_grads():
+with synapgrad.retain_all():
     x = synapgrad.tensor([5.0, 3.0], requires_grad=True)
     x2 = synapgrad.tensor([6.0, 0.4], requires_grad=True)
     y = (x ** 3 + 3) 

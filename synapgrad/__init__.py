@@ -3,9 +3,20 @@ from synapgrad.tensor import (
     Tensor, tensor, ones, ones_like, zeros, zeros_like, 
     arange, rand, randn, normal, randint, eye
 )
-from synapgrad.functional import *
+from synapgrad.functional import (
+    add, mul, matmul, pow, rpow, neg, slice,
+    concat, stack, unbind,
+    clone, exp, log, sqrt, sum, mean, max, min, squeeze, unsqueeze,
+    reshape, transpose, flatten, unfold_dim 
+)
 from synapgrad.tools import manual_seed
 
-# from synapgrad.nn.functional import *
+from synapgrad.nn.functional import (
+    relu, tanh, sigmoid, softmax, log_softmax,
+    mse_loss, nll_loss, binary_cross_entropy, binary_cross_entropy_with_logits, cross_entropy
+)
 
-from synapgrad import autograd, cpu_ops, device, functional, visual, tensor, tools
+from synapgrad import (
+    autograd, cpu_ops, device, functional, tensor, tools,
+    nn, optim, visual
+)

@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from .. import Tensor
+from synapgrad.tensor import Tensor
     
 
 class Module(ABC):
@@ -20,12 +20,8 @@ class Module(ABC):
         for m in self.modules:
             m.eval()
         
-    def __call__(self, batch:Tensor) -> Tensor:
-        assert isinstance(batch, Tensor), "Input must be a Tensor" 
-        if len(batch.shape) <= 1:
-            raise ValueError(f"Module '{self.__class__.__name__}' expects a batched input, Shape=(batch_size, *), but received {batch.shape}")
-
-        return self.forward(batch)
+    def __call__(self, *inputs:Tensor, **kwargs) -> Tensor:
+        return self.forward(*inputs, **kwargs)
 
     def zero_grad(self):
         for p in self.parameters():
@@ -60,7 +56,7 @@ class Module(ABC):
         return num_params
     
     @abstractmethod
-    def forward(self, x:Tensor) -> Tensor:
+    def forward(self, *args, **kwargs) -> Tensor:
         pass
     
     def __repr__(self) -> str:
@@ -75,7 +71,7 @@ class Sequential(Module):
         super().__init__()
         self.track_modules(modules)
         
-    def forward(self, x: Tensor) -> Tensor:
+    def forward(self, x:Tensor) -> Tensor:
         inp = x
         for module in self.modules:
             out = module(inp)

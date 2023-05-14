@@ -165,6 +165,10 @@ class Tensor:
         return self.data.size
     
     @property
+    def ndim(self) -> int:
+        return self.data.ndim
+    
+    @property
     def is_leaf(self) -> bool:
         return not self.requires_grad or self.grad_fn is None
     
@@ -267,25 +271,6 @@ class Tensor:
         Clones a tensor
         """
         return F.clone(self)
-    
-    def contiguous(self) -> 'Tensor':
-        """
-        Returns a contiguous tensor.
-
-        Returns
-        -------
-        Tensor
-            The contiguous tensor.
-        """
-        out = Tensor(np.ascontiguousarray(self.data), (self,), '<Contiguous>', requires_grad=self.requires_grad)
-        
-        def _backward():
-            if self.requires_grad:
-                self._grad += out._grad
-            
-        out._backward = _backward
-        
-        return out
     
     # *********************************
     # *********** Backprop ************
@@ -417,100 +402,22 @@ class Tensor:
     # *************************
     
     def exp(self) -> 'Tensor':
-        return np.e**self
-    
+        return F.exp(self)
     
     def log(self) -> 'Tensor':
-        out = Tensor(np.log(self.data), (self,), '<Log>', requires_grad=self.requires_grad)
-        
-        def _backward():
-            if self.requires_grad:
-                self._grad += (out._grad / (self.data + 1e-10)) 
-                
-        out._backward = _backward
-        
-        return out
-    
+        return F.log(self)
     
     def sqrt(self) -> 'Tensor':
-        out = Tensor(np.sqrt(self.data), (self,), '<Sqrt>', requires_grad=self.requires_grad)
-        
-        def _backward():
-            if self.requires_grad:
-                self._grad += out._grad / (2 * out.data)
-                
-        out._backward = _backward
-        
-        return out
-    
+        return F.sqrt(self)
     
     def sum(self, dim:int=None, keepdims=False) -> 'Tensor':
-        out = Tensor(self.data.sum(axis=dim, keepdims=keepdims), (self,), '<Sum>', requires_grad=self.requires_grad)
-        
-        def _backward():
-            if self.requires_grad:
-                out_grad = out._grad
-                if not keepdims and dim is not None:
-                    s = list(self.shape)
-                    for d in dim: s[d] = 1
-                    out_grad = out._grad.reshape(s) 
-                self._grad += np.ones(self.shape) * out_grad
-            
-        out._backward = _backward
-        
-        return out
+        return F.sum(self, dim, keepdims)
     
-    
-    def mean(self, dim:int=None, keepdims=False) -> 'Tensor':
-        out = Tensor(self.data.mean(axis=dim, keepdims=keepdims), (self,), '<Mean>', requires_grad=self.requires_grad)
-        
-        def _backward():
-            if self.requires_grad:
-                if dim is None:
-                    size = self.data.size
-                elif isinstance(dim, int):
-                    size = self.data.shape[dim]
-                elif isinstance(dim, tuple):
-                    size = 1
-                    for d in dim: size *= self.data.shape[d]
-                out_grad = out._grad
-                if not keepdims and dim is not None:
-                    s = list(self.shape)
-                    for d in dim: s[d] = 1
-                    out_grad = out._grad.reshape(s) 
-                self._grad += (np.ones(self.shape) / size) * out_grad
-            
-        out._backward = _backward
-        
-        return out
+    def mean(self, dim:int=None, keepdims=False) -> 'Tensor':        
+        return F.mean(self, dim, keepdims)
 
-    
-    def max(self, dim:int=None, keepdims=False, return_indices=None, return_selected=False) -> tuple['Tensor',...]:
-        max_values = self.data.max(axis=dim, keepdims=keepdims)
-        max_indices = self.data.argmax(axis=dim)
-        selected = tools.get_selected_from_indices(self.data, max_indices, dim)
-        
-        out = Tensor(max_values, (self,), '<Max>', requires_grad=self.requires_grad)
-        
-        def _backward():
-            if self.requires_grad:
-                grad = out._grad
-                if not keepdims and dim is not None:
-                    grad = np.expand_dims(grad, axis=dim)
-                self._grad += selected * grad
-            
-        out._backward = _backward
-        
-        out_tuple = (out,)
-        
-        if return_indices is not False and dim is not None:
-            out_tuple += (max_indices,)
-        
-        if return_selected:
-            out_tuple += (selected,)
-        
-        return out_tuple if len(out_tuple) > 1 else out_tuple[0]
-    
+    def max(self, dim:int=None, keepdims=False) -> 'Tensor': 
+        return F.max(self, dim, keepdims)
     
     def min(self, dim:int=None, keepdims=False, return_indices=None, return_selected=False) -> tuple['Tensor',...]:
         min_values = self.data.min(axis=dim, keepdims=keepdims)
@@ -537,188 +444,25 @@ class Tensor:
             out_tuple += (selected,)
         
         return out_tuple if len(out_tuple) > 1 else out_tuple[0]
-
     
-    def reshape(self, shape:tuple) -> 'Tensor':
-        out = Tensor(self.data.reshape(shape), (self,), '<Reshape>', requires_grad=self.requires_grad)
-        
-        def _backward():
-            if self.requires_grad:
-                self._grad += out._grad.reshape(self.shape)
-            
-        out._backward = _backward
-        
-        return out
-    
-    
-    def view(self, *shape:tuple) -> 'Tensor':
-        out = Tensor(self.data.reshape(shape), (self,), '<View>', requires_grad=self.requires_grad)
-        
-        def _backward():
-            if self.requires_grad:
-                self._grad += out._grad.reshape(self.shape)
-            
-        out._backward = _backward
-        
-        return out
-    
-    
-    def squeeze(self, dim:int=None) -> 'Tensor':
-        data = self.data
-        can_apply = len(self.shape) > 0 and (dim is None or self.shape[dim] == 1)
-        if can_apply:
-            data = np.squeeze(self.data, dim)
-            if dim is None:
-                dim = []
-                for i, d in enumerate(self.data.shape):
-                    if d == 1: dim.append(i) 
-        out = Tensor(data, (self,), '<Squeeze>', requires_grad=self.requires_grad)
-        
-        def _backward():
-            if self.requires_grad:
-                if can_apply:
-                    self._grad += np.expand_dims(out._grad, dim)
-                else:
-                    self._grad += out._grad
-            
-        out._backward = _backward
-        
-        return out
-    
+    def squeeze(self, dim:'int | tuple[int]'=None) -> 'Tensor':
+        return F.squeeze(self, dim)
     
     def unsqueeze(self, dim) -> 'Tensor':
-        data = np.expand_dims(self.data, dim)
-        out = Tensor(data, (self,), '<Unsqueeze>', requires_grad=self.requires_grad)
-        
-        def _backward():
-            if self.requires_grad:
-                self._grad += np.squeeze(out._grad, dim)
-            
-        out._backward = _backward
-        
-        return out
+        return F.unsqueeze(self, dim)
     
-    
-    def flatten(self, start_dim=0, end_dim=-1) -> 'Tensor':
-        shape = self.shape
-        start = start_dim if start_dim != -1 else len(shape)
-        end = end_dim if end_dim != -1 else len(shape)
-        if start > end:
-            raise RuntimeError("flatten() has invalid args: start_dim cannot come after end_dim")
-        if start < end:
-            shape = self.shape[:start] + (-1,) + self.shape[end+1:]
-        out = Tensor(self.data.reshape(shape), (self,), '<Flatten>', requires_grad=self.requires_grad)
-        
-        def _backward():
-            if self.requires_grad:
-                self._grad += out._grad.reshape(self.shape)
-                
-        out._backward = _backward
-        
-        return out
-    
-    
-    def unfold(self, dimension:int, size:int, step:int) -> 'Tensor':
-        """
-        Unfold a tensor along a specified dimension.
-
-        Parameters
-        ----------
-        tensor : Tensor
-            The tensor to unfold.
-        dimension : int
-            The dimension to unfold.
-        size : int
-            The size of the unfolding window.
-        step : int
-            The step between each unfolding window.
-
-        Returns
-        -------
-        Tensor
-            The unfolding result.
-
-        Raises
-        ------
-        ValueError
-            If the specified dimension is invalid, if the size or step are not positive integers, or if the size is
-            larger than the size of the specified dimension.
-
-        Examples
-        --------
-        >>> import numpy as np
-        >>> a = np.arange(10)
-        >>> unfold(a, 0, 3, 1)
-        array([[[0, 1, 2],
-                [3, 4, 5],
-                [6, 7, 8]],
-            
-               [[9, 0, 1],
-                [2, 3, 4],
-                [5, 6, 7]]])
-        """
-        tensor = self.data
-        # check that the specified dimension is valid
-        if dimension >= tensor.ndim or dimension < -tensor.ndim:
-            raise ValueError(f"Dimension out of range for tensor with {tensor.ndim} dimensions: {dimension}")
-        if dimension < 0:
-            dimension += tensor.ndim
-        # check that the size and step are positive integers
-        if not isinstance(size, int) or size <= 0:
-            raise ValueError(f"Invalid size: {size}")
-        if not isinstance(step, int) or step <= 0:
-            raise ValueError(f"Invalid step: {step}")
-        # get the size of the specified dimension
-        dim_size = tensor.shape[dimension]
-        # check that the size is smaller than or equal to the size of the dimension
-        if size > dim_size:
-            raise ValueError(f"Size ({size}) must be smaller than or equal to the size of the specified dimension ({dim_size})")
-        # calculate the size of the output dimension
-        out_size = int((dim_size - size) / step) + 1
-        # create an output array with the appropriate shape
-        out_shape = list(tensor.shape)
-        out_shape[dimension] = out_size
-        out_shape.append(size)
-        out_array = np.zeros(out_shape, dtype=tensor.dtype)
-        # fill the output array with the unfolded slices
-        for i in range(out_size):
-            start = i * step
-            end = start + size
-            window = np.take(tensor, np.arange(start, end), axis=dimension)
-            window = np.moveaxis(window, dimension, -1)
-            out_array = np.delete(out_array, i, axis=dimension)
-            out_array = np.insert(out_array, i, window, axis=dimension)
-        
-        out = Tensor(out_array, (self,), f'<UnfoldDim{dimension}>', requires_grad=self.requires_grad)
-        
-        def _backward():
-            if self.requires_grad:
-                folded = np.zeros_like(tensor)
-                for i in range(out._grad.shape[dimension]):
-                    start = i * step
-                    end = start + size
-                    s1 = [slice(None)] * (dimension + 1); s1[dimension] = slice(start, end)
-                    s2 = [slice(None)] * (dimension + 1); s2[dimension] = i
-                    s1 = tuple(s1); s2 = tuple(s2)
-                    folded[s1] += np.moveaxis(out._grad[s2], -1, dimension).reshape(folded[s1].shape)
-                
-                self._grad += folded 
-            
-        out._backward = _backward
-
-        return out    
+    def reshape(self, shape:tuple) -> 'Tensor':
+        return F.reshape(self, shape)
     
     def transpose(self, dim0:int, dim1:int) -> 'Tensor':
-        """ Transpose tensor, dim0 and dim1 are swapped (0, 1 for 2D tensor)"""
-        out = Tensor(self.data.swapaxes(dim0, dim1), (self,), '<Transpose>', requires_grad=self.requires_grad)
-        
-        def _backward():
-            if self.requires_grad:
-                self._grad += out._grad.swapaxes(dim0, dim1)
-                
-        out._backward = _backward
-        
-        return out
+        """ Transpose tensor, dim0 and dim1 are swapped (0, 1 for 2D tensor)"""    
+        return F.transpose(self, dim0, dim1)
+     
+    def flatten(self, start_dim=0, end_dim=-1) -> 'Tensor':
+        return F.flatten(self, start_dim, end_dim)
+    
+    def unfold(self, dimension:int, size:int, step:int) -> 'Tensor':
+        return F.unfold_dim(self, dimension, size, step)
     
     # *********************
     # **** Pretty data ****

@@ -1,8 +1,8 @@
-
 from abc import ABC, abstractmethod
 
-from .. import Tensor, tensor
 import numpy as np
+import synapgrad
+from synapgrad.tensor import Tensor
 
 
 class Optimizer(ABC):
@@ -58,7 +58,7 @@ class SGD(Optimizer):
     
     def step(self):
         super().step()
-        with tensor.no_grad():
+        with synapgrad.no_grad():
             for i, p in enumerate(self.parameters):
                 grad = p._grad
                 
@@ -119,7 +119,7 @@ class Adam(Optimizer):
     
     def step(self):
         super().step()
-        with tensor.no_grad():
+        with synapgrad.no_grad():
             for i, p in enumerate(self.parameters):
                 grad = -p._grad if self.maximize else p._grad   
                     

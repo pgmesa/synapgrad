@@ -1,4 +1,5 @@
 import torch
+import synapgrad
 from synapgrad import Tensor
 from utils import check_tensors
 import numpy as np
@@ -16,9 +17,9 @@ def test_engine():
     b.retain_grad()
     c = Tensor(4.0, requires_grad=True)
     
-    out1 = Tensor.stack((a.squeeze(), b.squeeze()))[0]
-    out2 = Tensor.concat((a*c, b), dim=1).transpose(0, 1)[0, :]
-    out = out1 @ out2.view(3).unsqueeze(1)
+    out1 = synapgrad.stack((a.squeeze(), b.squeeze()))[0]
+    out2 = synapgrad.concat((a*c, b), dim=1).transpose(0, 1)[0, :]
+    out = out1 @ out2.reshape(3).unsqueeze(1)
     s = out.sum()
     s.backward()
     
@@ -31,7 +32,7 @@ def test_engine():
     
     out1_t = torch.stack((a_t.squeeze(), b_t.squeeze()))[0]
     out2_t = torch.concat((a_t*c_t, b_t), dim=1).transpose(0, 1)[0, :]
-    out_t = out1_t @ out2_t.view(3).unsqueeze(1)
+    out_t = out1_t @ out2_t.reshape(3).unsqueeze(1)
     s_t = out_t.sum()
     s_t.backward()
 
@@ -153,23 +154,21 @@ def test_engine_maxpool2d():
 
     inp_t = torch.tensor(l, requires_grad=True)
     out_t = inp_t.unfold(2, kernel_size[0], stride[0]).unfold(3, kernel_size[1], stride[1])
-    out_t = out_t.contiguous().view(*out_t.size()[:-2], -1)
+    out_t = out_t.reshape((*out_t.size()[:-2], -1))
     out_t, indices_t = out_t.max(dim=4)
     out_t.backward(torch.ones_like(out_t))
 
-    inp = Tensor(l, requires_grad=True)
+    inp = synapgrad.tensor(l, requires_grad=True)
     out = inp.unfold(2, 2, 2).unfold(3, 2, 2)
-    out = out.contiguous().view(*out.shape[:-2], -1)
-    out, indices = out.max(dim=4)
-    out.backward(np.ones_like(out.data))
+    out = out.reshape((*out.shape[:-2], -1))
+    out = out.max(dim=4)
+    out.backward(synapgrad.ones_like(out))
 
     print(out); print(out_t)
     print(inp.grad); print(inp_t.grad)
-    print(indices); print(indices_t)
     
     assert check_tensors(out, out_t)
     assert check_tensors(inp.grad, inp_t.grad)
-    assert check_tensors(indices, indices_t, as_np_array=True)
     
     
 def test_engine_minpool2d():
@@ -181,20 +180,23 @@ def test_engine_minpool2d():
 
     inp_t = torch.tensor(l, requires_grad=True)
     out_t = inp_t.unfold(2, kernel_size[0], stride[0]).unfold(3, kernel_size[1], stride[1])
-    out_t = out_t.contiguous().view(*out_t.size()[:-2], -1)
+    out_t = out_t.reshape((*out_t.size()[:-2], -1))
     out_t, indices_t = out_t.min(dim=4)
     out_t.backward(torch.ones_like(out_t))
 
     inp = Tensor(l, requires_grad=True)
     out = inp.unfold(2, 2, 2).unfold(3, 2, 2)
-    out = out.contiguous().view(*out.shape[:-2], -1)
-    out, indices = out.min(dim=4)
-    out.backward(np.ones_like(out.data))
+    out = out.reshape((*out.shape[:-2], -1))
+    out = out.min(dim=4)
+    out.backward(synapgrad.ones_like(out))
 
     print(out); print(out_t)
     print(inp.grad); print(inp_t.grad)
-    print(indices); print(indices_t)
     
     assert check_tensors(out, out_t)
     assert check_tensors(inp.grad, inp_t.grad)
-    assert check_tensors(indices, indices_t, as_np_array=True)
+    
+    
+def test_engine_tensor_manipulation():
+    # Test Concat, Stack and Unbind
+    ...

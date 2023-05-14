@@ -178,6 +178,10 @@ class MaxPool2d(nn.Module):
         out._backward = _backward
         
         return out
+    
+    
+class AvgPool2d(nn.Module):
+    ...
 
 
 class Conv2d(nn.Module):

@@ -1,6 +1,7 @@
 import numpy as np
-from .. import Tensor, nn
-from .initializations import init_weights
+from synapgrad.tensor import Tensor
+from synapgrad import nn
+from synapgrad.nn.initializations import init_weights
 
 
 class Neuron(nn.Module):
