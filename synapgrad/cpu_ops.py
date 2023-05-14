@@ -62,7 +62,6 @@ def matmul_forward(a:np.ndarray, b:np.ndarray):
 
 @check_inputs
 def matmul_backward(grad:np.ndarray, a:np.ndarray, b:np.ndarray):
-    print(grad.shape, a.shape, b.shape)
     grad_a = grad @ np.swapaxes(b, -2, -1)
     grad_b = np.swapaxes(a, -2, -1) @ grad
     return unbroadcast(grad_a, a.shape), unbroadcast(grad_b, b.shape)
@@ -114,8 +113,9 @@ def concat_forward(a:np.ndarray, axis:int):
     return np.concatenate(a, axis=axis)
 
 @check_inputs
-def concat_backward(grad:np.ndarray, num_inputs:int, axis:int):
-    grads = np.split(grad, num_inputs, axis=axis)
+def concat_backward(grad:np.ndarray, sections:list, axis:int):
+    sections = [s if i == 0 else sections[i-1] + s for i, s in enumerate(sections)]
+    grads = np.split(grad, indices_or_sections=sections, axis=axis)
     return grads
 
 
@@ -127,14 +127,15 @@ def stack_forward(a:np.ndarray, axis:int):
 def stack_backward(grad:np.ndarray, axis:int):
     return unbind_forward(grad, axis)
 
-
+  
 @check_inputs
 def unbind_forward(a:np.ndarray, axis:int):
-    return [np.squeeze(s, axis=axis) for s in np.split(a, a.shape[axis], axis=axis)] 
+    return np.rollaxis(a, axis=axis)
 
 @check_inputs
 def unbind_backward(grad:np.ndarray, a_shape:tuple, axis:int, index:int):
     slice_grad = np.zeros(a_shape, dtype=grad.dtype)
+    if axis < 0: axis = len(a_shape) + axis
     axes = tuple([slice(None) if i != axis else index for i in range(len(a_shape))])
     slice_grad[axes] = grad
     return slice_grad
@@ -163,7 +164,7 @@ def exp_backward(grad:np.ndarray, exp_a:np.ndarray):
 
 @check_inputs
 def log_forward(a:np.ndarray):
-    return np.log(a)
+    return np.log(a + epsilon)
 
 @check_inputs
 def log_backward(grad:np.ndarray, a:np.ndarray):
@@ -219,16 +220,14 @@ def max_forward(a, axis, keepdims):
 
 @check_inputs
 def max_backward(grad, a, axis, keepdims):
-    max_indices = np.argmax(a, axis=axis, keepdims=True)
+    # Create mask of ones and zeros, where the maximum value is 1 
     mask = np.zeros_like(a)
-    print(max_indices)
-    s = list(np.unravel_index(max_indices, a.shape))
-    print(s)
-    mask2 = mask.copy()
-    mask2[s] = 1
-    print(mask2)
-    s = tuple([max_indices if i == axis else np.arange(a.shape[i]) for i in range(a.ndim)])
-    mask[s] = 1
+    indices_max = np.argmax(a, axis=axis, keepdims=True)
+    if axis is None:
+        unr_indices = np.unravel_index(indices_max, a.shape)
+        mask[unr_indices] = 1
+    else:
+        np.put_along_axis(mask, indices_max, 1, axis=axis)
     
     if not keepdims and axis is not None:
         grad = unsqueeze_forward(grad, axis)
@@ -242,10 +241,14 @@ def min_forward(a, axis, keepdims):
 
 @check_inputs
 def min_backward(grad, a, axis, keepdims):
-    min_indices = np.argmin(a, axis=axis)
+    # Create mask of ones and zeros, where the minimum value is 1 
     mask = np.zeros_like(a)
-    s = tuple([min_indices if i == axis else np.arange(a.shape[i]) for i in range(a.ndim)])
-    mask[s] = 1
+    indices_min = np.argmin(a, axis=axis, keepdims=True)
+    if axis is None:
+        unr_indices = np.unravel_index(indices_min, a.shape)
+        mask[unr_indices] = 1
+    else:
+        np.put_along_axis(mask, indices_min, 1, axis=axis)
     
     if not keepdims and axis is not None:
         grad = unsqueeze_forward(grad, axis)
@@ -469,6 +472,7 @@ def cross_entropy_loss_backward(grad: np.ndarray, y_pred: np.ndarray, y_true: np
 # ************************
 # ******* Pool ops *******
 # ************************
+
 
 
 # ************************

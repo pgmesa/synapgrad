@@ -118,6 +118,9 @@ class MatMul(Function):
             raise TypeError(f"Expected x1 to be a Tensor but got {type(x1)}")
         if not isinstance(x2, Tensor):
             raise TypeError(f"Expected x2 to be a Tensor but got {type(x2)}")
+        
+        if x1.ndim < 2 or x2.ndim < 2:
+            raise ValueError(f"{ctx.fn_name}: At least two dimensions are required for each input")
     
         if x1.device == Device.CPU:
             out_data = cpu_ops.matmul_forward(x1.data, x2.data)
@@ -381,17 +384,17 @@ class Concat(Function):
             
         out = Tensor(out_data, device=x[0].device)
         
-        ctx.num_inputs = len(x)
+        ctx.sections = [t.shape[dim] for t in x]
         ctx.dim = dim
         
         return out
     
     @staticmethod
     def backward(ctx:Context, grad_output:Tensor):
-        num_inputs, dim = ctx.num_inputs, ctx.dim
+        sections, dim = ctx.sections, ctx.dim
         
         if grad_output.device == Device.CPU:
-            a_grad = cpu_ops.concat_backward(grad_output.data, num_inputs, dim)
+            a_grad = cpu_ops.concat_backward(grad_output.data, sections, dim)
         else:
             raise RuntimeError(f"{ctx.fn_name}: {grad_output.device} not supported")
             
@@ -861,6 +864,7 @@ def max(x:Tensor, dim:int, keepdims=False) -> 'Tensor':
     Args:
         x (Tensor): First tensor.
         dim (int): Dimension to max over.
+        keepdims (bool, optional): Keep dimensions. Defaults to False.
 
     Returns:
         Tensor: The result of the max.
@@ -871,28 +875,30 @@ def max(x:Tensor, dim:int, keepdims=False) -> 'Tensor':
 class Min(Function):
     
     @staticmethod
-    def forward(ctx:Context, x:Tensor, dim:int):
+    def forward(ctx:Context, x:Tensor, dim:int, keepdims:bool=False):
         if not isinstance(x, Tensor):
             raise TypeError(f"Expected x to be a Tensor but got {type(x)}")
         
         if x.device == Device.CPU:
-            out_data = cpu_ops.min_forward(x.data, dim)
+            out_data = cpu_ops.min_forward(x.data, dim, keepdims)
         else:
             raise RuntimeError(f"{ctx.fn_name}: {x.device} not supported")
         
         out = Tensor(out_data, device=x.device)
         
-        ctx.x_shape = x.shape
+        ctx.x = ctx.save_for_backward(x)
         ctx.dim = dim
+        ctx.keepdims = keepdims
         
         return out
     
     def backward(ctx:Context, grad_output:Tensor):
-        x_shape = ctx.x_shape
+        x, = ctx.saved_tensors
         dim = ctx.dim
+        keepdims = ctx.keepdims
         
         if grad_output.device == Device.CPU:
-            a_grad = cpu_ops.min_backward(grad_output.data, x_shape, dim)
+            a_grad = cpu_ops.min_backward(grad_output.data, x.data, dim, keepdims)
         else:
             raise RuntimeError(f"{ctx.fn_name}: {grad_output.device} not supported")
 
@@ -901,18 +907,19 @@ class Min(Function):
         return x_grad
     
     
-def min(x:Tensor, dim:int) -> 'Tensor':
+def min(x:Tensor, dim:int, keepdims:bool=False) -> 'Tensor':
     """ 
     Calculate the minimum of a tensor.
 
     Args:
         x (Tensor): First tensor.
         dim (int): Dimension to min over.
+        keepdims (bool, optional): Keep dimensions. Defaults to False.
 
     Returns:
         Tensor: The result of the min.
     """
-    return Min.apply(x, dim)
+    return Min.apply(x, dim, keepdims)
 
 
 class Squeeze(Function):

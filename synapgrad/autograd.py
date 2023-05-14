@@ -197,6 +197,9 @@ class AccumulateGrad:
             self.variable.zero_()
             
         if self.variable.device is Device.CPU:
+            if not grad_tensor.matches_shape(self.variable):
+                raise RuntimeWarning("AccumulateGrad - calculated gradient doesn't match " + 
+                f"the shape of the variable. Expected {self.variable.shape} but got {grad_tensor.shape}")
             self.variable.grad.data += grad_tensor.data
         else:
             raise RuntimeError("AccumulateGrad is not supported for GPU tensors")

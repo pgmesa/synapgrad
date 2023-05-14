@@ -199,4 +199,32 @@ def test_engine_minpool2d():
     
 def test_engine_tensor_manipulation():
     # Test Concat, Stack and Unbind
-    ...
+    l = np.random.randint(0, 10, size=(3, 10)).astype(np.float32)
+    
+    # torch
+    inp_t = torch.tensor(l, requires_grad=True)
+    unb_t = torch.unbind(inp_t,  dim=0)
+    unb_t = [unb_t[i]*i for i in range(len(unb_t))]
+    stacked_t = torch.stack(unb_t, dim=0) / 2
+    unb2_t = torch.unbind(stacked_t, dim=0)
+    unb2_t = [unb2_t[i]/(i+1) for i in range(len(unb2_t))]
+    concated_t = torch.concat(unb2_t, dim=0)
+    
+    concated_t.sum().backward()
+    
+    print(concated_t)
+    print(inp_t.grad)
+    
+    # synapgrad
+    inp = synapgrad.tensor(l, requires_grad=True)
+    unb = synapgrad.unbind(inp,  dim=0)
+    unb = [unb[i]*i for i in range(len(unb))]
+    stacked = synapgrad.stack(unb, dim=0) / 2
+    unb2 = synapgrad.unbind(stacked, dim=0)
+    unb2 = [unb2[i]/(i+1) for i in range(len(unb2))]
+    concated = synapgrad.concat(unb2, dim=0)
+    
+    concated.sum().backward()
+    
+    assert check_tensors(concated, concated_t)
+    assert check_tensors(inp.grad, inp_t.grad)

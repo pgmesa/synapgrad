@@ -419,31 +419,8 @@ class Tensor:
     def max(self, dim:int=None, keepdims=False) -> 'Tensor': 
         return F.max(self, dim, keepdims)
     
-    def min(self, dim:int=None, keepdims=False, return_indices=None, return_selected=False) -> tuple['Tensor',...]:
-        min_values = self.data.min(axis=dim, keepdims=keepdims)
-        min_indices = self.data.argmin(axis=dim)
-        selected = tools.get_selected_from_indices(self.data, min_indices, dim)
-        
-        out = Tensor(min_values, (self,), '<Min>', requires_grad=self.requires_grad)
-        
-        def _backward():
-            if self.requires_grad:
-                grad = out._grad
-                if not keepdims and dim is not None:
-                    grad = np.expand_dims(grad, axis=dim)
-                self._grad += selected * grad
-            
-        out._backward = _backward
-        
-        out_tuple = (out,)
-        
-        if return_indices is not False and dim is not None:
-            out_tuple += (min_indices,)
-        
-        if return_selected:
-            out_tuple += (selected,)
-        
-        return out_tuple if len(out_tuple) > 1 else out_tuple[0]
+    def min(self, dim:int=None, keepdims=False) -> 'Tensor':
+        return F.min(self, dim, keepdims)
     
     def squeeze(self, dim:'int | tuple[int]'=None) -> 'Tensor':
         return F.squeeze(self, dim)
