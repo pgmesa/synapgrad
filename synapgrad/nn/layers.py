@@ -1,7 +1,8 @@
 import numpy as np
-from .. import nn, Tensor, tensor
-from .neurons import init_weights
-# from .functional import unfold, fold
+import synapgrad
+from synapgrad import nn
+from synapgrad.tensor import Tensor
+from synapgrad.nn import functional as F
 from .initializations import init_weights
 
 
@@ -14,8 +15,8 @@ class Linear(nn.Module):
         
         self.weight_init_method = weight_init_method
         weight_values = init_weights((output_size, input_size), weight_init_method).astype(np.float32)
-        self.weight = Tensor(weight_values, requires_grad=True)
-        self.bias = Tensor.zeros((output_size,), dtype=np.float32, requires_grad=True)
+        self.weight = synapgrad.tensor(weight_values, requires_grad=True)
+        self.bias = synapgrad.zeros((output_size,), dtype=np.float32, requires_grad=True)
         
     def forward(self, x:Tensor) -> Tensor:
         assert x.shape[1] == self.input_size, f"Expected input size '{self.input_size}' but received '{x.shape[1]}'"
@@ -43,7 +44,9 @@ class Flatten(nn.Module):
     
     
 class Unfold(nn.Module):
-    """ Check nn.funcional.unfold for more information """
+    """ 
+    Check nn.funcional.unfold for more information 
+    """
     
     def __init__(self, kernel_size, stride=1, padding=0, dilation=1, pad_value=0) -> None:
         super().__init__()
@@ -60,26 +63,14 @@ class Unfold(nn.Module):
         self.pad_value = pad_value
         
     def forward(self, x: Tensor) -> Tensor:
-        N, C, H, W = x.shape
-        unfolded = unfold(x.data, kernel_size=self.kernel_size, stride=self.stride, dilation=self.dilation,
-                           padding=self.padding, pad_value=self.pad_value)
-        
-        out = Tensor(unfolded, (x,), "<Unfold>", requires_grad=x.requires_grad)
-        
-        def _backward():
-            if x.requires_grad:
-                grad = fold(out._grad, (H,W), kernel_size=self.kernel_size, stride=self.stride,
-                     dilation=self.dilation, padding=self.padding)
-
-                x._grad += grad
-                
-        out._backward = _backward
-    
-        return out
+        return F.unfold(x.data, kernel_size=self.kernel_size, stride=self.stride, padding=self.padding,
+                       dilation=self.dilation, pad_value=self.pad_value)
     
     
 class Fold(nn.Module):
-    """ Check nn.funcional.fold for more information """
+    """ 
+    Check nn.funcional.fold for more information 
+    """
     
     def __init__(self, output_size, kernel_size, stride=1, padding=0, dilation=1) -> None:
         super().__init__()
@@ -97,21 +88,8 @@ class Fold(nn.Module):
         self.dilation = dilation
         
     def forward(self, x: Tensor) -> Tensor:
-        folded = fold(x.data, self.output_size, kernel_size=self.kernel_size, stride=self.stride, dilation=self.dilation,
-                           padding=self.padding)
-        
-        out = Tensor(folded, (x,), "<Fold>", requires_grad=x.requires_grad)
-        
-        def _backward():
-            if x.requires_grad:
-                grad = unfold(out._grad, kernel_size=self.kernel_size, stride=self.stride,
-                     dilation=self.dilation, padding=self.padding)
-
-                x._grad += grad
-                
-        out._backward = _backward
-    
-        return out
+        return F.fold(x.data, output_size=self.output_size, kernel_size=self.kernel_size, stride=self.stride,
+                      padding=self.padding, dilation=self.dilation)
     
 
 class MaxPool2d(nn.Module):
@@ -272,7 +250,7 @@ class Dropout(nn.Module):
         random_data = np.where(random_data <= self.p, 0, 1)
         if self.p < 1:
             random_data = random_data / (1-self.p) # scale data
-        random_t = Tensor(random_data)
+        random_t = synapgrad.tensor(random_data)
         
         return x*random_t
     

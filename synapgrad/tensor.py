@@ -431,8 +431,16 @@ class Tensor:
     def reshape(self, shape:tuple) -> 'Tensor':
         return F.reshape(self, shape)
     
+    def movedim(self, source, destination) -> 'Tensor':
+        return F.movedim(self, source, destination)
+    
+    def moveaxis(self, source, destination) -> 'Tensor':
+        return F.movedim(self, source, destination)
+    
     def transpose(self, dim0:int, dim1:int) -> 'Tensor':
-        """ Transpose tensor, dim0 and dim1 are swapped (0, 1 for 2D tensor)"""    
+        """ 
+        Transpose tensor, dim0 and dim1 are swapped (0, 1 for 2D tensor)
+        """    
         return F.transpose(self, dim0, dim1)
      
     def flatten(self, start_dim=0, end_dim=-1) -> 'Tensor':

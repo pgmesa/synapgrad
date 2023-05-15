@@ -105,3 +105,8 @@ To run the unit tests you will have to install PyTorch. In these tests, gradient
 ```bash
 python -m pytest
 ```
+Run 
+```
+pytest ./tests/test_ops.py -s
+```
+to check operations speed compared with pytorch.

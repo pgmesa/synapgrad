@@ -1,6 +1,9 @@
 import numpy as np
 from synapgrad.tensor import Tensor
-from synapgrad.tools import recursively_seek_tensors, get_selected_from_indices
+from synapgrad.tools import (
+    recursively_seek_tensors,
+    im2col, col2im, get_conv2d_output_size
+)
 
 epsilon = 1e-12
 
@@ -284,6 +287,15 @@ def reshape_backward(grad:np.ndarray, a_shape:tuple):
 
 
 @check_inputs
+def movedim_forward(a:np.ndarray, source:int, destination:int):
+    return np.moveaxis(a, source, destination)
+
+@check_inputs
+def movedim_backward(grad:np.ndarray, source:int, destination:int):
+    return np.moveaxis(grad, source, destination)
+
+
+@check_inputs
 def transpose_forward(a:np.ndarray, axis0:int, axis1:int):
     return np.swapaxes(a, axis0, axis1)
 
@@ -298,21 +310,9 @@ def unfold_forward(a:np.ndarray, dimension:int, size:int, step:int):
     # check that the size is smaller than or equal to the size of the dimension
     if size > dim_size:
         raise ValueError(f"Size ({size}) must be smaller than or equal to the size of the specified dimension ({dim_size})")
-    # calculate the size of the output dimension
-    out_size = int((dim_size - size) / step) + 1
-    # create an output array with the appropriate shape
-    out_shape = list(a.shape)
-    out_shape[dimension] = out_size
-    out_shape.append(size)
-    out_array = np.zeros(out_shape, dtype=a.dtype)
-    # fill the output array with the unfolded slices
-    for i in range(out_size):
-        start = i * step
-        end = start + size
-        window = np.take(a, np.arange(start, end), axis=dimension)
-        window = np.moveaxis(window, dimension, -1)
-        out_array = np.delete(out_array, i, axis=dimension)
-        out_array = np.insert(out_array, i, window, axis=dimension)
+    slices = [slice(None)] * a.ndim; slices[dimension] = slice(None, None, step)
+    slices = tuple(slices)
+    out_array = np.lib.stride_tricks.sliding_window_view(a, size, axis=dimension, writeable=True)[slices]
         
     return out_array
     
@@ -470,132 +470,107 @@ def cross_entropy_loss_backward(grad: np.ndarray, y_pred: np.ndarray, y_true: np
     return  dlogits * grad
 
 # ************************
-# ******* Pool ops *******
-# ************************
-
-
-
-# ************************
 # ******* Conv ops *******
 # ************************
 
-def unfold4d_forward(tensor:np.ndarray, kernel_size, stride=1, padding=0, dilation=1, pad_value=0) -> np.ndarray:
-    """
-    Unfold a tensor of shape (N, C, H, W) to a tensor in the shape of (N, C*kH*kW, L)
+@check_inputs
+def conv1d_forward():
+    ...
     
-    Reference: 
-        https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html
+@check_inputs
+def conv1d_backward():
+    ...
 
-    Args:
-        tensor (numpy.ndarray): Input tensor of shape (N, C, H, W).
-        kernel_size (int or tuple): Size of the sliding window.
-        stride (int or tuple, optional): Stride size. Defaults to 1.
-        padding (int or tuple, optional): Padding size. Defaults to 0.
-        dilation (int or tuple, optional): Dilation factor. Defaults to 1.
-
-    Returns:
-        numpy.ndarray: Output tensor of shape (N, C*kH*kW, L).
-    """
-    assert len(tensor.shape) == 4, "Input tensor must be of shape (N, C, H, W)"
-    N, C, H, W = tensor.shape
-    kernel_size = np.broadcast_to(kernel_size, 2)
-    dilation = np.broadcast_to(dilation, 2)
-    padding = np.broadcast_to(padding, 2)
-    stride = np.broadcast_to(stride, 2)
-
-    # Calculate output spatial size
-    lH = int(np.floor((H + 2 * padding[0] - dilation[0] * (kernel_size[0] - 1) - 1) / stride[0] + 1))
-    lW = int(np.floor((W + 2 * padding[1] - dilation[1] * (kernel_size[1] - 1) - 1) / stride[1] + 1))
-    L = lH*lW
     
-    if L <= 0:
-        raise RuntimeError('Cannot unfold a tensor with zero or negative spatial size (L='+str(L)+
-            ') for kernel_size='+str(kernel_size)+', stride='+str(stride)+', padding='+str(padding)+
-            ', dilation='+str(dilation)+' and tensor shape='+str(tensor.shape))
+@check_inputs
+def conv2d_forward():
+    ...
     
-    # Pad input
-    padded_input = np.pad(
-        tensor, ((0, 0), (0, 0)) + tuple((padding[d], padding[d]) for d in range(2)),
-        mode='constant', constant_values=pad_value)
+@check_inputs
+def conv2d_backward():
+    ...
     
-    # Initialize output tensor
-    output_size = (N, C * np.prod(kernel_size), L)
-    output = np.zeros(output_size, dtype=tensor.dtype)
+# ************************
+# ******* Pool ops *******
+# ************************
     
-    # Extract sliding window for each input channel and put it in the output tensor
-    for i in range(lH):
-        for j in range(lW):
-            # Height parameters
-            h_start = i * stride[0]
-            h_end = i * stride[0] + kernel_size[0] + (dilation[0] - 1) * (kernel_size[0] - 1)
-            h_step = dilation[0]
-            # Width parameters
-            w_start = j * stride[1]
-            w_end = j * stride[1] + kernel_size[1] + (dilation[1] - 1) * (kernel_size[1] - 1)
-            w_step = dilation[1]
-            # Extract sliding window
-            window = padded_input[:, :, h_start:h_end:h_step, w_start:w_end:w_step]
-            output[:, :, i*lW + j] = window.ravel().reshape(output[:, :, i*lW + j].shape)
-            
-    return output
+@check_inputs
+def max_pool1d_forward():
+    ...
 
-
-def fold4d_forward(tensor:np.ndarray, output_size, kernel_size, stride=1, padding=0, dilation=1):
-    """
-    Fold a tensor of shape (N, C*kH*kW, L) to a tensor in the shape of (N, C, H, W).
+@check_inputs
+def max_pool1d_backward():
+    ...
     
-    Reference:
-        https://pytorch.org/docs/stable/generated/torch.nn.Fold.html
-
-    Args:
-        tensor (numpy.ndarray): Input tensor of shape (N, C*kH*kW, L).
-        kernel_size (int or tuple): Size of the sliding window.
-        output_size (tuple): Desired output size of the folded tensor, in the form of (H, W).
-        stride (int or tuple, optional): Stride size. Defaults to 1.
-        padding (int or tuple, optional): Padding size. Defaults to 0.
-        dilation (int or tuple, optional): Dilation factor. Defaults to 1.
-
-    Returns:
-        numpy.ndarray: Output tensor of shape (N, C, H, W).
-    """
-    N, CkHkW, L = tensor.shape
-    kernel_size = np.broadcast_to(kernel_size, 2)
-    dilation = np.broadcast_to(dilation, 2)
-    padding = np.broadcast_to(padding, 2)
-    stride = np.broadcast_to(stride, 2)
-
-    C = CkHkW // np.prod(kernel_size)
-    H, W = output_size
     
-    H_with_pad = H + 2 * padding[0]
-    W_with_pad = W + 2 * padding[1]
+@check_inputs
+def avg_pool1d_forward():
+    ...
+
+@check_inputs
+def avg_pool1d_backward():
+    ...
+
+
+@check_inputs
+def max_pool2d_forward(a, kernel_size, stride, padding, dilation):
+    N, C, H, W = a.shape
+    lH, lW = get_conv2d_output_size(a.shape, kernel_size, dilation, stride, padding)
     
-    # Calculate input spatial size
-    lH = int(np.floor((H_with_pad - dilation[0] * (kernel_size[0] - 1) - 1) / stride[0] + 1))
-    lW = int(np.floor((W_with_pad - dilation[1] * (kernel_size[1] - 1) - 1) / stride[1] + 1))
+    x_split = a.reshape(N * C, 1, H, W)
+    x_cols, col_indices = im2col(x_split, kernel_size, dilation=dilation, stride=stride,
+                                            padding=padding, pad_value=-np.inf, return_indices=True)
+    
+    x_cols_argmax = np.argmax(x_cols, axis=0)
+    x_cols_max = x_cols[x_cols_argmax, np.arange(x_cols.shape[1])]
+    out = x_cols_max.reshape(lH, lW, N, C).transpose(2,3,0,1)
+    return out, a.shape, x_cols.shape, x_cols_argmax, col_indices
 
-    # Initialize output tensor
-    output = np.zeros((N, C, H_with_pad, W_with_pad), dtype=tensor.dtype)
+@check_inputs
+def max_pool2d_backward(grad, kernel_size, stride, padding, dilation, a_shape, x_cols_shape, max_indices, col_indices):
+    out_grad = np.zeros(x_cols_shape)
+    # flatten the gradient
+    dout_flat = grad.transpose(2,3,0,1).ravel()
+    out_grad[max_indices, range(max_indices.size)] = dout_flat
+    
+    N, C, H, W = a_shape
+    # get the original X_reshaped structure from col2im
+    shape = (N*C, 1, H, W)
+    out_grad = col2im(out_grad, shape, kernel_size, dilation, stride, padding, col_indices=col_indices)
+    out_grad = out_grad.reshape(N, C, H, W)
+    return out_grad
+    
 
-    # Reshape input tensor to match the expected shape of the output tensor
-    tensor = tensor.reshape((N, C, np.prod(kernel_size), L))
+@check_inputs
+def avg_pool2d_forward(a, kernel_size, stride, padding, dilation):
+    N, C, H, W = a.shape
+    lH, lW = get_conv2d_output_size(a.shape, kernel_size, dilation, stride, padding)
+    
+    x_split = a.reshape(N * C, 1, H, W)
+    x_cols, col_indices = \
+        im2col(x_split, kernel_size, dilation=dilation, stride=stride, padding=padding, pad_value=-np.inf)
+    x_cols = np.concatenate(x_cols, axis=-1)
+    print(x_cols, x_cols.shape)
+    
+    x_cols_avg = np.average(x_cols, axis=0)
+    out = x_cols_avg.reshape(N, C, lH, lW)
+    return out, col_indices
 
-    # Undo the sliding window operation and place the values back in the output tensor
-    for i in range(lH):
-        for j in range(lW):
-            h_start = i * stride[0]
-            h_end = i * stride[0] + kernel_size[0] + (dilation[0] - 1) * (kernel_size[0] - 1)
-            h_step = dilation[0]
-            w_start = j * stride[1]
-            w_end = j * stride[1] + kernel_size[1] + (dilation[1] - 1) * (kernel_size[1] - 1)
-            w_step = dilation[1]
-            # Calculate the output window
-            o = output[:, :, h_start:h_end:h_step, w_start:w_end:w_step]
-            window = tensor[:, :, :, i*lW + j].reshape(o.shape)
-            output[:, :, h_start:h_end:h_step, w_start:w_end:w_step] = o + window
-
-    # Remove padding if necessary
-    if padding[0] > 0 or padding[1] > 0:
-        output = output[:, :, padding[0]:H_with_pad-padding[0], padding[1]:W_with_pad-padding[1]]
-
-    return output
+@check_inputs
+def avg_pool2d_backward(grad, kernel_size, stride, padding, dilation, a_shape, x_cols_shape, max_indices, col_indices):
+    out_grad = np.zeros(x_cols_shape)
+    # flatten the gradient
+    dout_flat = grad.ravel()
+    out_grad[max_indices, range(max_indices.size)] = dout_flat
+    
+    N, C, H, W = a_shape
+    # get the original X_reshaped structure from col2im
+    out_grad = np.stack(np.hsplit(out_grad, C), axis=0)
+    out_grad = col2im(out_grad, (H,W), kernel_size, dilation, stride, padding, col_indices=col_indices)
+    out_grad = out_grad.reshape(N, C, H, W)
+    return out_grad
+    
+    
+# ******************************
+# ******* Batch norm ops *******
+# ******************************

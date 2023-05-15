@@ -1,3 +1,5 @@
+import numpy as np
+
 from synapgrad import cpu_ops
 from synapgrad.tensor import Tensor
 from synapgrad.autograd import Function, Context
@@ -13,7 +15,7 @@ class ReLU(Function):
     @staticmethod
     def forward(ctx:Context, x:Tensor):
         if not isinstance(x, Tensor):
-            raise TypeError(f"Expected x1 to be a Tensor but got {type(x)}")
+            raise TypeError(f"Expected x to be a Tensor but got {type(x)}")
         
         if x.device == Device.CPU:
             out_data = cpu_ops.relu_forward(x.data)
@@ -61,7 +63,7 @@ class Tanh(Function):
     @staticmethod
     def forward(ctx:Context, x:Tensor):
         if not isinstance(x, Tensor):
-            raise TypeError(f"Expected x1 to be a Tensor but got {type(x)}")
+            raise TypeError(f"Expected x to be a Tensor but got {type(x)}")
         
         if x.device == Device.CPU:
             out_data = cpu_ops.tanh_forward(x.data)
@@ -106,7 +108,7 @@ class Sigmoid(Function):
     @staticmethod
     def forward(ctx:Context, x:Tensor):
         if not isinstance(x, Tensor):
-            raise TypeError(f"Expected x1 to be a Tensor but got {type(x)}")
+            raise TypeError(f"Expected x to be a Tensor but got {type(x)}")
         
         if x.device == Device.CPU:
             out_data = cpu_ops.sigmoid_forward(x.data)
@@ -154,7 +156,7 @@ class Softmax(Function):
     @staticmethod
     def forward(ctx:Context, x:Tensor, dim:int):
         if not isinstance(x, Tensor):
-            raise TypeError(f"Expected x1 to be a Tensor but got {type(x)}")
+            raise TypeError(f"Expected x to be a Tensor but got {type(x)}")
         
         if x.device == Device.CPU:
             out_data = cpu_ops.softmax_forward(x.data, dim)
@@ -204,7 +206,7 @@ class LogSoftmax(Function):
     @staticmethod
     def forward(ctx:Context, x:Tensor, dim:int):
         if not isinstance(x, Tensor):
-            raise TypeError(f"Expected x1 to be a Tensor but got {type(x)}")
+            raise TypeError(f"Expected x to be a Tensor but got {type(x)}")
         
         if x.device == Device.CPU:
             out_data = cpu_ops.log_softmax_forward(x.data, dim)
@@ -495,19 +497,280 @@ def cross_entropy(y_pred:Tensor, y_true:Tensor):
     return CrossEntropyLoss.apply(y_pred, y_true)
 
 # *******************************
-# ******* Pool functions ********
-# *******************************
-
-
-
-
-# *******************************
 # ******* Conv functions ********
 # *******************************
 
+class Unfold(Function):
+    
+    @staticmethod
+    def forward(ctx:Context, x:Tensor, kernel_size, dilation=1, stride=1, padding=0, pad_value=0):
+        if not isinstance(x, Tensor):
+            raise TypeError(f"Expected x to be a Tensor but got {type(x)}")
+        
+        if len(x.shape) != 4:
+            raise ValueError(f"Input tensor must be of shape (N, C, H, W), but got {x.shape}")
+        
+        if x.device == Device.CPU:
+            out_data, col_indices = \
+                cpu_ops.im2col(x.data, kernel_size, dilation, stride, padding, pad_value, return_indices=True, as_unfold=True)
+        else:
+            raise RuntimeError(f"{ctx.fn_name}: {x.device} not supported")
+
+        out = Tensor(out_data, device=x.device)
+
+        ctx.im_size = x.shape[2:]
+        ctx.kernel_size = kernel_size
+        ctx.stride = stride
+        ctx.padding = padding
+        ctx.dilation = dilation
+        ctx.col_indices = col_indices
+        
+        return out
+    
+    @staticmethod
+    def backward(ctx:Context, grad_output:Tensor):
+        im_size = ctx.im_size
+        kernel_size = ctx.kernel_size
+        dilation = ctx.dilation
+        stride = ctx.stride
+        padding = ctx.padding
+        col_indices = ctx.col_indices    
+        
+        if not isinstance(grad_output, Tensor):
+            raise TypeError(f"Expected grad_output to be a Tensor but got {type(grad_output)}")
+        
+        if grad_output.device == Device.CPU:
+            grad_input_data = cpu_ops.col2im(grad_output.data, im_size, kernel_size,
+                                    dilation, stride, padding, col_indices=col_indices)
+        else:
+            raise RuntimeError(f"{ctx.fn_name}: {grad_output.device} not supported")
+        
+        grad_input = Tensor(grad_input_data, device=grad_output.device)
+        
+        return grad_input
+    
+
+def unfold(x:Tensor, kernel_size:'int | tuple', dilation:'int | tuple'=1, stride:'int | tuple'=1, padding:'int | tuple'=0, pad_value=0) -> Tensor:
+    """
+    Unfold a tensor of shape (N, C, H, W) to a tensor in the shape of (N, C*kH*kW, L)
+    
+    Reference: 
+        https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html
+
+    Args:
+        tensor (numpy.ndarray): Input tensor of shape (N, C, H, W).
+        kernel_size (int or tuple): Size of the sliding window.
+        dilation (int or tuple, optional): Dilation factor. Defaults to 1.
+        stride (int or tuple, optional): Stride size. Defaults to 1.
+        padding (int or tuple, optional): Padding size. Defaults to 0.
+
+    Returns:
+        numpy.ndarray: Output tensor of shape (N, C*kH*kW, L).
+    """
+    return Unfold.apply(x, kernel_size, dilation, stride, padding, pad_value)
+    
+    
+class Fold(Function):
+    
+    @staticmethod
+    def forward(ctx:Context, x:Tensor, im_size, kernel_size, dilation=1, stride=1, padding=0):
+        if not isinstance(x, Tensor):
+            raise TypeError(f"Expected x to be a Tensor but got {type(x)}")
+        
+        if len(x.shape) != 3:
+            raise ValueError(f"Input tensor must be of shape (N, C*kH*kW, L), but got {x.shape}")
+        
+        if x.device == Device.CPU:
+            out_data, col_indices = \
+                cpu_ops.col2im(x.data, im_size, kernel_size, dilation, stride, padding, return_indices=True)
+        else:
+            raise RuntimeError(f"{ctx.fn_name}: {x.device} not supported")
+
+        out = Tensor(out_data, device=x.device)
+
+        ctx.kernel_size = kernel_size
+        ctx.stride = stride
+        ctx.padding = padding
+        ctx.dilation = dilation
+        ctx.col_indices = col_indices
+        
+        return out
+    
+    @staticmethod
+    def backward(ctx:Context, grad_output:Tensor):
+        kernel_size = ctx.kernel_size
+        dilation = ctx.dilation
+        stride = ctx.stride
+        padding = ctx.padding
+        col_indices = ctx.col_indices    
+    
+        if not isinstance(grad_output, Tensor):
+            raise TypeError(f"Expected grad_output to be a Tensor but got {type(grad_output)}")
+        
+        if grad_output.device == Device.CPU:
+            grad_input_data = cpu_ops.im2col(grad_output.data, kernel_size, dilation,
+                                    stride, padding, 0, col_indices=col_indices, as_unfold=True)
+        else:
+            raise RuntimeError(f"{ctx.fn_name}: {grad_output.device} not supported")
+        
+        grad_input = Tensor(grad_input_data, device=grad_output.device)
+        
+        return grad_input
+    
+    
+def fold(x:Tensor, output_size:tuple, kernel_size:'int | tuple', dilation:'int | tuple'=1, stride:'int | tuple'=1, padding:'int | tuple'=0) -> Tensor:
+    """
+    Fold a tensor of shape (N, C*kH*kW, L) to a tensor in the shape of (N, C, H, W).
+    
+    Reference:
+        https://pytorch.org/docs/stable/generated/torch.nn.Fold.html
+
+    Args:
+        tensor (numpy.ndarray): Input tensor of shape (N, C*kH*kW, L).
+        output_size (tuple): Desired output size of the folded tensor, in the form of (H, W).
+        kernel_size (int or tuple): Size of the sliding window.
+        dilation (int or tuple, optional): Dilation factor. Defaults to 1.
+        stride (int or tuple, optional): Stride size. Defaults to 1.
+        padding (int or tuple, optional): Padding size. Defaults to 0.
+
+    Returns:
+        numpy.ndarray: Output tensor of shape (N, C, H, W).
+    """
+    return Fold.apply(x, output_size, kernel_size, dilation, stride, padding)
 
 
+# *******************************
+# ******* Pool functions ********
+# *******************************
 
-# *************************************
-# ******* Batch norm functions ********
-# *************************************
+class MaxPool2d(Function):
+    
+    @staticmethod
+    def forward(ctx:Context, x:Tensor, kernel_size, stride=None, padding=0, dilation=1):
+        if not isinstance(x, Tensor):
+            raise TypeError(f"Expected x to be a Tensor but got {type(x)}")
+        
+        if len(x.shape) != 4:
+            raise ValueError(f"Input tensor must be of shape (N, C, H, W), but got {x.shape}")
+        
+        if x.device == Device.CPU:
+            out_data, *bw_data = cpu_ops.max_pool2d_forward(x.data, kernel_size, stride, padding, dilation)
+        else:
+            raise RuntimeError(f"{ctx.fn_name}: {x.device} not supported")
+
+        out = Tensor(out_data, device=x.device)
+        
+        ctx.kernel_size = kernel_size
+        ctx.stride = stride
+        ctx.padding = padding
+        ctx.dilation = dilation
+        ctx.bw_data = bw_data
+
+        return out
+    
+    @staticmethod
+    def backward(ctx:Context, grad_output:Tensor):
+        kernel_size = ctx.kernel_size
+        stride = ctx.stride
+        padding = ctx.padding
+        dilation = ctx.dilation
+        bw_data = ctx.bw_data
+        
+        if not isinstance(grad_output, Tensor):
+            raise TypeError(f"Expected grad_output to be a Tensor but got {type(grad_output)}")
+        
+        if grad_output.device == Device.CPU:
+            grad_input_data = cpu_ops.max_pool2d_backward(grad_output.data, kernel_size, stride, padding, dilation, *bw_data)
+        else:
+            raise RuntimeError(f"{ctx.fn_name}: {grad_output.device} not supported")
+        
+        grad_input = Tensor(grad_input_data, device=grad_output.device)
+        
+        return grad_input
+
+
+def max_pool2d(x:Tensor, kernel_size, stride=None, padding=0, dilation=1):
+    """ 
+    Max-pooling function.
+    
+    Reference:
+        https://pytorch.org/docs/stable/generated/torch.nn.MaxPool2d.html
+
+    Args:
+        tensor (numpy.ndarray): Input tensor of shape (N, C, H, W).
+        kernel_size (int or tuple): Size of the sliding window.
+        stride (int or tuple, optional): Stride size. Defaults to None.
+        padding (int or tuple, optional): Padding size. Defaults to 0.
+        dilation (int or tuple, optional): Dilation factor. Defaults to 1.
+
+    Returns:
+        numpy.ndarray: Output tensor of shape (N, C, H, W).
+    """
+    return MaxPool2d.apply(x, kernel_size, stride, padding, dilation)
+
+
+class AvgPool2d(Function):
+    
+    @staticmethod
+    def forward(ctx:Context, x:Tensor, kernel_size, stride=None, padding=0, dilation=1):
+        if not isinstance(x, Tensor):
+            raise TypeError(f"Expected x to be a Tensor but got {type(x)}")
+        
+        if len(x.shape) != 4:
+            raise ValueError(f"Input tensor must be of shape (N, C, H, W), but got {x.shape}")
+        
+        if x.device == Device.CPU:
+            out_data, *bw_data = cpu_ops.avg_pool2d_forward(x.data, kernel_size, stride, padding, dilation)
+        else:
+            raise RuntimeError(f"{ctx.fn_name}: {x.device} not supported")
+
+        out = Tensor(out_data, device=x.device)
+        
+        ctx.kernel_size = kernel_size
+        ctx.stride = stride
+        ctx.padding = padding
+        ctx.dilation = dilation
+        ctx.bw_data = bw_data
+
+        return out
+        
+        
+    @staticmethod
+    def backward(ctx:Context, grad_output:Tensor):
+        kernel_size = ctx.kernel_size
+        stride = ctx.stride
+        padding = ctx.padding
+        dilation = ctx.dilation
+        bw_data = ctx.bw_data
+        
+        if not isinstance(grad_output, Tensor):
+            raise TypeError(f"Expected grad_output to be a Tensor but got {type(grad_output)}")
+        
+        if grad_output.device == Device.CPU:
+            grad_input_data = cpu_ops.avg_pool2d_backward(grad_output.data, kernel_size, stride, padding, dilation, *bw_data)
+        else:
+            raise RuntimeError(f"{ctx.fn_name}: {grad_output.device} not supported")
+        
+        grad_input = Tensor(grad_input_data, device=grad_output.device)
+        
+        return grad_input
+    
+
+def avg_pool2d(x:Tensor, kernel_size, stride=None, padding=0, dilation=1):
+    """ 
+    Average-pooling function.
+    
+    Reference:
+        https://pytorch.org/docs/stable/generated/torch.nn.AvgPool2d.html
+
+    Args:
+        tensor (numpy.ndarray): Input tensor of shape (N, C, H, W).
+        kernel_size (int or tuple): Size of the sliding window.
+        stride (int or tuple, optional): Stride size. Defaults to None.
+        padding (int or tuple, optional): Padding size. Defaults to 0.
+        dilation (int or tuple, optional): Dilation factor. Defaults to 1.
+
+    Returns:
+        numpy.ndarray: Output tensor of shape (N, C, H, W).
+    """
+    return AvgPool2d.apply(x, kernel_size, stride, padding, dilation)

@@ -1058,6 +1058,54 @@ def reshape(x:Tensor, shape:'tuple') -> 'Tensor':
     return Reshape.apply(x, shape)
 
 
+class Movedim(Function):
+    
+    @staticmethod
+    def forward(ctx:Context, x:Tensor, source:int, destination:int):
+        if not isinstance(x, Tensor):
+            raise TypeError(f"Expected x to be a Tensor but got {type(x)}")
+        
+        if x.device == Device.CPU:
+            out_data = cpu_ops.movedim_forward(x.data, source, destination)
+        else:
+            raise RuntimeError(f"{ctx.fn_name}: {x.device} not supported")
+        
+        out = Tensor(out_data, device=x.device)
+        
+        ctx.source = source
+        ctx.destination = destination
+        
+        return out
+    
+    @staticmethod
+    def backward(ctx:Context, grad_output:Tensor):
+        source = ctx.source; destination = ctx.destination
+        
+        if grad_output.device == Device.CPU:
+            a_grad = cpu_ops.movedim_backward(grad_output.data, source, destination)
+        else:
+            raise RuntimeError(f"{ctx.fn_name}: {grad_output.device} not supported")
+        
+        out = Tensor(a_grad, device=grad_output.device)
+        
+        return out
+
+
+def movedim(x:Tensor, source:int, destination:int) -> 'Tensor':
+    """ 
+    Move a dimension.
+
+    Args:
+        x (Tensor): First tensor.
+        source (int): Source dimension.
+        destination (int): Destination dimension.
+
+    Returns:
+        Tensor: The result of the movedim.
+    """
+    return Movedim.apply(x, source, destination)
+
+
 class Transpose(Function):
     
     @staticmethod

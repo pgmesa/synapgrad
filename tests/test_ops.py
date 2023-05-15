@@ -6,9 +6,13 @@ from utils import check_tensors, time_fun
 
 atol = 1e-8; rtol = 1e-5
 
-def op_tester(inputs:list, function, name, device=Device.CPU, module_func=False, factor=1):    
+def op_tester(inputs:list, function, name, device=Device.CPU, module_func=False, nn_functional=False, factor=1):    
     torch_inputs = [torch.tensor(np.random.rand(*shape)*factor, requires_grad=True, dtype=torch.float32, device=device.value) for shape in inputs]
-    if module_func: torch_inputs.insert(0, torch)
+    if module_func: 
+        if nn_functional:
+            torch_inputs.insert(0, torch.nn.functional)
+        else:
+            torch_inputs.insert(0, torch)
     torch_out, torch_fw_time = time_fun(function, *torch_inputs)
     if not isinstance(torch_out, torch.Tensor):
         torch_out = torch_out[0]
@@ -17,7 +21,11 @@ def op_tester(inputs:list, function, name, device=Device.CPU, module_func=False,
     torch_inputs = torch_inputs[1:] if module_func else torch_inputs
     
     syn_inputs = [synapgrad.tensor(inp.detach().numpy(), requires_grad=True, dtype=np.float32, device=device) for inp in torch_inputs]
-    if module_func: syn_inputs.insert(0, synapgrad)
+    if module_func: 
+        if nn_functional:
+            syn_inputs.insert(0, synapgrad.nn.functional)
+        else:
+            syn_inputs.insert(0, synapgrad)
     syn_out, syn_fw_time = time_fun(function, *syn_inputs)
     if not isinstance(syn_out, synapgrad.Tensor):
         syn_out = syn_out[0]
@@ -113,7 +121,7 @@ def test_mean():
     op_tester([(1000, 1500)], lambda x: x.mean(dim=1), name='mean')
 
 def test_min():
-    op_tester([(1000, 1500)], lambda x: x.min(), name='min')
+    op_tester([(100, 150)], lambda x: x.min(), name='min')
     op_tester([(1000, 1500)], lambda x: x.min(dim=0), name='min_d0')
     op_tester([(1000, 1500)], lambda x: x.min(dim=1), name='min_d1')
     op_tester([(1000, 1500)], lambda x: x.min(dim=1, keepdims=True), name='min_d1')
@@ -123,7 +131,7 @@ def test_min():
     op_tester([(1000, 3, 4, 5)], lambda x: x.min(dim=-2), name='min_d3')
 
 def test_max():
-    op_tester([(1000, 1500)], lambda x: x.max(), name='max')
+    op_tester([(100, 150)], lambda x: x.max(), name='max')
     op_tester([(1000, 1500)], lambda x: x.max(dim=0), name='max_d0')
     op_tester([(1000, 1500)], lambda x: x.max(dim=1), name='max_d1')
     op_tester([(1000, 1500)], lambda x: x.max(dim=1, keepdims=True), name='max_d1')
@@ -143,6 +151,10 @@ def test_reshape():
     op_tester([(100000,)], lambda x: x.reshape((1000, 100)), name='reshape')
     op_tester([(10000, 200)], lambda x: x.reshape((-1, 50)), name='reshape')
     
+def test_movedim():
+    op_tester([(100, 200, 300)], lambda x: x.movedim(0, 1), name='movedim')
+    op_tester([(10000, 200)], lambda x: x.movedim(-1, -2), name='movedim')
+    
 def test_flatten():
     op_tester([(100, 200, 300)], lambda x: x.flatten(), name='flatten')
     op_tester([(100, 200, 300)], lambda x: x.flatten(start_dim=0, end_dim=1), name='flatten_0_1')
@@ -154,8 +166,8 @@ def test_transpose():
     op_tester([(100, 200, 300)], lambda x: x.transpose(0, 1), name='transpose')
     
 def test_unfold_dim():
-    op_tester([(10, 20, 30)], lambda x: x.unfold(dimension=0, size=2, step=1), name='unfold_dim')
-    op_tester([(10, 20, 30)], lambda x: x.unfold(dimension=1, size=2, step=1), name='unfold_dim')
+    op_tester([(100, 200, 300)], lambda x: x.unfold(dimension=0, size=2, step=1), name='unfold_dim')
+    op_tester([(100, 200, 300)], lambda x: x.unfold(dimension=1, size=2, step=1), name='unfold_dim')
 
 # **********************************
 # ******* Array manipulation *******
@@ -174,19 +186,45 @@ def test_unbind():
     op_tester([(100, 200, 300)], lambda engine, x: engine.unbind(x, dim=-1), name='unbind', module_func=True)
     op_tester([(100, 200, 300)], lambda engine, x: engine.unbind(x, dim=1), name='unbind', module_func=True)
 
-
 # ************************
 # ******* Pool ops *******
 # ************************
 
- 
+def test_max_pool1d():
+    op_tester([(32, 3, 64)], lambda engine, x: engine.max_pool1d(x, kernel_size=2, stride=1), name='max_pool1d', module_func=True)
+    op_tester([(32, 3, 64)], lambda engine, x: engine.max_pool1d(x, kernel_size=3, stride=2), name='max_pool1d', module_func=True)
+    op_tester([(32, 3, 64)], lambda engine, x: engine.max_pool1d(x, kernel_size=5, stride=3, padding=2), name='max_pool1d', module_func=True)    
+
+def test_max_pool2d():
+    op_tester([(32, 3, 64, 64)], lambda engine, x: engine.max_pool2d(x, kernel_size=(2,2), stride=(1,1)), name='max_pool2d', module_func=True)
+    op_tester([(32, 3, 64, 64)], lambda engine, x: engine.max_pool2d(x, kernel_size=(3,2), stride=(1,2)), name='max_pool2d', module_func=True)
+    op_tester([(32, 3, 64, 64)], lambda engine, x: engine.max_pool2d(x, kernel_size=(5,5), stride=(3,3), padding=(2,1)), name='max_pool2d', module_func=True)
+
+def test_avg_pool1d():
+    op_tester([(32, 3, 64)], lambda engine, x: engine.avg_pool1d(x, kernel_size=2, stride=1), name='avg_pool1d', module_func=True)
+    op_tester([(32, 3, 64)], lambda engine, x: engine.avg_pool1d(x, kernel_size=3, stride=2), name='avg_pool1d', module_func=True)
+    op_tester([(32, 3, 64)], lambda engine, x: engine.avg_pool1d(x, kernel_size=5, stride=3, padding=2), name='avg_pool1d', module_func=True)
+
+def test_avg_pool2d():
+    op_tester([(32, 3, 64, 64)], lambda engine, x: engine.avg_pool2d(x, kernel_size=(2,2), stride=(1,1)), name='avg_pool2d', module_func=True)
+    op_tester([(32, 3, 64, 64)], lambda engine, x: engine.avg_pool2d(x, kernel_size=(3,2), stride=(1,2)), name='avg_pool2d', module_func=True)
+    op_tester([(32, 3, 64, 64)], lambda engine, x: engine.avg_pool2d(x, kernel_size=(5,5), stride=(3,3), padding=(2,1)), name='avg_pool2d', module_func=True)
+    
 # ************************
 # ******* Conv ops *******
 # ************************
 
+def test_unfold():
+    op_tester([(32, 3, 64, 64)], lambda engine, x: engine.unfold(x, kernel_size=(3,3), dilation=1, stride=(1,1), padding=0), name='unfold', module_func=True, nn_functional=True)
+    op_tester([(32, 3, 64, 64)], lambda engine, x: engine.unfold(x, kernel_size=(5,3), dilation=(1,2), stride=(3,2), padding=1), name='unfold', module_func=True, nn_functional=True)
+    op_tester([(32, 3, 64, 64)], lambda engine, x: engine.unfold(x, kernel_size=(7,7), dilation=3, stride=(2,2), padding=(2, 3)), name='unfold', module_func=True, nn_functional=True)
+    
+def test_fold():
+    op_tester([(32, 27, 3844)], lambda engine, x: engine.fold(x, (64,64), kernel_size=(3,3), dilation=1, stride=(1,1), padding=0), name='fold', module_func=True, nn_functional=True)
+    op_tester([(32, 45, 651)], lambda engine, x: engine.fold(x, (64,64), kernel_size=(5,3), dilation=(1,2), stride=(3,2), padding=1), name='fold', module_func=True, nn_functional=True)
+    op_tester([(32, 147, 650)], lambda engine, x: engine.fold(x, (64,64), kernel_size=(7,7), dilation=3, stride=(2,2), padding=(2, 3)), name='fold', module_func=True, nn_functional=True)
 
 # ******************************
 # ******* Batch norm ops *******
 # ******************************
-
 
