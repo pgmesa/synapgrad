@@ -453,6 +453,13 @@ class Tensor:
     # **** Pretty data ****
     # *********************
     
+    def draw_graph(self):
+        """
+        Draw graph of the tensor
+        """
+        from synapgrad.visual import graph
+        return graph.draw(self)
+    
     def __str__(self) -> str:
         return self.__repr__()
         
