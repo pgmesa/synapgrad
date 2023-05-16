@@ -7,7 +7,8 @@ from synapgrad.tensor import Tensor
 # **************************
 
 def get_conv1d_output_size(input_length:int, kernel_size:int, stride:int, padding:int, dilation:int) -> int:
-    """Computes the output size of a 1d convolution.
+    """
+    Computes the output size of a 1d convolution.
 
     Args:
         input_length (int): Length of the sequence
@@ -22,6 +23,163 @@ def get_conv1d_output_size(input_length:int, kernel_size:int, stride:int, paddin
     length_padded = input_length + 2 * padding
     num_windows = int(np.floor((length_padded - dilation * (kernel_size - 1) - 1) / stride + 1))
     return num_windows
+
+
+def get_arr2col_indices(arr_shape, kernel_size, dilation=1, stride=1, padding=0) -> tuple:
+    """
+    Compute the indices of the input array for the 1d convolution operation.
+
+    Parameters
+    ----------
+    arr_shape : tuple
+        Shape of the input array.
+    kernel_size : int
+        Size of the kernel used in the convolution operation.
+    dilation : int
+        Dilation rate used in the convolution operation.
+    stride : int
+        Stride value used in the convolution operation.
+    padding : int
+        Padding value or tuple of values used in the convolution operation.
+
+    Returns
+    -------
+    tuple
+        Tuple of 1d arrays of indices.
+
+    Example
+    -------
+    >>> arr_shape = (1,1,9)
+    >>> get_arr2col_indices(arr_shape, kernel_size=3, stride=2, padding=0)
+    Output:
+    (array([0, 1, 2]), array([2, 3, 4]), array([4, 5, 6]), array([6, 7, 8]),)
+    """
+    if padding > kernel_size / 2:
+            raise ValueError("Invalid padding: pad should be smaller than or equal to half " +
+                    "of kernel size, but got pad = {}, kernel_size = {}.".format(padding, kernel_size))
+    
+    L = get_conv1d_output_size(arr_shape[2], kernel_size, stride, padding, dilation)
+    
+    if L == 0:
+        raise RuntimeError('Cannot get indices of an array with zero or negative spatial size (L='+str(L)+
+            ') for kernel_size='+str(kernel_size)+', stride='+str(stride)+', padding='+str(padding)+
+            ', dilation='+str(dilation)+' and shape='+str(arr_shape))
+    
+    window_size = kernel_size + (dilation - 1) * (kernel_size - 1)
+    indices = tuple([np.arange(i*stride, (i*stride)+window_size, dilation) for i in range(L)])
+    return indices
+    
+    
+def arr2col(arr, kernel_size, dilation=1, stride=1, padding=0, pad_value=0, unf_indices=None, return_indices=False):
+    """
+    Convert a 3D dimension array to a 4D dimension array by unfolding the 3nd dimension.
+
+    Parameters
+    ----------
+    arr : array-like
+        Input array
+    kernel_size : int
+        Size of the kernel used in the convolution operation.
+    dilation : int
+        Dilation rate used in the convolution operation.
+    stride : int
+        Stride value used in the convolution operation.
+    padding : int
+        Padding value or tuple of values used in the convolution operation.
+    pad_value : scalar, optional (default=0)
+        Value used for padding the input array.
+    unf_indices : tuple
+        Precomputed indices of the input array.
+    return_indices : bool
+        If True, the function returns the indices of the input array.
+
+    Returns
+    -------
+    array
+        An array representing the unfolded array.
+
+    Example
+    -------
+    >>> arr = np.array([[[1, 2, 3, 4, 5, 6, 7, 8, 9]]])
+    >>> arr2col(arr, kernel_size=3, dilation=1, stride=2, padding=0)
+    Output:
+    array([[[[1, 2, 3],
+             [3, 4, 5],
+             [5, 6, 7],
+             [7, 8, 9]]]])
+    """
+    if len(arr.shape) != 3:
+        raise ValueError("array must be a 3D array, but got shape = {}".format(arr.shape))
+    
+    if not unf_indices:
+        unf_indices = get_arr2col_indices(arr.shape, kernel_size, dilation, stride, padding)
+    
+    if padding > 0:
+        arr = np.pad(arr, ((0,0), (0,0), (padding, padding)), mode='constant', constant_values=pad_value)
+    
+    unfolded = np.take(arr, unf_indices, axis=2)
+    
+    out = unfolded if not return_indices else (unfolded, unf_indices)
+    return out
+
+
+def col2arr(unfolded, arr_shape, kernel_size, dilation=1, stride=1, padding=0, unf_indices=None, return_indices=False):
+    """
+    Converts a 4D array to a 3D array by folding the 3rd dimension
+
+    Parameters
+    ----------
+    unfolded : array-like
+        4D input array to fold
+    arr_shape : tuple
+        Shape of the output array
+    kernel_size : int
+        Size of the kernel used in the convolution operation.
+    dilation : int
+        Dilation rate used in the convolution operation.
+    stride : int
+        Stride value used in the convolution operation.
+    padding : int
+        Padding value or tuple of values used in the convolution operation.
+    unf_indices : tuple
+        Precomputed indices in arr2col.
+    return_indices : bool
+        If True, the function returns the indices of the input array.
+
+    Returns
+    -------
+    array
+        An array representing the folded array.
+
+    Example
+    -------
+    >>> unfolded = np.array([[1, 2, 3],
+    ...                      [3, 4, 5],
+    ...                      [4, 6, 7],
+    ...                      [7, 8, 9]])
+    >>> indices = (array([0, 1, 2]), array([2, 3, 4]), array([4, 5, 6]), array([6, 7, 8]),)
+    >>> col2arr(unfolded, (1,1,9), kernel_size=3, dilation=1, stride=2, padding=0, unf_indices=indices)
+    Output:
+    array([[[1, 2, 3+3, 4, 5+5, 6, 7+7, 8, 9]]])
+    """
+    if len(unfolded.shape) != 4:
+        raise ValueError("Input array must be 4D, but got shape="+str(unfolded.shape))
+    
+    if len(arr_shape) != 3:
+        raise ValueError("Output array must be 3D, but got shape="+str(arr_shape))
+    
+    output = np.zeros((arr_shape[0], arr_shape[1], arr_shape[2] + 2 * padding))
+  
+    if unf_indices is None:
+        unf_indices = get_arr2col_indices(arr_shape, kernel_size, dilation, stride, padding)
+    
+    np.add.at(output, (slice(None), slice(None), unf_indices), unfolded)
+    
+    if padding > 0:
+        output = output[:, :, padding:-padding]
+    
+    out = output if not return_indices else (output, unf_indices)
+    return out
 
 
 def get_conv2d_output_size(shape:tuple, kernel_size, dilation, stride, padding) -> tuple:

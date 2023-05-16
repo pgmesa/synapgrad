@@ -668,6 +668,7 @@ class MaxPool1d(Function):
 
         return out
     
+    @staticmethod
     def backward(ctx:Context, grad_output:Tensor):
         kernel_size = ctx.kernel_size
         stride = ctx.stride
@@ -693,6 +694,9 @@ class MaxPool1d(Function):
 def max_pool1d(x:Tensor, kernel_size, stride=None, padding=0, dilation=1):
     """
     Max-pooling operation for 1D data.
+    
+    Reference:
+        https://pytorch.org/docs/stable/generated/torch.nn.MaxPool1d.html
 
     Args:
         x (Tensor): Input tensor of shape (N, C, L).
@@ -775,6 +779,76 @@ def max_pool2d(x:Tensor, kernel_size, stride=None, padding=0, dilation=1):
     return MaxPool2d.apply(x, kernel_size, stride, padding, dilation)
 
 
+class AvgPool1d(Function):
+    
+    @staticmethod
+    def forward(ctx:Context, x:Tensor, kernel_size, stride=None, padding=0, dilation=1):
+        if not isinstance(x, Tensor):
+            raise TypeError(f"Expected x to be a Tensor but got {type(x)}")
+        
+        if len(x.shape) != 3:
+            raise ValueError(f"Input tensor must be of shape (N, C, L), but got {x.shape}")
+        
+        if x.device == Device.CPU:
+            out_data, *bw_data = cpu_ops.avg_pool1d_forward(x.data, kernel_size, stride, padding, dilation)
+        else:
+            raise RuntimeError(f"{ctx.fn_name}: {x.device} not supported")
+
+        out = Tensor(out_data, device=x.device)
+        
+        ctx.kernel_size = kernel_size
+        ctx.stride = stride
+        ctx.padding = padding
+        ctx.dilation = dilation
+        ctx.x_shape = x.shape
+        ctx.bw_data = bw_data
+
+        return out
+    
+    @staticmethod
+    def backward(ctx:Context, grad_output:Tensor):
+        kernel_size = ctx.kernel_size
+        stride = ctx.stride
+        padding = ctx.padding
+        dilation = ctx.dilation
+        x_shape = ctx.x_shape
+        bw_data = ctx.bw_data
+        
+        if not isinstance(grad_output, Tensor):
+            raise TypeError(f"Expected grad_output to be a Tensor but got {type(grad_output)}")
+        
+        if grad_output.device == Device.CPU:
+            grad_input_data = cpu_ops.avg_pool1d_backward(grad_output.data, kernel_size, stride, padding, dilation, x_shape, *bw_data)
+        else:
+            raise RuntimeError(f"{ctx.fn_name}: {grad_output.device} not supported")
+        
+        grad_input = Tensor(grad_input_data, device=grad_output.device)
+        
+        return grad_input
+    
+
+def avg_pool1d(x:Tensor, kernel_size, stride=None, padding=0, dilation=1):
+    """ 
+    Average-pooling function.
+    
+    Reference:
+        https://pytorch.org/docs/stable/generated/torch.nn.AvgPool1d.html
+
+    Args:
+        tensor (numpy.ndarray): Input tensor of shape (N, C, L).
+        kernel_size (int or tuple): Size of the sliding window.
+        stride (int or tuple, optional): Stride size. Defaults to kernel_size.
+        padding (int or tuple, optional): Padding size. Defaults to 0.
+        dilation (int or tuple, optional): Dilation factor. Defaults to 1.
+
+    Returns:
+        numpy.ndarray: Output tensor of shape (N, C, L).
+    """
+    if stride is None: stride = kernel_size
+    return AvgPool1d.apply(x, kernel_size, stride, padding, dilation)
+    
+
+
 class AvgPool2d(Function):
     
     @staticmethod
@@ -799,7 +873,6 @@ class AvgPool2d(Function):
         ctx.bw_data = bw_data
 
         return out
-        
         
     @staticmethod
     def backward(ctx:Context, grad_output:Tensor):

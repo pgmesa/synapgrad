@@ -2,7 +2,8 @@ import numpy as np
 from synapgrad.tensor import Tensor
 from synapgrad.tools import (
     recursively_seek_tensors,
-    im2col, col2im, get_conv2d_output_size, get_conv1d_output_size
+    get_conv2d_output_size, get_conv1d_output_size,
+    im2col, col2im, arr2col, col2arr
 )
 
 epsilon = 1e-12
@@ -209,7 +210,9 @@ def mean_backward(grad:np.ndarray, a_shape:tuple, axis:'None| int | tuple', keep
         grad = unsqueeze_forward(grad, axis)
     
     if axis is None: axis = range(len(a_shape))
-    if isinstance(axis, int): axis = [axis]
+    if isinstance(axis, int): 
+        if axis < 0: axis = len(a_shape) + axis
+        axis = [axis]
     n_samples = np.prod([a_shape[i] for i in range(len(a_shape)) if i in axis])
 
     out_grad = out_grad + grad
@@ -497,18 +500,7 @@ def conv2d_backward():
     
 @check_inputs
 def max_pool1d_forward(a, kernel_size, stride, padding, dilation):
-    if padding > kernel_size / 2:
-        raise ValueError("Invalid padding: pad should be smaller than or equal to half " +
-                "of kernel size, but got pad = {}, kernel_size = {}.".format(padding, kernel_size))
-    
-    num_windows = get_conv1d_output_size(a.shape[2], kernel_size, stride, padding, dilation)
-    
-    if padding > 0:
-        a = np.pad(a,  ((0, 0), (0, 0), (padding, padding)), mode='constant', constant_values=-np.inf)
-    
-    window_size = kernel_size + (dilation - 1) * (kernel_size - 1)
-    indices = [np.arange(i*stride, (i*stride)+window_size, dilation) for i in range(num_windows)]
-    unfolded = np.take(a, indices, axis=2)
+    unfolded, indices = arr2col(a, kernel_size, dilation, stride, padding, pad_value=-np.inf, return_indices=True)
     out = unfolded.max(axis=3)
 
     return out, unfolded, indices
@@ -516,22 +508,24 @@ def max_pool1d_forward(a, kernel_size, stride, padding, dilation):
 @check_inputs
 def max_pool1d_backward(grad, kernel_size, stride, padding, dilation, a_shape, unfolded, unf_indices):
     max_grad = max_backward(grad, unfolded, 3, False)
-    out_grad = np.zeros((a_shape[0], a_shape[1], a_shape[2] + 2 * padding))
-    np.add.at(out_grad, (slice(None), slice(None), unf_indices), max_grad)
-    
-    if padding > 0:
-        out_grad = out_grad[:, :, padding:-padding]
+    out_grad = col2arr(max_grad, a_shape, kernel_size, dilation, stride, padding, unf_indices=unf_indices)
     
     return out_grad
     
     
 @check_inputs
-def avg_pool1d_forward():
-    ...
+def avg_pool1d_forward(a, kernel_size, stride, padding, dilation):
+    unfolded, indices = arr2col(a, kernel_size, dilation, stride, padding, pad_value=0, return_indices=True)
+    out = unfolded.mean(axis=3)
+
+    return out, unfolded, indices
 
 @check_inputs
-def avg_pool1d_backward():
-    ...
+def avg_pool1d_backward(grad, kernel_size, stride, padding, dilation, a_shape, unfolded, unf_indices):
+    mean_grad = mean_backward(grad, unfolded.shape, 3, False)
+    out_grad = col2arr(mean_grad, a_shape, kernel_size, dilation, stride, padding, unf_indices=unf_indices)
+    
+    return out_grad
 
 
 @check_inputs
@@ -569,29 +563,26 @@ def avg_pool2d_forward(a, kernel_size, stride, padding, dilation):
     lH, lW = get_conv2d_output_size(a.shape, kernel_size, dilation, stride, padding)
     
     x_split = a.reshape(N * C, 1, H, W)
-    x_cols, col_indices = \
-        im2col(x_split, kernel_size, dilation=dilation, stride=stride, padding=padding, pad_value=-np.inf)
-    x_cols = np.concatenate(x_cols, axis=-1)
-    print(x_cols, x_cols.shape)
+    x_cols, col_indices = im2col(x_split, kernel_size, dilation=dilation, stride=stride,
+                                            padding=padding, pad_value=0, return_indices=True)
     
-    x_cols_avg = np.average(x_cols, axis=0)
-    out = x_cols_avg.reshape(N, C, lH, lW)
-    return out, col_indices
+    x_cols_avg = np.mean(x_cols, axis=0)
+    out = x_cols_avg.reshape(lH, lW, N, C).transpose(2,3,0,1)
+    return out, a.shape, x_cols.shape, col_indices
 
 @check_inputs
-def avg_pool2d_backward(grad, kernel_size, stride, padding, dilation, a_shape, x_cols_shape, max_indices, col_indices):
+def avg_pool2d_backward(grad, kernel_size, stride, padding, dilation, a_shape, x_cols_shape, col_indices):
     out_grad = np.zeros(x_cols_shape)
     # flatten the gradient
-    dout_flat = grad.ravel()
-    out_grad[max_indices, range(max_indices.size)] = dout_flat
+    grad = grad.transpose(2,3,0,1).ravel()
+    out_grad = mean_backward(grad, x_cols_shape, 0, False)
     
     N, C, H, W = a_shape
     # get the original X_reshaped structure from col2im
-    out_grad = np.stack(np.hsplit(out_grad, C), axis=0)
-    out_grad = col2im(out_grad, (H,W), kernel_size, dilation, stride, padding, col_indices=col_indices)
+    shape = (N*C, 1, H, W)
+    out_grad = col2im(out_grad, shape, kernel_size, dilation, stride, padding, col_indices=col_indices)
     out_grad = out_grad.reshape(N, C, H, W)
     return out_grad
-    
     
 # ******************************
 # ******* Batch norm ops *******

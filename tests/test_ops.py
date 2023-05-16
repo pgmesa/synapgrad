@@ -115,10 +115,12 @@ def test_sum():
     op_tester([(1000, 1500)], lambda x: x.sum(), name='sum')
     op_tester([(1000, 1500)], lambda x: x.sum(dim=1), name='sum')
     op_tester([(1000, 1500, 3)], lambda x: x.sum(dim=(1, 2)), name='sum')
+    op_tester([(1000, 1500, 3)], lambda x: x.sum(dim=-1), name='sum')
 
 def test_mean():
     op_tester([(1000, 1500)], lambda x: x.mean(dim=0), name='mean')
     op_tester([(1000, 1500)], lambda x: x.mean(dim=1), name='mean')
+    op_tester([(1000, 1500)], lambda x: x.mean(dim=-1), name='mean')
 
 def test_min():
     op_tester([(100, 150)], lambda x: x.min(), name='min')
@@ -168,6 +170,7 @@ def test_transpose():
 def test_unfold_dim():
     op_tester([(100, 200, 300)], lambda x: x.unfold(dimension=0, size=2, step=1), name='unfold_dim')
     op_tester([(100, 200, 300)], lambda x: x.unfold(dimension=1, size=2, step=1), name='unfold_dim')
+    op_tester([(100, 200, 300)], lambda x: x.unfold(dimension=-1, size=2, step=1), name='unfold_dim')
 
 # **********************************
 # ******* Array manipulation *******
@@ -200,15 +203,15 @@ def test_max_pool2d():
     op_tester([(32, 3, 64, 64)], lambda engine, x: engine.max_pool2d(x, kernel_size=(3,2), stride=(1,2)), name='max_pool2d', module_func=True)
     op_tester([(32, 3, 64, 64)], lambda engine, x: engine.max_pool2d(x, kernel_size=(5,5), stride=(3,3), padding=(2,1)), name='max_pool2d', module_func=True)
 
-# def test_avg_pool1d():
-#     op_tester([(32, 3, 64)], lambda engine, x: engine.avg_pool1d(x, kernel_size=2, stride=1), name='avg_pool1d', module_func=True)
-#     op_tester([(32, 3, 64)], lambda engine, x: engine.avg_pool1d(x, kernel_size=3, stride=2), name='avg_pool1d', module_func=True)
-#     op_tester([(32, 3, 64)], lambda engine, x: engine.avg_pool1d(x, kernel_size=5, stride=3, padding=2), name='avg_pool1d', module_func=True)
+def test_avg_pool1d():
+    op_tester([(32, 3, 64)], lambda engine, x: engine.avg_pool1d(x, kernel_size=2, stride=1), name='avg_pool1d', module_func=True)
+    op_tester([(32, 3, 64)], lambda engine, x: engine.avg_pool1d(x, kernel_size=3, stride=2), name='avg_pool1d', module_func=True)
+    op_tester([(32, 3, 64)], lambda engine, x: engine.avg_pool1d(x, kernel_size=5, stride=3, padding=2), name='avg_pool1d', module_func=True)
 
-# def test_avg_pool2d():
-#     op_tester([(32, 3, 64, 64)], lambda engine, x: engine.avg_pool2d(x, kernel_size=(2,2), stride=(1,1)), name='avg_pool2d', module_func=True)
-#     op_tester([(32, 3, 64, 64)], lambda engine, x: engine.avg_pool2d(x, kernel_size=(3,2), stride=(1,2)), name='avg_pool2d', module_func=True)
-#     op_tester([(32, 3, 64, 64)], lambda engine, x: engine.avg_pool2d(x, kernel_size=(5,5), stride=(3,3), padding=(2,1)), name='avg_pool2d', module_func=True)
+def test_avg_pool2d():
+    op_tester([(32, 3, 64, 64)], lambda engine, x: engine.avg_pool2d(x, kernel_size=(2,2), stride=(1,1)), name='avg_pool2d', module_func=True, nn_functional=True)
+    op_tester([(32, 3, 64, 64)], lambda engine, x: engine.avg_pool2d(x, kernel_size=(3,2), stride=(1,2)), name='avg_pool2d', module_func=True, nn_functional=True)
+    op_tester([(32, 3, 64, 64)], lambda engine, x: engine.avg_pool2d(x, kernel_size=(5,5), stride=(3,3), padding=(2,1)), name='avg_pool2d', module_func=True, nn_functional=True)
     
 # ************************
 # ******* Conv ops *******
@@ -223,6 +226,15 @@ def test_fold():
     op_tester([(32, 27, 3844)], lambda engine, x: engine.fold(x, (64,64), kernel_size=(3,3), dilation=1, stride=(1,1), padding=0), name='fold', module_func=True, nn_functional=True)
     op_tester([(32, 45, 651)], lambda engine, x: engine.fold(x, (64,64), kernel_size=(5,3), dilation=(1,2), stride=(3,2), padding=1), name='fold', module_func=True, nn_functional=True)
     op_tester([(32, 147, 650)], lambda engine, x: engine.fold(x, (64,64), kernel_size=(7,7), dilation=3, stride=(2,2), padding=(2, 3)), name='fold', module_func=True, nn_functional=True)
+
+# def test_conv1d():
+#     op_tester([(32, 3, 64)], lambda engine, x: engine.conv1d(x, 64, kernel_size=3, stride=1, padding=1), name='conv1d', module_func=True, nn_functional=True)
+#     op_tester([(32, 3, 64)], lambda engine, x: engine.conv1d(x, 64, kernel_size=5, stride=2, padding=2), name='conv1d', module_func=True, nn_functional=True)
+    
+# def test_conv2d():
+#     op_tester([(32, 3, 64, 64)], lambda engine, x: engine.conv2d(x, 64, kernel_size=(3,3), stride=(1,1), padding=0), name='conv2d', module_func=True, nn_functional=True)
+#     op_tester([(32, 3, 64, 64)], lambda engine, x: engine.conv2d(x, 64, kernel_size=(5,3), stride=(1,2), padding=1), name='conv2d', module_func=True, nn_functional=True)
+#     op_tester([(32, 3, 64, 64)], lambda engine, x: engine.conv2d(x, 64, kernel_size=(7,7), stride=(2,2), padding=(2, 3)), name='conv2d', module_func=True, nn_functional=True)
 
 # ******************************
 # ******* Batch norm ops *******
