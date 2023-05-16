@@ -14,7 +14,7 @@ from synapgrad.tools import manual_seed
 from synapgrad.nn.functional import (
     relu, tanh, sigmoid, softmax, log_softmax,
     mse_loss, nll_loss, binary_cross_entropy, binary_cross_entropy_with_logits, cross_entropy,
-    unfold, fold, max_pool2d, avg_pool2d
+    unfold, fold, max_pool1d, max_pool2d, avg_pool2d
 )
 
 from synapgrad import (

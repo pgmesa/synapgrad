@@ -1228,7 +1228,7 @@ class UnfoldDim(Function):
             raise ValueError(f"Invalid step: {step}")
         
         if x.device == Device.CPU:
-            out_data = cpu_ops.unfold_forward(x.data, dimension, size, step)
+            out_data = cpu_ops.unfold_dim_forward(x.data, dimension, size, step)
         else:
             raise RuntimeError(f"{ctx.fn_name}: {x.device} not supported")
         
@@ -1249,7 +1249,7 @@ class UnfoldDim(Function):
         step = ctx.step
         
         if grad_output.device == Device.CPU:
-            a_grad = cpu_ops.unfold_backward(grad_output.data, x_shape, dimension, size, step)
+            a_grad = cpu_ops.unfold_dim_backward(grad_output.data, x_shape, dimension, size, step)
         else:
             raise RuntimeError(f"{ctx.fn_name}: {grad_output.device} not supported")
         

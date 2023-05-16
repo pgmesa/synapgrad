@@ -6,6 +6,24 @@ from synapgrad.tensor import Tensor
 # ******* Conv tools *******
 # **************************
 
+def get_conv1d_output_size(input_length:int, kernel_size:int, stride:int, padding:int, dilation:int) -> int:
+    """Computes the output size of a 1d convolution.
+
+    Args:
+        input_length (int): Length of the sequence
+        kernel_size (int): Spatial size of the kernel
+        stride (int): Stride of the convolution
+        padding (int): Padding of the convolution
+        dilation (int): Spacing between kernel elements
+
+    Returns:
+        int: Output size
+    """
+    length_padded = input_length + 2 * padding
+    num_windows = int(np.floor((length_padded - dilation * (kernel_size - 1) - 1) / stride + 1))
+    return num_windows
+
+
 def get_conv2d_output_size(shape:tuple, kernel_size, dilation, stride, padding) -> tuple:
     """
     Calculate the output size of a 2D convolution operation.

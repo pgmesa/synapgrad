@@ -2,7 +2,7 @@ import numpy as np
 from synapgrad.tensor import Tensor
 from synapgrad.tools import (
     recursively_seek_tensors,
-    im2col, col2im, get_conv2d_output_size
+    im2col, col2im, get_conv2d_output_size, get_conv1d_output_size
 )
 
 epsilon = 1e-12
@@ -222,15 +222,16 @@ def max_forward(a, axis, keepdims):
     return np.max(a, axis=axis, keepdims=keepdims)
 
 @check_inputs
-def max_backward(grad, a, axis, keepdims):
+def max_backward(grad, a, axis, keepdims, max_indices=None):
     # Create mask of ones and zeros, where the maximum value is 1 
     mask = np.zeros_like(a)
-    indices_max = np.argmax(a, axis=axis, keepdims=True)
+    if max_indices is None:
+        max_indices = np.argmax(a, axis=axis, keepdims=True)
     if axis is None:
-        unr_indices = np.unravel_index(indices_max, a.shape)
+        unr_indices = np.unravel_index(max_indices, a.shape)
         mask[unr_indices] = 1
     else:
-        np.put_along_axis(mask, indices_max, 1, axis=axis)
+        np.put_along_axis(mask, max_indices, 1, axis=axis)
     
     if not keepdims and axis is not None:
         grad = unsqueeze_forward(grad, axis)
@@ -305,7 +306,7 @@ def transpose_backward(grad:np.ndarray, axis0:int, axis1:int):
     
 
 @check_inputs
-def unfold_forward(a:np.ndarray, dimension:int, size:int, step:int):
+def unfold_dim_forward(a:np.ndarray, dimension:int, size:int, step:int):
     dim_size = a.shape[dimension]
     # check that the size is smaller than or equal to the size of the dimension
     if size > dim_size:
@@ -317,7 +318,7 @@ def unfold_forward(a:np.ndarray, dimension:int, size:int, step:int):
     return out_array
     
 @check_inputs
-def unfold_backward(grad:np.ndarray, a_shape:tuple, dimension:int, size:int, step:int):
+def unfold_dim_backward(grad:np.ndarray, a_shape:tuple, dimension:int, size:int, step:int):
     a_grad = np.zeros(a_shape)
     for i in range(grad.shape[dimension]):
         start = i * step
@@ -495,12 +496,33 @@ def conv2d_backward():
 # ************************
     
 @check_inputs
-def max_pool1d_forward():
-    ...
+def max_pool1d_forward(a, kernel_size, stride, padding, dilation):
+    if padding > kernel_size / 2:
+        raise ValueError("Invalid padding: pad should be smaller than or equal to half " +
+                "of kernel size, but got pad = {}, kernel_size = {}.".format(padding, kernel_size))
+    
+    num_windows = get_conv1d_output_size(a.shape[2], kernel_size, stride, padding, dilation)
+    
+    if padding > 0:
+        a = np.pad(a,  ((0, 0), (0, 0), (padding, padding)), mode='constant', constant_values=-np.inf)
+    
+    window_size = kernel_size + (dilation - 1) * (kernel_size - 1)
+    indices = [np.arange(i*stride, (i*stride)+window_size, dilation) for i in range(num_windows)]
+    unfolded = np.take(a, indices, axis=2)
+    out = unfolded.max(axis=3)
 
+    return out, unfolded, indices
+    
 @check_inputs
-def max_pool1d_backward():
-    ...
+def max_pool1d_backward(grad, kernel_size, stride, padding, dilation, a_shape, unfolded, unf_indices):
+    max_grad = max_backward(grad, unfolded, 3, False)
+    out_grad = np.zeros((a_shape[0], a_shape[1], a_shape[2] + 2 * padding))
+    np.add.at(out_grad, (slice(None), slice(None), unf_indices), max_grad)
+    
+    if padding > 0:
+        out_grad = out_grad[:, :, padding:-padding]
+    
+    return out_grad
     
     
 @check_inputs
