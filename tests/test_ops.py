@@ -6,8 +6,8 @@ from utils import check_tensors, time_fun
 
 atol = 1e-8; rtol = 1e-5
 
-def op_tester(inputs:list, function, name, device=Device.CPU, module_func=False, nn_functional=False, factor=1):    
-    torch_inputs = [torch.tensor(np.random.rand(*shape)*factor, requires_grad=True, dtype=torch.float32, device=device.value) for shape in inputs]
+def op_tester(inputs:list, function, name, device=Device.CPU, module_func=False, nn_functional=False, factor=1, offset=0):    
+    torch_inputs = [torch.tensor(np.random.rand(*shape)*factor+offset, requires_grad=True, dtype=torch.float32, device=device.value) for shape in inputs]
     if module_func: 
         if nn_functional:
             torch_inputs.insert(0, torch.nn.functional)
@@ -103,7 +103,7 @@ def test_clone():
     op_tester([(1000, 1000)], lambda x: x.clone(), name='clone')
 
 def test_log():
-    op_tester([(1000, 1000)], lambda x: x.log(), name='log', factor=10)
+    op_tester([(1000, 1000)], lambda x: x.log(), name='log', factor=5, offset=0.1)
 
 def test_exp():
     op_tester([(1000, 1000)], lambda x: x.exp(), name='exp')

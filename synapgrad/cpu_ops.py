@@ -537,17 +537,17 @@ def max_pool2d_forward(a, kernel_size, stride, padding, dilation):
     x_cols, col_indices = im2col(x_split, kernel_size, dilation=dilation, stride=stride,
                                             padding=padding, pad_value=-np.inf, return_indices=True)
     
-    x_cols_argmax = np.argmax(x_cols, axis=0)
+    x_cols_argmax = np.argmax(x_cols, axis=0, keepdims=True)
     x_cols_max = x_cols[x_cols_argmax, np.arange(x_cols.shape[1])]
     out = x_cols_max.reshape(lH, lW, N, C).transpose(2,3,0,1)
-    return out, a.shape, x_cols.shape, x_cols_argmax, col_indices
+    return out, a.shape, x_cols, x_cols_argmax, col_indices
 
 @check_inputs
-def max_pool2d_backward(grad, kernel_size, stride, padding, dilation, a_shape, x_cols_shape, max_indices, col_indices):
-    out_grad = np.zeros(x_cols_shape)
+def max_pool2d_backward(grad, kernel_size, stride, padding, dilation, a_shape, x_cols, max_indices, col_indices):
     # flatten the gradient
-    dout_flat = grad.transpose(2,3,0,1).ravel()
-    out_grad[max_indices, range(max_indices.size)] = dout_flat
+    grad = grad.transpose(2,3,0,1).ravel()
+    out_grad = max_backward(grad, x_cols, 0, False, max_indices=max_indices)
+    # Another way to do it: out_grad = np.zeros_like(x_cols); out_grad[max_indices, range(max_indices.size)] = grad
     
     N, C, H, W = a_shape
     # get the original X_reshaped structure from col2im
@@ -572,7 +572,6 @@ def avg_pool2d_forward(a, kernel_size, stride, padding, dilation):
 
 @check_inputs
 def avg_pool2d_backward(grad, kernel_size, stride, padding, dilation, a_shape, x_cols_shape, col_indices):
-    out_grad = np.zeros(x_cols_shape)
     # flatten the gradient
     grad = grad.transpose(2,3,0,1).ravel()
     out_grad = mean_backward(grad, x_cols_shape, 0, False)
