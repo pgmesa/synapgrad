@@ -120,9 +120,14 @@ class Tensor:
             
         """
         if F is None: lazy_import()
+        if isinstance(data, Tensor):
+            self.copy_from(data); return
         
         if not isinstance(data, np.ndarray):
-            data = np.array(data, dtype=default_type__)
+            try:
+                data = np.array(data, dtype=default_type__)
+            except: 
+                raise RuntimeError("data must be convertible into a numpy array")
         if dtype is not None and data.dtype != dtype: data = data.astype(dtype)
         assert isinstance(data, np.ndarray), "data must be a list or numpy array"
         
@@ -139,6 +144,7 @@ class Tensor:
         self._children = children
         self._operation = operation
         self._name = name
+        self._initialized = True
         
     # **************************
     # ******* Properties *******
@@ -175,6 +181,10 @@ class Tensor:
     @property
     def is_floating_point(self) -> bool:
         return tools.is_floating_point(self.data)
+    
+    @property
+    def is_initialized(self) -> bool:
+        return hasattr(self, "_initialized") and self._initialized
     
     @property
     def requires_grad(self) -> bool:
@@ -272,6 +282,12 @@ class Tensor:
         """
         return F.clone(self)
     
+    def copy_from(self, tensor:'Tensor'):
+        """
+        Copies all attributes of a tensor to this tensor
+        """
+        self.__dict__.update(tensor.__dict__)
+        
     # *********************************
     # *********** Backprop ************
     # *********************************

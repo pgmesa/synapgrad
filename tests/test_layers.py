@@ -2,37 +2,67 @@ import torch
 from synapgrad import Tensor, nn
 from utils import check_tensors
 import numpy as np
-    
-    
-def test_linear():
-    list_ = np.random.randn(10,6).astype(np.float32)
+
+
+def test_neuron():
+    list_ = [[0.2, 1, 4, 2, -1, 4], [0.2, 1, 4, 2, -1, 4]]
     
     # synapgrad
     inp = Tensor(list_, requires_grad=True)
-    linear = nn.Linear(6,3)
-    out = linear(inp)
+    neuron = nn.Neuron(6)
+    out = neuron(inp)
     out = out.sum()
     out.backward()
 
     # torch
     inp_t = torch.tensor(list_, requires_grad=True)
-    linear_t = torch.nn.Linear(6,3)
-    linear_t.weight = torch.nn.parameter.Parameter(torch.tensor(linear.weight.data))
-    linear_t.bias = torch.nn.parameter.Parameter(torch.tensor(linear.bias.data))
-    out_t = linear_t(inp_t)
+    neuron_t = torch.nn.Linear(6,1)
+    out_t = neuron_t(inp_t)
     out_t = out_t.sum()
     out_t.backward()
 
-    params = linear.parameters()
-    params_t = list(linear_t.parameters())
+    params = neuron.parameters()
+    params_t = list(neuron_t.parameters())
 
     assert len(params) == len(params_t)
     for p, p_t in zip(params, params_t):
-        assert check_tensors(p, p_t)
         assert check_tensors(p.grad, p_t.grad)
         
-    assert check_tensors(out, out_t)
-    assert check_tensors(inp.grad, inp_t.grad)
+    
+def test_linear():
+    for i in range(2):
+        list_ = np.random.randn(10,6).astype(np.float32)
+        
+        bias = True
+        if i == 0: bias = False
+        
+        # synapgrad
+        inp = Tensor(list_, requires_grad=True)
+        linear = nn.Linear(6,3, bias=bias)
+        out = linear(inp)
+        out = out.sum()
+        out.backward()
+
+        # torch
+        inp_t = torch.tensor(list_, requires_grad=True)
+        linear_t = torch.nn.Linear(6,3, bias=bias)
+        linear_t.weight = torch.nn.parameter.Parameter(torch.tensor(linear.weight.data))
+        if bias:
+            linear_t.bias = torch.nn.parameter.Parameter(torch.tensor(linear.bias.data))
+        out_t = linear_t(inp_t)
+        out_t = out_t.sum()
+        out_t.backward()
+
+        params = linear.parameters()
+        params_t = list(linear_t.parameters())
+
+        assert len(params) == len(params_t)
+        for p, p_t in zip(params, params_t):
+            assert check_tensors(p, p_t)
+            assert check_tensors(p.grad, p_t.grad)
+            
+        assert check_tensors(out, out_t)
+        assert check_tensors(inp.grad, inp_t.grad)
         
         
 def test_flatten():
@@ -88,8 +118,36 @@ def test_fold_unfold():
     assert check_tensors(f, f_t)
     assert check_tensors(inp.grad, inp_t.grad)
     
+
+def test_max_pool1d():
+    l = np.random.randn(32,5,28).astype(np.float32)
+    l2 = np.random.randn(32,5,1).astype(np.float32)
     
-def test_maxpool2d():
+    kernel_size = 5; stride = None; padding = 1; dilation = 2
+    
+    inp = Tensor(l, requires_grad=True)
+    p2 = Tensor(l2)
+    pool = nn.MaxPool1d(kernel_size=kernel_size, stride=stride, padding=padding, dilation=dilation)
+    out = pool(inp)*p2
+    out.sum().backward()
+    
+    inp_t = torch.tensor(l, requires_grad=True)
+    p2_t = torch.tensor(l2)
+    pool_t = torch.nn.MaxPool1d(kernel_size=kernel_size, stride=stride, padding=padding, dilation=dilation)
+    out_t = pool_t(inp_t)*p2_t
+    out_t.sum().backward()
+    
+    print(out.shape, "\n" + str(out)[:100])
+    print(out_t.shape, "\n" + str(out_t)[:100])
+    
+    print(inp.grad.shape, "\n" + str(inp.grad)[:200])
+    print(inp_t.grad.shape, "\n" + str(inp_t.grad)[:200])
+        
+    assert check_tensors(out, out_t)
+    assert check_tensors(inp.grad, inp_t.grad)
+
+
+def test_max_pool2d():
     l = np.random.randn(32,5,28,28).astype(np.float32)
     l2 = np.random.randn(32,5,1,1).astype(np.float32)
     
@@ -116,37 +174,135 @@ def test_maxpool2d():
     assert check_tensors(out, out_t)
     assert check_tensors(inp.grad, inp_t.grad)
     
-
-def test_conv2d():
-    l = np.random.rand(64,16,28,28).astype(np.float32)
-    out_channels = 32; kernel_size = 3; stride = 1; padding = 'same'
     
-    conv = nn.Conv2d(l.shape[1], out_channels, kernel_size, stride, padding)
-    conv_t = torch.nn.Conv2d(l.shape[1], out_channels, kernel_size, stride, padding)
-    conv_t.weight = torch.nn.parameter.Parameter(torch.tensor(conv.weight.data))
-    conv_t.bias = torch.nn.parameter.Parameter(torch.tensor(conv.bias.data))
-    print("Bias", conv_t.bias.shape)
-
+def test_avg_pool1d():
+    l = np.random.randn(32,5,28).astype(np.float32)
+    l2 = np.random.randn(32,5,1).astype(np.float32)
+    
+    kernel_size = 5; stride = None; padding = 1
+    
     inp = Tensor(l, requires_grad=True)
-    out = conv(inp)
+    p2 = Tensor(l2)
+    pool = nn.AvgPool1d(kernel_size=kernel_size, stride=stride, padding=padding)
+    out = pool(inp)*p2
     out.sum().backward()
     
     inp_t = torch.tensor(l, requires_grad=True)
-    out_t = conv_t(inp_t)
+    p2_t = torch.tensor(l2)
+    pool_t = torch.nn.AvgPool1d(kernel_size=kernel_size, stride=stride, padding=padding)
+    out_t = pool_t(inp_t)*p2_t
     out_t.sum().backward()
-
-    print(out_t.shape)
-    print(out.shape)
-
-    params_t = list(conv_t.parameters())
-    params = list(conv.parameters())
-    for i, (p_t, p) in enumerate(zip(params_t, params)):
-        print(f"Param {i+1}")
-        assert check_tensors(p, p_t)
-        assert check_tensors(p.grad, p_t.grad)
     
-    assert check_tensors(out, out_t, atol=1e-5)
+    print(out.shape, "\n" + str(out)[:100])
+    print(out_t.shape, "\n" + str(out_t)[:100])
+    
+    print(inp.grad.shape, "\n" + str(inp.grad)[:200])
+    print(inp_t.grad.shape, "\n" + str(inp_t.grad)[:200])
+        
+    assert check_tensors(out, out_t)
     assert check_tensors(inp.grad, inp_t.grad)
+
+
+def test_avg_pool2d():
+    l = np.random.randn(32,5,28,28).astype(np.float32)
+    l2 = np.random.randn(32,5,1,1).astype(np.float32)
+    
+    kernel_size = 5; stride = None; padding = 1
+    
+    inp = Tensor(l, requires_grad=True)
+    p2 = Tensor(l2)
+    pool = nn.AvgPool2d(kernel_size=kernel_size, stride=stride, padding=padding)
+    out = pool(inp)*p2
+    out.sum().backward()
+    
+    inp_t = torch.tensor(l, requires_grad=True)
+    p2_t = torch.tensor(l2)
+    pool_t = torch.nn.AvgPool2d(kernel_size=kernel_size, stride=stride, padding=padding)
+    out_t = pool_t(inp_t)*p2_t
+    out_t.sum().backward()
+    
+    print(out.shape, "\n" + str(out)[:100])
+    print(out_t.shape, "\n" + str(out_t)[:100])
+    
+    print(inp.grad.shape, "\n" + str(inp.grad)[:200])
+    print(inp_t.grad.shape, "\n" + str(inp_t.grad)[:200])
+        
+    assert check_tensors(out, out_t)
+    assert check_tensors(inp.grad, inp_t.grad)
+
+
+def test_conv1d():
+    for i in range(2):
+        l = np.random.rand(32,16,28).astype(np.float32)
+        out_channels = 32; kernel_size = 3; stride = 1; padding = 'same'
+        
+        bias = True
+        if i == 0: bias = False
+        
+        conv = nn.Conv1d(l.shape[1], out_channels, kernel_size, stride, padding, bias=bias)
+        conv_t = torch.nn.Conv1d(l.shape[1], out_channels, kernel_size, stride, padding, bias=bias)
+        conv_t.weight = torch.nn.parameter.Parameter(torch.tensor(conv.weight.data))
+        if bias:
+            conv_t.bias = torch.nn.parameter.Parameter(torch.tensor(conv.bias.data))
+            print("Bias", conv_t.bias.shape)
+
+        inp = Tensor(l, requires_grad=True)
+        out = conv(inp)
+        out.sum().backward()
+        
+        inp_t = torch.tensor(l, requires_grad=True)
+        out_t = conv_t(inp_t)
+        out_t.sum().backward()
+
+        print(out_t.shape)
+        print(out.shape)
+
+        params_t = list(conv_t.parameters())
+        params = list(conv.parameters())
+        for i, (p_t, p) in enumerate(zip(params_t, params)):
+            print(f"Param {i+1}")
+            assert check_tensors(p, p_t)
+            assert check_tensors(p.grad, p_t.grad)
+        
+        assert check_tensors(out, out_t)
+        assert check_tensors(inp.grad, inp_t.grad)
+
+
+def test_conv2d():
+    for i in range(2):
+        l = np.random.rand(32,16,28,28).astype(np.float32)
+        out_channels = 32; kernel_size = 3; stride = 1; padding = 'same'
+        
+        bias = True
+        if i == 0: bias = False
+        
+        conv = nn.Conv2d(l.shape[1], out_channels, kernel_size, stride, padding, bias=bias)
+        conv_t = torch.nn.Conv2d(l.shape[1], out_channels, kernel_size, stride, padding, bias=bias)
+        conv_t.weight = torch.nn.parameter.Parameter(torch.tensor(conv.weight.data))
+        if bias:
+            conv_t.bias = torch.nn.parameter.Parameter(torch.tensor(conv.bias.data))
+            print("Bias", conv_t.bias.shape)
+
+        inp = Tensor(l, requires_grad=True)
+        out = conv(inp)
+        out.sum().backward()
+        
+        inp_t = torch.tensor(l, requires_grad=True)
+        out_t = conv_t(inp_t)
+        out_t.sum().backward()
+
+        print(out_t.shape)
+        print(out.shape)
+
+        params_t = list(conv_t.parameters())
+        params = list(conv.parameters())
+        for i, (p_t, p) in enumerate(zip(params_t, params)):
+            print(f"Param {i+1}")
+            assert check_tensors(p, p_t)
+            assert check_tensors(p.grad, p_t.grad)
+        
+        assert check_tensors(out, out_t)
+        assert check_tensors(inp.grad, inp_t.grad)
     
 
 def test_dropout():

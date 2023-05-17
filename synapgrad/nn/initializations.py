@@ -1,6 +1,7 @@
 import numpy as np
 
-# Referece to keras code: https://github.com/keras-team/keras/blob/998efc04eefa0c14057c1fa87cab71df5b24bf7e/keras/initializations.py
+# Referece to keras code: 
+# https://github.com/keras-team/keras/blob/998efc04eefa0c14057c1fa87cab71df5b24bf7e/keras/initializations.py
 
 
 weight_initializers = ['glorot_normal', 'glorot_uniform', 'he_normal', 'he_uniform', 'lecun_uniform']
