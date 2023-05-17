@@ -49,7 +49,7 @@ def get_arr2col_indices(arr_shape, kernel_size, dilation=1, stride=1, padding=0)
 
     Example
     -------
-    >>> arr_shape = (1,1,9)
+    >>> arr_shape = (1, 1, 9)
     >>> get_arr2col_indices(arr_shape, kernel_size=3, stride=2, padding=0)
     Output:
     (array([0, 1, 2]), array([2, 3, 4]), array([4, 5, 6]), array([6, 7, 8]),)
@@ -72,12 +72,16 @@ def get_arr2col_indices(arr_shape, kernel_size, dilation=1, stride=1, padding=0)
     
 def arr2col(arr, kernel_size, dilation=1, stride=1, padding=0, pad_value=0, unf_indices=None, return_indices=False):
     """
-    Convert a 3D dimension array to a 4D dimension array by unfolding the 3nd dimension.
-
+    Convert a 3D (N, C, W) dimension array to a 4D (N, C, L, kW) dimension array by unfolding the 3nd dimension.
+    
+    Where:
+        - L = number of windows (determined by kernel_size, dilation, stride and padding)
+        - kW = kernel width (equal to kernel_size)
+    
     Parameters
     ----------
     arr : array-like
-        Input array
+        3D input array
     kernel_size : int
         Size of the kernel used in the convolution operation.
     dilation : int
@@ -125,7 +129,11 @@ def arr2col(arr, kernel_size, dilation=1, stride=1, padding=0, pad_value=0, unf_
 
 def col2arr(unfolded, arr_shape, kernel_size, dilation=1, stride=1, padding=0, unf_indices=None, return_indices=False):
     """
-    Converts a 4D array to a 3D array by folding the 3rd dimension
+    Converts a 4D (N, C, L, KW) array to a 3D (N, C, W) array by folding the 3rd dimension
+    
+    Where:
+        - L = number of windows (determined by kernel_size, dilation, stride and padding)
+        - kW = kernel width (equal to kernel_size)
 
     Parameters
     ----------
@@ -285,6 +293,8 @@ def get_im2col_indices(a_shape:tuple, kernel_size, dilation=1, stride=1, padding
 def im2col(a:np.ndarray, kernel_size, dilation=1, stride=1, padding=0, pad_value=0, col_indices=None, return_indices=False, as_unfold=False) -> np.ndarray:
     """
     Maps an input matrix to a column matrix using a specified kernel size.
+    
+    (N, C, H, W) -> im2col -> (C * kH * kW, N * L) or (N, C * kH * kW, L) where L = lH * lW.
 
     Parameters
     ----------
@@ -314,8 +324,8 @@ def im2col(a:np.ndarray, kernel_size, dilation=1, stride=1, padding=0, pad_value
 
     Output size
     -----------
-    - 2D: The usual shape of the im2col output matrix.
-    - 3D: If `as_unfold` is True, the output shape is (N, C*kH*kW, L), where L is the number of mapped positions.
+    - 2D: The usual shape of the im2col output matrix (C * kH * kW, N * L) where L = lH * lW.
+    - 3D: If `as_unfold` is True, the output shape is (N, C * kH * kW, L), where L is the number of mapped positions.
 
     Example
     -------
@@ -355,6 +365,10 @@ def im2col(a:np.ndarray, kernel_size, dilation=1, stride=1, padding=0, pad_value
 def col2im(a:np.ndarray, output_shape, kernel_size, dilation, stride, padding, col_indices=None, return_indices=False):
     """
     Maps a column matrix back to the original input matrix shape.
+    
+    (C * kH * kW, N * L) or (N, C * kH * kW, L) -> col2im -> (N, C, H, W)
+    
+    where L = lH * lW. 
 
     Parameters
     ----------

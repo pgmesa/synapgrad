@@ -296,8 +296,8 @@ def mse_loss(y_pred:Tensor, y_true:Tensor):
     Mean Squared Error loss function.
 
     Args:
-        y_pred (Tensor): tensor
-        y_true (Tensor): tensor
+        - y_pred (Tensor): tensor
+        - y_true (Tensor): tensor
 
     Returns:
         Tensor: result
@@ -344,8 +344,8 @@ def nll_loss(y_pred:Tensor, y_true:Tensor):
     Negative Log Likelihood loss function.
 
     Args:
-        y_pred (Tensor): tensor
-        y_true (Tensor): tensor
+        - y_pred (Tensor): tensor
+        - y_true (Tensor): tensor
 
     Returns:
         Tensor: result
@@ -392,8 +392,8 @@ def binary_cross_entropy(y_pred:Tensor, y_true:Tensor):
     Binary Cross Entropy loss function.
 
     Args:
-        y_pred (Tensor): tensor
-        y_true (Tensor): tensor
+        - y_pred (Tensor): tensor
+        - y_true (Tensor): tensor
 
     Returns:
         Tensor: result
@@ -440,8 +440,8 @@ def binary_cross_entropy_with_logits(y_pred:Tensor, y_true:Tensor):
     Binary Cross Entropy with Logits loss function.
 
     Args:
-        y_pred (Tensor): tensor
-        y_true (Tensor): tensor
+        - y_pred (Tensor): tensor
+        - y_true (Tensor): tensor
 
     Returns:
         Tensor: result
@@ -488,8 +488,8 @@ def cross_entropy(y_pred:Tensor, y_true:Tensor):
     Cross Entropy loss function.
 
     Args:
-        y_pred (Tensor): tensor
-        y_true (Tensor): tensor
+        - y_pred (Tensor): tensor
+        - y_true (Tensor): tensor
 
     Returns:
         Tensor: result
@@ -558,11 +558,11 @@ def unfold(x:Tensor, kernel_size:'int | tuple', dilation:'int | tuple'=1, stride
         https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html
 
     Args:
-        tensor (numpy.ndarray): Input tensor of shape (N, C, H, W).
-        kernel_size (int or tuple): Size of the sliding window.
-        dilation (int or tuple, optional): Dilation factor. Defaults to 1.
-        stride (int or tuple, optional): Stride size. Defaults to 1.
-        padding (int or tuple, optional): Padding size. Defaults to 0.
+        - tensor (numpy.ndarray): Input tensor of shape (N, C, H, W).
+        - kernel_size (int or tuple): Size of the sliding window.
+        - dilation (int or tuple, optional): Dilation factor. Defaults to 1.
+        - stride (int or tuple, optional): Stride size. Defaults to 1.
+        - padding (int or tuple, optional): Padding size. Defaults to 0.
 
     Returns:
         numpy.ndarray: Output tensor of shape (N, C*kH*kW, L).
@@ -626,17 +626,171 @@ def fold(x:Tensor, output_size:tuple, kernel_size:'int | tuple', dilation:'int |
         https://pytorch.org/docs/stable/generated/torch.nn.Fold.html
 
     Args:
-        tensor (numpy.ndarray): Input tensor of shape (N, C*kH*kW, L).
-        output_size (tuple): Desired output size of the folded tensor, in the form of (H, W).
-        kernel_size (int or tuple): Size of the sliding window.
-        dilation (int or tuple, optional): Dilation factor. Defaults to 1.
-        stride (int or tuple, optional): Stride size. Defaults to 1.
-        padding (int or tuple, optional): Padding size. Defaults to 0.
+        - tensor (numpy.ndarray): Input tensor of shape (N, C*kH*kW, L).
+        - output_size (tuple): Desired output size of the folded tensor, in the form of (H, W).
+        - kernel_size (int or tuple): Size of the sliding window.
+        - dilation (int or tuple, optional): Dilation factor. Defaults to 1.
+        - stride (int or tuple, optional): Stride size. Defaults to 1.
+        - padding (int or tuple, optional): Padding size. Defaults to 0.
 
     Returns:
         numpy.ndarray: Output tensor of shape (N, C, H, W).
     """
     return Fold.apply(x, output_size, kernel_size, dilation, stride, padding)
+
+
+class Conv1d(Function):
+    
+    @staticmethod
+    def forward(ctx:Context, x:Tensor, weight:Tensor, bias:Tensor=None, stride:int=1, padding:int=0, dilation:int=1):
+        if not isinstance(x, Tensor):
+            raise TypeError(f"Expected x to be a Tensor but got {type(x)}")
+        
+        if not isinstance(weight, Tensor):
+            raise TypeError(f"Expected weight to be a Tensor but got {type(weight)}")
+        
+        if bias is not None and not isinstance(bias, Tensor):
+            raise TypeError(f"Expected bias to be a Tensor but got {type(bias)}")
+        
+        if x.device == Device.CPU:
+            bias_data = bias.data if bias is not None else None
+            out_data, *bw_data = cpu_ops.conv1d_forward(x.data, weight.data, bias_data, stride, padding, dilation)
+        else:
+            raise RuntimeError(f"{ctx.fn_name}: {x.device} not supported")
+
+        out = Tensor(out_data, device=x.device)
+        
+        ctx.x_shape = x.shape
+        ctx.weight = weight
+        ctx.bias = bias
+        ctx.stride = stride
+        ctx.padding = padding
+        ctx.dilation = dilation
+        ctx.bw_data = bw_data
+        
+        return out
+    
+    @staticmethod
+    def backward(ctx:Context, grad_output:Tensor):
+        x_shape = ctx.x_shape
+        weight = ctx.weight
+        bias = ctx.bias
+        stride = ctx.stride
+        padding = ctx.padding
+        dilation = ctx.dilation
+        bw_data = ctx.bw_data
+        
+        if not isinstance(grad_output, Tensor):
+            raise TypeError(f"Expected grad_output to be a Tensor but got {type(grad_output)}")
+        
+        if grad_output.device == Device.CPU:
+            bias_data = bias.data if bias is not None else None
+            gradients = cpu_ops.conv1d_backward(grad_output.data, x_shape, weight.data,
+                                                        bias_data, stride, padding, dilation, *bw_data)
+        else:
+            raise RuntimeError(f"{ctx.fn_name}: {grad_output.device} not supported")
+        
+        grad_tensors = [Tensor(g, device=grad_output.device) for g in gradients]
+        
+        return grad_tensors
+    
+    
+def conv1d(x:Tensor, weight:Tensor, bias:Tensor=None, stride:int=1, padding:int=0, dilation:int=1) -> Tensor:
+    """
+    1D convolution.
+    
+    Reference:
+        https://pytorch.org/docs/stable/generated/torch.nn.Conv1d.html
+
+    Args:
+        - x (Tensor): Input tensor of shape (N, C, W).
+        - weight (Tensor): Weight tensor of shape (C_out, C, kW).
+        - bias (Tensor, optional): Bias tensor of shape (C_out,). Defaults to None.
+        - stride (int, optional): Stride size. Defaults to 1.
+        - padding (int, optional): Padding size. Defaults to 0.
+        - dilation (int, optional): Dilation factor. Defaults to 1.
+
+    Returns:
+        numpy.ndarray: Output tensor of shape (N, C_out, L).
+    """
+    return Conv1d.apply(x, weight, bias, stride, padding, dilation)
+
+
+class Conv2d(Function):
+    
+    @staticmethod
+    def forward(ctx:Context, x:Tensor, weight:Tensor, bias:Tensor=None, stride=1, padding=0, dilation=1):
+        if not isinstance(x, Tensor):
+            raise TypeError(f"Expected x to be a Tensor but got {type(x)}")
+        
+        if not isinstance(weight, Tensor):
+            raise TypeError(f"Expected weight to be a Tensor but got {type(weight)}")
+        
+        if bias is not None and not isinstance(bias, Tensor):
+            raise TypeError(f"Expected bias to be a Tensor but got {type(bias)}")
+        
+        if x.device == Device.CPU:
+            bias_data = bias.data if bias is not None else None
+            out_data, *bw_data = cpu_ops.conv2d_forward(x.data, weight.data, bias_data, stride, padding, dilation)
+        else:
+            raise RuntimeError(f"{ctx.fn_name}: {x.device} not supported")
+
+        out = Tensor(out_data, device=x.device)
+        
+        ctx.x_shape = x.shape
+        ctx.weight = weight
+        ctx.bias = bias
+        ctx.stride = stride
+        ctx.padding = padding
+        ctx.dilation = dilation
+        ctx.bw_data = bw_data
+
+        return out
+    
+    @staticmethod
+    def backward(ctx:Context, grad_output:Tensor):
+        x_shape = ctx.x_shape
+        weight = ctx.weight
+        bias = ctx.bias
+        stride = ctx.stride
+        padding = ctx.padding
+        dilation = ctx.dilation
+        bw_data = ctx.bw_data
+        
+        if not isinstance(grad_output, Tensor):
+            raise TypeError(f"Expected grad_output to be a Tensor but got {type(grad_output)}")
+        
+        if grad_output.device == Device.CPU:
+            bias_data = bias.data if bias is not None else None
+            gradients = cpu_ops.conv2d_backward(grad_output.data, x_shape, weight.data,
+                                                        bias_data, stride, padding, dilation, *bw_data)
+        else:
+            raise RuntimeError(f"{ctx.fn_name}: {grad_output.device} not supported")
+        
+        grad_tensors = [Tensor(g, device=grad_output.device) for g in gradients]
+        
+        return grad_tensors
+
+
+def conv2d(x:Tensor, weight:Tensor, bias:Tensor=None, stride=1, padding=0, dilation=1) -> Tensor:
+    """
+    Applies 2D convolution to an input tensor.
+    
+    Reference:
+        https://pytorch.org/docs/stable/generated/torch.nn.Conv2d.html
+
+    Args:
+        - x (Tensor): Input tensor of shape (N, C, H, W).
+        - weight (Tensor): Weight tensor of shape (C_out, C, kH, kW).
+        - bias (Tensor, optional): Bias tensor of shape (C_out). Defaults to None.
+        - stride (tuple | int, optional): Stride size. Defaults to 1.
+        - padding (tuple | int, optional): Padding size. Defaults to 0.
+        - dilation (tuple | int, optional): Dilation factor. Defaults to 1.
+
+    Returns:
+        Tensor: Output tensor of shape (N, C_out, lH, lW).
+    """
+    return Conv2d.apply(x, weight, bias, stride, padding, dilation)
 
 # *******************************
 # ******* Pool functions ********
@@ -699,11 +853,11 @@ def max_pool1d(x:Tensor, kernel_size, stride=None, padding=0, dilation=1):
         https://pytorch.org/docs/stable/generated/torch.nn.MaxPool1d.html
 
     Args:
-        x (Tensor): Input tensor of shape (N, C, L).
-        kernel_size (int): Size of the sliding window.
-        stride (int, optional): Stride size. Defaults to kernel_size.
-        padding (int, optional): Padding size. Defaults to 0.
-        dilation (int, optional): Dilation factor. Defaults to 1.
+        - x (Tensor): Input tensor of shape (N, C, W).
+        - kernel_size (int): Size of the sliding window.
+        - stride (int, optional): Stride size. Defaults to kernel_size.
+        - padding (int, optional): Padding size. Defaults to 0.
+        - dilation (int, optional): Dilation factor. Defaults to 1.
 
     Returns:
         Tensor: Output tensor of shape (N, C, L).
@@ -766,14 +920,14 @@ def max_pool2d(x:Tensor, kernel_size, stride=None, padding=0, dilation=1):
         https://pytorch.org/docs/stable/generated/torch.nn.MaxPool2d.html
 
     Args:
-        tensor (numpy.ndarray): Input tensor of shape (N, C, H, W).
-        kernel_size (int or tuple): Size of the sliding window.
-        stride (int or tuple, optional): Stride size. Defaults to kernel_size.
-        padding (int or tuple, optional): Padding size. Defaults to 0.
-        dilation (int or tuple, optional): Dilation factor. Defaults to 1.
+        - tensor (numpy.ndarray): Input tensor of shape (N, C, H, W).
+        - kernel_size (int or tuple): Size of the sliding window.
+        - stride (int or tuple, optional): Stride size. Defaults to kernel_size.
+        - padding (int or tuple, optional): Padding size. Defaults to 0.
+        - dilation (int or tuple, optional): Dilation factor. Defaults to 1.
 
     Returns:
-        numpy.ndarray: Output tensor of shape (N, C, H, W).
+        numpy.ndarray: Output tensor of shape (N, C, lH, lW).
     """
     if stride is None: stride = kernel_size
     return MaxPool2d.apply(x, kernel_size, stride, padding, dilation)
@@ -835,11 +989,11 @@ def avg_pool1d(x:Tensor, kernel_size, stride=None, padding=0, dilation=1):
         https://pytorch.org/docs/stable/generated/torch.nn.AvgPool1d.html
 
     Args:
-        tensor (numpy.ndarray): Input tensor of shape (N, C, L).
-        kernel_size (int or tuple): Size of the sliding window.
-        stride (int or tuple, optional): Stride size. Defaults to kernel_size.
-        padding (int or tuple, optional): Padding size. Defaults to 0.
-        dilation (int or tuple, optional): Dilation factor. Defaults to 1.
+        - tensor (numpy.ndarray): Input tensor of shape (N, C, W).
+        - kernel_size (int or tuple): Size of the sliding window.
+        - stride (int or tuple, optional): Stride size. Defaults to kernel_size.
+        - padding (int or tuple, optional): Padding size. Defaults to 0.
+        - dilation (int or tuple, optional): Dilation factor. Defaults to 1.
 
     Returns:
         numpy.ndarray: Output tensor of shape (N, C, L).
@@ -903,14 +1057,14 @@ def avg_pool2d(x:Tensor, kernel_size, stride=None, padding=0, dilation=1):
         https://pytorch.org/docs/stable/generated/torch.nn.AvgPool2d.html
 
     Args:
-        tensor (numpy.ndarray): Input tensor of shape (N, C, H, W).
-        kernel_size (int or tuple): Size of the sliding window.
-        stride (int or tuple, optional): Stride size. Defaults to kernel_size.
-        padding (int or tuple, optional): Padding size. Defaults to 0.
-        dilation (int or tuple, optional): Dilation factor. Defaults to 1.
+        - tensor (numpy.ndarray): Input tensor of shape (N, C, H, W).
+        - kernel_size (int or tuple): Size of the sliding window.
+        - stride (int or tuple, optional): Stride size. Defaults to kernel_size.
+        - padding (int or tuple, optional): Padding size. Defaults to 0.
+        - dilation (int or tuple, optional): Dilation factor. Defaults to 1.
 
     Returns:
-        numpy.ndarray: Output tensor of shape (N, C, H, W).
+        numpy.ndarray: Output tensor of shape (N, C, lH , lW).
     """
     if stride is None: stride = kernel_size
     return AvgPool2d.apply(x, kernel_size, stride, padding, dilation)

@@ -42,6 +42,29 @@ class Flatten(nn.Module):
     def forward(self, x: Tensor) -> Tensor:
         return x.flatten(self.start_dim, self.end_dim)
     
+
+class Dropout(nn.Module):
+    """ 
+    Reference:
+        https://pytorch.org/docs/stable/generated/torch.nn.Dropout.html
+    
+    """
+
+    def __init__(self, p=0.5, inplace=False) -> None:
+        super().__init__()
+        self.p = p
+        self.inplace = inplace
+        
+    def forward(self, x: Tensor) -> Tensor:
+        if not self.training: return x
+        random_data = np.random.rand(*x.shape)
+        random_data = np.where(random_data <= self.p, 0, 1)
+        if self.p < 1:
+            random_data = random_data / (1-self.p) # scale data
+        random_t = synapgrad.tensor(random_data)
+        
+        return x*random_t
+    
     
 class Unfold(nn.Module):
     """ 
@@ -230,29 +253,6 @@ class Conv2d(nn.Module):
         return (f"Conv2d(in_channels={self.in_channels}, out_channels={self.out_channels}, " + 
                 f"kernel_size={self.kernel_size}, stride={self.stride}, padding={self.padding}, " + 
                 f"dilation={self.dilation}")
-    
-
-class Dropout(nn.Module):
-    """ 
-    Reference:
-        https://pytorch.org/docs/stable/generated/torch.nn.Dropout.html
-    
-    """
-
-    def __init__(self, p=0.5, inplace=False) -> None:
-        super().__init__()
-        self.p = p
-        self.inplace = inplace
-        
-    def forward(self, x: Tensor) -> Tensor:
-        if not self.training: return x
-        random_data = np.random.rand(*x.shape)
-        random_data = np.where(random_data <= self.p, 0, 1)
-        if self.p < 1:
-            random_data = random_data / (1-self.p) # scale data
-        random_t = synapgrad.tensor(random_data)
-        
-        return x*random_t
     
     
 class BatchNorm(nn.Module):

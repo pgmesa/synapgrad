@@ -209,32 +209,33 @@ def test_avg_pool1d():
     op_tester([(32, 3, 64)], lambda engine, x: engine.avg_pool1d(x, kernel_size=5, stride=3, padding=2), name='avg_pool1d', module_func=True)
 
 def test_avg_pool2d():
-    op_tester([(32, 3, 64, 64)], lambda engine, x: engine.avg_pool2d(x, kernel_size=(2,2), stride=(1,1)), name='avg_pool2d', module_func=True, nn_functional=True)
-    op_tester([(32, 3, 64, 64)], lambda engine, x: engine.avg_pool2d(x, kernel_size=(3,2), stride=(1,2)), name='avg_pool2d', module_func=True, nn_functional=True)
-    op_tester([(32, 3, 64, 64)], lambda engine, x: engine.avg_pool2d(x, kernel_size=(5,5), stride=(3,3), padding=(2,1)), name='avg_pool2d', module_func=True, nn_functional=True)
+    op_tester([(32, 3, 64, 64)], lambda F, x: F.avg_pool2d(x, kernel_size=(2,2), stride=(1,1)), name='avg_pool2d', module_func=True, nn_functional=True)
+    op_tester([(32, 3, 64, 64)], lambda F, x: F.avg_pool2d(x, kernel_size=(3,2), stride=(1,2)), name='avg_pool2d', module_func=True, nn_functional=True)
+    op_tester([(32, 3, 64, 64)], lambda F, x: F.avg_pool2d(x, kernel_size=(5,5), stride=(3,3), padding=(2,1)), name='avg_pool2d', module_func=True, nn_functional=True)
     
 # ************************
 # ******* Conv ops *******
 # ************************
 
 def test_unfold():
-    op_tester([(32, 3, 64, 64)], lambda engine, x: engine.unfold(x, kernel_size=(3,3), dilation=1, stride=(1,1), padding=0), name='unfold', module_func=True, nn_functional=True)
-    op_tester([(32, 3, 64, 64)], lambda engine, x: engine.unfold(x, kernel_size=(5,3), dilation=(1,2), stride=(3,2), padding=1), name='unfold', module_func=True, nn_functional=True)
-    op_tester([(32, 3, 64, 64)], lambda engine, x: engine.unfold(x, kernel_size=(7,7), dilation=3, stride=(2,2), padding=(2, 3)), name='unfold', module_func=True, nn_functional=True)
+    op_tester([(32, 3, 64, 64)], lambda F, x: F.unfold(x, kernel_size=(3,3), dilation=1, stride=(1,1), padding=0), name='unfold', module_func=True, nn_functional=True)
+    op_tester([(32, 3, 64, 64)], lambda F, x: F.unfold(x, kernel_size=(5,3), dilation=(1,2), stride=(3,2), padding=1), name='unfold', module_func=True, nn_functional=True)
+    op_tester([(32, 3, 64, 64)], lambda F, x: F.unfold(x, kernel_size=(7,7), dilation=3, stride=(2,2), padding=(2, 3)), name='unfold', module_func=True, nn_functional=True)
     
 def test_fold():
-    op_tester([(32, 27, 3844)], lambda engine, x: engine.fold(x, (64,64), kernel_size=(3,3), dilation=1, stride=(1,1), padding=0), name='fold', module_func=True, nn_functional=True)
-    op_tester([(32, 45, 651)], lambda engine, x: engine.fold(x, (64,64), kernel_size=(5,3), dilation=(1,2), stride=(3,2), padding=1), name='fold', module_func=True, nn_functional=True)
-    op_tester([(32, 147, 650)], lambda engine, x: engine.fold(x, (64,64), kernel_size=(7,7), dilation=3, stride=(2,2), padding=(2, 3)), name='fold', module_func=True, nn_functional=True)
+    op_tester([(32, 27, 3844)], lambda F, x: F.fold(x, (64,64), kernel_size=(3,3), dilation=1, stride=(1,1), padding=0), name='fold', module_func=True, nn_functional=True)
+    op_tester([(32, 45, 651)], lambda F, x: F.fold(x, (64,64), kernel_size=(5,3), dilation=(1,2), stride=(3,2), padding=1), name='fold', module_func=True, nn_functional=True)
+    op_tester([(32, 147, 650)], lambda F, x: F.fold(x, (64,64), kernel_size=(7,7), dilation=3, stride=(2,2), padding=(2, 3)), name='fold', module_func=True, nn_functional=True)
 
-# def test_conv1d():
-#     op_tester([(32, 3, 64)], lambda engine, x: engine.conv1d(x, 64, kernel_size=3, stride=1, padding=1), name='conv1d', module_func=True, nn_functional=True)
-#     op_tester([(32, 3, 64)], lambda engine, x: engine.conv1d(x, 64, kernel_size=5, stride=2, padding=2), name='conv1d', module_func=True, nn_functional=True)
+def test_conv1d():
+    op_tester([(32, 3, 64)], lambda engine, x: engine.conv1d(x, weight=engine.ones((34, 3, 3), requires_grad=True), bias=engine.zeros(34, requires_grad=True), stride=1, padding=0, dilation=2), name='conv1d', module_func=True)
+    op_tester([(32, 3, 64)], lambda engine, x: engine.conv1d(x, weight=engine.ones((34, 3, 5), requires_grad=True), bias=None, stride=2, padding=1), name='conv1d', module_func=True)
+    op_tester([(32, 3, 64)], lambda engine, x: engine.conv1d(x, weight=engine.ones((34, 3, 7), requires_grad=True), bias=engine.zeros(34, requires_grad=True), stride=2, padding=3), name='conv1d', module_func=True)
     
-# def test_conv2d():
-#     op_tester([(32, 3, 64, 64)], lambda engine, x: engine.conv2d(x, 64, kernel_size=(3,3), stride=(1,1), padding=0), name='conv2d', module_func=True, nn_functional=True)
-#     op_tester([(32, 3, 64, 64)], lambda engine, x: engine.conv2d(x, 64, kernel_size=(5,3), stride=(1,2), padding=1), name='conv2d', module_func=True, nn_functional=True)
-#     op_tester([(32, 3, 64, 64)], lambda engine, x: engine.conv2d(x, 64, kernel_size=(7,7), stride=(2,2), padding=(2, 3)), name='conv2d', module_func=True, nn_functional=True)
+def test_conv2d():
+    op_tester([(32, 3, 64, 64)], lambda engine, x: engine.conv2d(x, weight=engine.ones((34, 3, 3, 3), requires_grad=True), bias=engine.zeros(34, requires_grad=True), stride=(1,1), padding=0, dilation=2), name='conv2d', module_func=True)
+    op_tester([(32, 3, 64, 64)], lambda engine, x: engine.conv2d(x, weight=engine.ones((34, 3, 5, 3), requires_grad=True), bias=None, stride=(1,2), padding=1), name='conv2d', module_func=True)
+    op_tester([(32, 3, 64, 64)], lambda engine, x: engine.conv2d(x, weight=engine.ones((34, 3, 7, 7), requires_grad=True), bias=engine.zeros(34, requires_grad=True), stride=(2,2), padding=(2, 3)), name='conv2d', module_func=True)
 
 # ******************************
 # ******* Batch norm ops *******

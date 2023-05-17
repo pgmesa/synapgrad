@@ -478,21 +478,82 @@ def cross_entropy_loss_backward(grad: np.ndarray, y_pred: np.ndarray, y_true: np
 # ************************
 
 @check_inputs
-def conv1d_forward():
-    ...
+def conv1d_forward(a, weight, bias, stride, padding, dilation):
+    N, C, W = a.shape
+    C_out, C_in, kW = weight.shape
+    kernel_size = kW
     
-@check_inputs
-def conv1d_backward():
-    ...
+    L = get_conv1d_output_size(a.shape[2], kernel_size, stride, padding, dilation)
+    cols, indices = arr2col(a, kernel_size, dilation, stride, padding, return_indices=True)
+    
+    weight_cols = weight.reshape(C_out, kW * C_in).T
+    cols = cols.transpose(0, 2, 1, 3).reshape(N, L, -1)
+    
+    out = (cols @ weight_cols)
+    if bias is not None:
+        out += bias 
+    out = out.transpose(0, 2, 1).reshape(N, C_out, L)
 
+    return out, cols, indices
     
 @check_inputs
-def conv2d_forward():
-    ...
+def conv1d_backward(grad, a_shape, weight, bias, stride, padding, dilation, cols, unf_indices):
+    N, C, W = a_shape
+    C_out, C_in, kW = weight.shape
+    kernel_size = kW
+    
+    L = get_conv1d_output_size(a_shape[2], kernel_size, stride, padding, dilation)
+    
+    grad = grad.reshape(N, C_out, -1).transpose(0, 2, 1)
+    weight_cols = weight.reshape(C_out, kW * C_in).T
+    cols_grad, weight_grad = matmul_backward(grad, cols, weight_cols)
+
+    weight_grad = weight_grad.T.reshape(weight.shape)
+    bias_grad = None
+    if bias is not None:
+        bias_grad = grad.sum(axis=(0, 1))
+        
+    cols_grad = cols_grad.reshape(N, L, C_in, kW).transpose(0, 2, 1, 3)
+    a_grad = col2arr(cols_grad, a_shape, kernel_size, dilation, stride, padding, unf_indices=unf_indices)
+    
+    return a_grad, weight_grad, bias_grad
+    
     
 @check_inputs
-def conv2d_backward():
-    ...
+def conv2d_forward(a, weight, bias, stride, padding, dilation):
+    N, C, H, W = a.shape
+    C_out, C_in, kH, kW = weight.shape
+    kernel_size = (kH, kW)
+    
+    lH,lW = get_conv2d_output_size(a.shape, kernel_size, dilation, stride, padding)
+    cols, indices = im2col(a, kernel_size, dilation, stride, padding, return_indices=True, as_unfold=True)
+    
+    weight_cols = weight.reshape(C_out, kH * kW * C_in).T
+    out = (cols.transpose(0, 2, 1) @ weight_cols)
+    
+    if bias is not None:
+        out += bias
+    out = out.transpose(0, 2, 1).reshape(N, C_out, lH, lW)
+    
+    return out, cols, indices
+    
+@check_inputs
+def conv2d_backward(grad, a_shape, weight, bias, stride, padding, dilation, cols, col_indices):
+    N, C, H, W = a_shape
+    C_out, C_in, kH, kW = weight.shape
+    kernel_size = (kH, kW)
+    
+    grad = grad.reshape(N, C_out, -1).transpose(0, 2, 1)
+    weight_cols = weight.reshape(C_out, kH * kW * C_in).T
+    cols_grad, weight_grad = matmul_backward(grad, cols.transpose(0, 2, 1), weight_cols)
+    
+    weight_grad = weight_grad.T.reshape(weight.shape)
+    bias_grad = None
+    if bias is not None:
+        bias_grad = grad.sum(axis=(0, 1))
+    a_grad = col2im(cols_grad.transpose(0, 2, 1), a_shape, kernel_size, dilation, stride, padding, col_indices=col_indices)
+    
+    return a_grad, weight_grad, bias_grad
     
 # ************************
 # ******* Pool ops *******
