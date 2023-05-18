@@ -1,6 +1,6 @@
 #  SynapGrad
 
-This is another implementation of synapgrad (not available in PyPI at the moment), but with a more Torch-like engine. It is a better-documented and structured project that additionally includes new functionalities. It is not in the main branch because, currently, this implementation, despite being, in my opinion, a better project, is somewhat slower than my previous implementation. 
+This is another implementation of synapgrad (not available in PyPI at the moment), but with a more Torch-like engine. It is a better-documented and structured project that additionally includes new functionalities. It is not in the main branch because, currently, this implementation, despite being in my opinion a better project, is somewhat slower than my previous implementation. 
 
 I need to investigate the cause of this slowdown. The backward pass is specially slow compared to my first implementation. If I manage to identify the bottleneck and fix it, I will update the main branch with this implementation.
 
