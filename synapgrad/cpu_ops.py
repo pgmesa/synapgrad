@@ -37,82 +37,82 @@ def check_inputs(func):
 # ******* Basic ops *******
 # *************************
 
-@check_inputs
+# @check_inputs
 def add_forward(a:np.ndarray, b:np.ndarray):
     return a + b
 
-@check_inputs
+# @check_inputs
 def add_backward(grad:np.ndarray, a_shape:tuple, b_shape:tuple):
     grad_a = np.ones(a_shape, dtype=grad.dtype) * grad
     grad_b = np.ones(b_shape, dtype=grad.dtype) * grad
     return unbroadcast(grad_a, a_shape), unbroadcast(grad_b, b_shape)
 
 
-@check_inputs
+# @check_inputs
 def mul_forward(a:np.ndarray, b:np.ndarray):
     return a * b
 
-@check_inputs
+# @check_inputs
 def mul_backward(grad:np.ndarray, a:np.ndarray, b:np.ndarray):
     grad_a = grad * b
     grad_b = grad * a
     return unbroadcast(grad_a, a.shape), unbroadcast(grad_b, b.shape)
 
 
-@check_inputs
+# @check_inputs
 def matmul_forward(a:np.ndarray, b:np.ndarray):
     return a @ b
 
-@check_inputs
+# @check_inputs
 def matmul_backward(grad:np.ndarray, a:np.ndarray, b:np.ndarray):
     grad_a = grad @ np.swapaxes(b, -2, -1)
     grad_b = np.swapaxes(a, -2, -1) @ grad
     return unbroadcast(grad_a, a.shape), unbroadcast(grad_b, b.shape)
 
 
-@check_inputs
+# @check_inputs
 def addmm_forward(a:np.ndarray, b:np.ndarray, c:np.ndarray):
     return a + (b @ c)
 
-@check_inputs
+# @check_inputs
 def addmm_backward(grad:np.ndarray, a:np.ndarray, b:np.ndarray, c:np.ndarray):
     grad_a, grad_mm = add_backward(grad, a.shape, (b.shape[0], c.shape[1],))
     grad_b, grad_c = matmul_backward(grad_mm, b, c)
     return grad_a, grad_b, grad_c
 
 
-@check_inputs
+# @check_inputs
 def pow_forward(a:np.ndarray, n:'int | float'):
     return a ** n
 
-@check_inputs
+# @check_inputs
 def pow_backward(grad:np.ndarray, a:np.ndarray, n:'int | float'):
     return n * (a ** (n - 1)) * grad
 
 
-@check_inputs
+# @check_inputs
 def rpow_forward(a:np.ndarray, n:'int | float'):
     return n ** a
 
-@check_inputs
+# @check_inputs
 def rpow_backward(grad:np.ndarray, exp_n_a:np.ndarray, n:'int | float'):
     return (exp_n_a * np.log(n)) * grad
 
 
-@check_inputs
+# @check_inputs
 def neg_forward(a:np.ndarray):
     return -a
 
-@check_inputs
+# @check_inputs
 def neg_backward(grad:np.ndarray):
     return -grad
 
 
-@check_inputs
+# @check_inputs
 def slice_forward(a:np.ndarray, s:tuple):
     return a[s]
 
-@check_inputs
+# @check_inputs
 def slice_backward(grad:np.ndarray, a_shape:tuple, s:tuple):
     grad_a = np.zeros(a_shape, dtype=grad.dtype)
     grad_a[s] = grad
@@ -122,30 +122,30 @@ def slice_backward(grad:np.ndarray, a_shape:tuple, s:tuple):
 # ******* Array manipulation *******
 # **********************************
 
-@check_inputs
+# @check_inputs
 def concat_forward(a:np.ndarray, axis:int):
     return np.concatenate(a, axis=axis)
 
-@check_inputs
+# @check_inputs
 def concat_backward(grad:np.ndarray, sections:list, axis:int):
     grads = np.split(grad, indices_or_sections=sections, axis=axis)
     return grads
 
 
-@check_inputs
+# @check_inputs
 def stack_forward(a:np.ndarray, axis:int):
     return np.stack(a, axis=axis)
 
-@check_inputs
+# @check_inputs
 def stack_backward(grad:np.ndarray, axis:int):
     return unbind_forward(grad, axis)
 
   
-@check_inputs
+# @check_inputs
 def unbind_forward(a:np.ndarray, axis:int):
     return np.rollaxis(a, axis=axis)
 
-@check_inputs
+# @check_inputs
 def unbind_backward(grad:np.ndarray, a_shape:tuple, axis:int, index:int):
     slice_grad = np.zeros(a_shape, dtype=grad.dtype)
     if axis < 0: axis = len(a_shape) + axis
@@ -157,47 +157,47 @@ def unbind_backward(grad:np.ndarray, a_shape:tuple, axis:int, index:int):
 # ******* Other ops *******
 # *************************
 
-@check_inputs
+# @check_inputs
 def clone_forward(a:np.ndarray):
     return a.copy()
 
-@check_inputs
+# @check_inputs
 def clone_backward(grad:np.ndarray):
     return grad
 
 
-@check_inputs
+# @check_inputs
 def exp_forward(a:np.ndarray):
     return np.exp(a)
 
-@check_inputs
+# @check_inputs
 def exp_backward(grad:np.ndarray, exp_a:np.ndarray):
     return grad * exp_a
 
 
-@check_inputs
+# @check_inputs
 def log_forward(a:np.ndarray):
     return np.log(a + epsilon)
 
-@check_inputs
+# @check_inputs
 def log_backward(grad:np.ndarray, a:np.ndarray):
     return grad / (a + epsilon)
 
 
-@check_inputs
+# @check_inputs
 def sqrt_forward(a:np.ndarray):
     return np.sqrt(a)
 
-@check_inputs
+# @check_inputs
 def sqrt_backward(grad:np.ndarray, sqrt_a:np.ndarray):
     return grad / (2 * sqrt_a)
     
     
-@check_inputs
+# @check_inputs
 def sum_forward(a:np.ndarray, axis:'None| int | tuple', keepdims:bool):
     return np.sum(a, axis=axis, keepdims=keepdims)
 
-@check_inputs
+# @check_inputs
 def sum_backward(grad:np.ndarray, a_shape:tuple, axis:'None| int | tuple', keepdims:bool):
     out_grad = np.zeros(a_shape, dtype=grad.dtype)
     if not keepdims and axis is not None:
@@ -208,11 +208,11 @@ def sum_backward(grad:np.ndarray, a_shape:tuple, axis:'None| int | tuple', keepd
     return out_grad
 
 
-@check_inputs
+# @check_inputs
 def mean_forward(a:np.ndarray, axis:'None| int | tuple', keepdims:bool):
     return np.mean(a, axis=axis, keepdims=keepdims)
 
-@check_inputs
+# @check_inputs
 def mean_backward(grad:np.ndarray, a_shape:tuple, axis:'None| int | tuple', keepdims:bool):
     out_grad = np.zeros(a_shape, dtype=grad.dtype)
     if not keepdims and axis is not None:
@@ -229,11 +229,11 @@ def mean_backward(grad:np.ndarray, a_shape:tuple, axis:'None| int | tuple', keep
     return out_grad / n_samples
 
 
-@check_inputs
+# @check_inputs
 def max_forward(a, axis, keepdims):
     return np.max(a, axis=axis, keepdims=keepdims)
 
-@check_inputs
+# @check_inputs
 def max_backward(grad, a, axis, keepdims, max_indices=None):
     # Create mask of ones and zeros, where the maximum value is 1 
     mask = np.zeros_like(a)
@@ -251,11 +251,11 @@ def max_backward(grad, a, axis, keepdims, max_indices=None):
     return grad * mask
 
 
-@check_inputs
+# @check_inputs
 def min_forward(a, axis, keepdims):
     return np.min(a, axis=axis, keepdims=keepdims)
 
-@check_inputs
+# @check_inputs
 def min_backward(grad, a, axis, keepdims):
     # Create mask of ones and zeros, where the minimum value is 1 
     mask = np.zeros_like(a)
@@ -272,55 +272,55 @@ def min_backward(grad, a, axis, keepdims):
     return grad * mask
 
 
-@check_inputs
+# @check_inputs
 def squeeze_forward(a:np.ndarray, axis:'None | int | tuple'):
     out = a
     can_apply = len(a.shape) > 0 and (axis is None or a.shape[axis] == 1)
     if can_apply: out = np.squeeze(a, axis)
     return out
 
-@check_inputs
+# @check_inputs
 def squeeze_backward(grad:np.ndarray, a_shape:tuple):
     return grad.reshape(a_shape)
 
 
-@check_inputs
+# @check_inputs
 def unsqueeze_forward(a:np.ndarray, axis:'int | tuple'):
     return np.expand_dims(a, axis)
 
-@check_inputs
+# @check_inputs
 def unsqueeze_backward(grad:np.ndarray, axis:'int | tuple'):
     return np.squeeze(grad, axis)
 
 
-@check_inputs
+# @check_inputs
 def reshape_forward(a:np.ndarray, shape:tuple):
     return a.reshape(shape)
 
-@check_inputs
+# @check_inputs
 def reshape_backward(grad:np.ndarray, a_shape:tuple):
     return grad.reshape(a_shape)
 
 
-@check_inputs
+# @check_inputs
 def movedim_forward(a:np.ndarray, source:int, destination:int):
     return np.moveaxis(a, source, destination)
 
-@check_inputs
+# @check_inputs
 def movedim_backward(grad:np.ndarray, source:int, destination:int):
     return np.moveaxis(grad, source, destination)
 
 
-@check_inputs
+# @check_inputs
 def transpose_forward(a:np.ndarray, axis0:int, axis1:int):
     return np.swapaxes(a, axis0, axis1)
 
-@check_inputs
+# @check_inputs
 def transpose_backward(grad:np.ndarray, axis0:int, axis1:int):
     return np.swapaxes(grad, axis0, axis1)
     
 
-@check_inputs
+# @check_inputs
 def unfold_dim_forward(a:np.ndarray, dimension:int, size:int, step:int):
     dim_size = a.shape[dimension]
     # check that the size is smaller than or equal to the size of the dimension
@@ -332,7 +332,7 @@ def unfold_dim_forward(a:np.ndarray, dimension:int, size:int, step:int):
         
     return out_array
     
-@check_inputs
+# @check_inputs
 def unfold_dim_backward(grad:np.ndarray, a_shape:tuple, dimension:int, size:int, step:int):
     a_grad = np.zeros(a_shape)
     for i in range(grad.shape[dimension]):
@@ -349,34 +349,34 @@ def unfold_dim_backward(grad:np.ndarray, a_shape:tuple, dimension:int, size:int,
 # ******* Activation ops *********
 # ********************************
 
-@check_inputs
+# @check_inputs
 def relu_forward(a:np.ndarray) -> np.ndarray:
     return np.maximum(0, a)
 
-@check_inputs
+# @check_inputs
 def relu_backward(grad:np.ndarray, a:np.ndarray) -> np.ndarray:
     return grad * (a > 0)
 
 
-@check_inputs
+# @check_inputs
 def tanh_forward(a:np.ndarray) -> np.ndarray:
     return np.tanh(a)
 
-@check_inputs
+# @check_inputs
 def tanh_backward(grad:np.ndarray, tanh_a:np.ndarray) -> np.ndarray:
     return grad * (1 - tanh_a**2)
 
 
-@check_inputs
+# @check_inputs
 def sigmoid_forward(a:np.ndarray) -> np.ndarray:
     return 1/(1 + np.exp(-a))
 
-@check_inputs
+# @check_inputs
 def sigmoid_backward(grad:np.ndarray, sigmoid_a:np.ndarray) -> np.ndarray:
     return grad * sigmoid_a * (1 - sigmoid_a)
 
 
-@check_inputs
+# @check_inputs
 def softmax_forward(a:np.ndarray, axis:int) -> np.ndarray:
     # Shift to make it numerically stable (with large values 'inf' appears)
     shiftx = a - a.max(axis=axis, keepdims=True) 
@@ -384,7 +384,7 @@ def softmax_forward(a:np.ndarray, axis:int) -> np.ndarray:
     exp_sums = exps.sum(axis=axis, keepdims=True)
     return exps / exp_sums
 
-@check_inputs
+# @check_inputs
 def softmax_backward(grad:np.ndarray, softmax_a:np.ndarray, axis:int) -> np.ndarray:
     """ 
     References: 
@@ -397,7 +397,7 @@ def softmax_backward(grad:np.ndarray, softmax_a:np.ndarray, axis:int) -> np.ndar
     return a_grad
 
 
-@check_inputs
+# @check_inputs
 def log_softmax_forward(a:np.ndarray, axis:int) -> np.ndarray:
     max_val = a.max(axis=axis, keepdims=True)
     substract = a - max_val
@@ -406,7 +406,7 @@ def log_softmax_forward(a:np.ndarray, axis:int) -> np.ndarray:
     log_softmax = a - lse
     return log_softmax
 
-@check_inputs
+# @check_inputs
 def log_softmax_backward(grad:np.ndarray, log_softmax_a:np.ndarray, axis:int) -> np.ndarray:
     softmax = np.exp(log_softmax_a)
     jacobians = np.stack([np.diag(y) - np.outer(y, y) for y in softmax])
@@ -419,36 +419,36 @@ def log_softmax_backward(grad:np.ndarray, log_softmax_a:np.ndarray, axis:int) ->
 # ******* Loss ops *********
 # **************************
 
-@check_inputs
+# @check_inputs
 def mse_loss_forward(y_pred: np.ndarray, y_true: np.ndarray) -> np.ndarray:
     loss = (y_pred - y_true)**2
     return loss
 
-@check_inputs
+# @check_inputs
 def mse_loss_backward(grad: np.ndarray, y_pred: np.ndarray, y_true: np.ndarray) -> np.ndarray:
     return grad * 2 * (y_pred - y_true)
     
     
-@check_inputs
+# @check_inputs
 def nll_loss_forward(y_pred: np.ndarray, y_true: np.ndarray) -> np.ndarray:
     loss = -y_pred[range(len(y_pred)), y_true].reshape((-1, 1))
     return loss
 
-@check_inputs
+# @check_inputs
 def nll_loss_backward(grad: np.ndarray, y_pred: np.ndarray, y_true: np.ndarray) -> np.ndarray:
     loss_grad = np.zeros(y_pred.shape)
     loss_grad[range(len(y_pred)), y_true] = -1.0
     return grad * loss_grad
 
 
-@check_inputs
+# @check_inputs
 def bce_loss_forward(y_pred: np.ndarray, y_true: np.ndarray) -> np.ndarray:
     loss = - (y_true * np.log(y_pred + epsilon) + (1 - y_true) * np.log(1 - y_pred + epsilon))
     # For compatibility with pytorch (returns 100 when y_pred=0 and y_true=1; vice versa)
     loss = np.where(loss == -np.log(epsilon), 100, loss) 
     return loss
 
-@check_inputs
+# @check_inputs
 def bce_loss_backward(grad: np.ndarray, y_pred: np.ndarray, y_true: np.ndarray) -> np.ndarray:
     term_0 = -(1 - y_true + epsilon) / ((1 - y_pred) + epsilon)
     term_1 = (y_true + epsilon) / (y_pred + epsilon)
@@ -456,13 +456,13 @@ def bce_loss_backward(grad: np.ndarray, y_pred: np.ndarray, y_true: np.ndarray) 
     return loss_grad
 
 
-@check_inputs
+# @check_inputs
 def bce_with_logits_loss_forward(y_pred: np.ndarray, y_true: np.ndarray) -> np.ndarray:
     tn = -relu_forward(y_pred)
     loss = (1-y_true) * y_pred + tn + np.log(np.exp(-tn) + np.exp((-y_pred-tn)))
     return loss
 
-@check_inputs
+# @check_inputs
 def bce_with_logits_loss_backward(grad: np.ndarray, y_pred: np.ndarray, y_true: np.ndarray) -> np.ndarray:
     tn = -relu_forward(y_pred)
     dtn = np.where(tn == 0, 0, -1)
@@ -472,13 +472,13 @@ def bce_with_logits_loss_backward(grad: np.ndarray, y_pred: np.ndarray, y_true: 
     return grad * loss_grad
 
 
-@check_inputs
+# @check_inputs
 def cross_entropy_loss_forward(y_pred: np.ndarray, y_true: np.ndarray) -> np.ndarray:
     softmax = np.log(softmax_forward(y_pred, 1) + epsilon)
     log_likelihood = nll_loss_forward(softmax, y_true)
     return log_likelihood
 
-@check_inputs
+# @check_inputs
 def cross_entropy_loss_backward(grad: np.ndarray, y_pred: np.ndarray, y_true: np.ndarray) -> np.ndarray:
     dlogits = softmax_forward(y_pred, 1)
     n = y_pred.shape[0]
@@ -489,7 +489,7 @@ def cross_entropy_loss_backward(grad: np.ndarray, y_pred: np.ndarray, y_true: np
 # ******* Conv ops *******
 # ************************
 
-@check_inputs
+# @check_inputs
 def conv1d_forward(a, weight, bias, stride, padding, dilation):
     N, C, W = a.shape
     C_out, C_in, kW = weight.shape
@@ -508,7 +508,7 @@ def conv1d_forward(a, weight, bias, stride, padding, dilation):
 
     return out, cols, indices
     
-@check_inputs
+# @check_inputs
 def conv1d_backward(grad, a_shape, weight, bias, stride, padding, dilation, cols, unf_indices):
     N, C, W = a_shape
     C_out, C_in, kW = weight.shape
@@ -531,7 +531,7 @@ def conv1d_backward(grad, a_shape, weight, bias, stride, padding, dilation, cols
     return a_grad, weight_grad, bias_grad
     
     
-@check_inputs
+# @check_inputs
 def conv2d_forward(a, weight, bias, stride, padding, dilation):
     N, C, H, W = a.shape
     C_out, C_in, kH, kW = weight.shape
@@ -549,7 +549,7 @@ def conv2d_forward(a, weight, bias, stride, padding, dilation):
     
     return out, cols, indices
     
-@check_inputs
+# @check_inputs
 def conv2d_backward(grad, a_shape, weight, bias, stride, padding, dilation, cols, col_indices):
     N, C, H, W = a_shape
     C_out, C_in, kH, kW = weight.shape
@@ -571,14 +571,14 @@ def conv2d_backward(grad, a_shape, weight, bias, stride, padding, dilation, cols
 # ******* Pool ops *******
 # ************************
     
-@check_inputs
+# @check_inputs
 def max_pool1d_forward(a, kernel_size, stride, padding, dilation):
     unfolded, indices = arr2col(a, kernel_size, dilation, stride, padding, pad_value=-np.inf, return_indices=True)
     out = unfolded.max(axis=3)
 
     return out, unfolded, indices
     
-@check_inputs
+# @check_inputs
 def max_pool1d_backward(grad, kernel_size, stride, padding, dilation, a_shape, unfolded, unf_indices):
     max_grad = max_backward(grad, unfolded, 3, False)
     out_grad = col2arr(max_grad, a_shape, kernel_size, dilation, stride, padding, unf_indices=unf_indices)
@@ -586,14 +586,14 @@ def max_pool1d_backward(grad, kernel_size, stride, padding, dilation, a_shape, u
     return out_grad
     
     
-@check_inputs
+# @check_inputs
 def avg_pool1d_forward(a, kernel_size, stride, padding, dilation):
     unfolded, indices = arr2col(a, kernel_size, dilation, stride, padding, pad_value=0, return_indices=True)
     out = unfolded.mean(axis=3)
 
     return out, unfolded, indices
 
-@check_inputs
+# @check_inputs
 def avg_pool1d_backward(grad, kernel_size, stride, padding, dilation, a_shape, unfolded, unf_indices):
     mean_grad = mean_backward(grad, unfolded.shape, 3, False)
     out_grad = col2arr(mean_grad, a_shape, kernel_size, dilation, stride, padding, unf_indices=unf_indices)
@@ -601,7 +601,7 @@ def avg_pool1d_backward(grad, kernel_size, stride, padding, dilation, a_shape, u
     return out_grad
 
 
-@check_inputs
+# @check_inputs
 def max_pool2d_forward(a, kernel_size, stride, padding, dilation):
     N, C, H, W = a.shape
     lH, lW = get_conv2d_output_size(a.shape, kernel_size, dilation, stride, padding)
@@ -615,7 +615,7 @@ def max_pool2d_forward(a, kernel_size, stride, padding, dilation):
     out = x_cols_max.reshape(lH, lW, N, C).transpose(2,3,0,1)
     return out, a.shape, x_cols, x_cols_argmax, col_indices
 
-@check_inputs
+# @check_inputs
 def max_pool2d_backward(grad, kernel_size, stride, padding, dilation, a_shape, x_cols, max_indices, col_indices):
     # flatten the gradient
     grad = grad.transpose(2,3,0,1).ravel()
@@ -630,7 +630,7 @@ def max_pool2d_backward(grad, kernel_size, stride, padding, dilation, a_shape, x
     return out_grad
     
 
-@check_inputs
+# @check_inputs
 def avg_pool2d_forward(a, kernel_size, stride, padding, dilation):
     N, C, H, W = a.shape
     lH, lW = get_conv2d_output_size(a.shape, kernel_size, dilation, stride, padding)
@@ -643,7 +643,7 @@ def avg_pool2d_forward(a, kernel_size, stride, padding, dilation):
     out = x_cols_avg.reshape(lH, lW, N, C).transpose(2,3,0,1)
     return out, a.shape, x_cols.shape, col_indices
 
-@check_inputs
+# @check_inputs
 def avg_pool2d_backward(grad, kernel_size, stride, padding, dilation, a_shape, x_cols_shape, col_indices):
     # flatten the gradient
     grad = grad.transpose(2,3,0,1).ravel()

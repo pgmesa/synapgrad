@@ -110,7 +110,7 @@ def mul(x1:Tensor, x2:Tensor):
     return Mul.apply(x1, x2)
 
 
-class MatMul(Function):
+class Matmul(Function):
 
     @staticmethod
     def forward(ctx:Context, x1:Tensor, x2:Tensor):
@@ -167,7 +167,7 @@ def matmul(x1:Tensor, x2:Tensor):
     Returns:
         Tensor: The result of the matrix multiplication.
     """
-    return MatMul.apply(x1, x2)
+    return Matmul.apply(x1, x2)
 
 
 class Addmm(Function):

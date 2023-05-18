@@ -1,29 +1,31 @@
 digraph {
 	graph [rankdir=LR]
-	2447619733200 [label=<<b>Tensor</b> | data=[128., 30.] | req_grad=True   is_leaf=False | grad=[1.,1.]> shape=record]
-	"2447619733200<Add>" [label=<Add>]
-	"2447619733200<Add>" -> 2447619733200
-	2447619682016 [label=<<b>Tensor</b> | data=[0.2 ,0.33] | req_grad=True   is_leaf=False | grad=[6. ,0.4]> shape=record]
-	"2447619682016<Pow(-1)>" [label=<Pow(-1)>]
-	"2447619682016<Pow(-1)>" -> 2447619682016
-	2447618189536 [label=<<b>Tensor</b> | data=[129.2 , 30.13] | req_grad=True   is_leaf=False | grad=[1.,1.]> shape=record]
-	"2447618189536<Add>" [label=<Add>]
-	"2447618189536<Add>" -> 2447618189536
-	2447619733776 [label=<<b>Tensor</b> | data=[6. ,0.4] | req_grad=True   is_leaf=True | grad=[0.2 ,0.33]> shape=record]
-	2447619733296 [label=<<b>Tensor</b> | data=3. | req_grad=False   is_leaf=True | grad=None> shape=record]
-	2447619732816 [label=<<b>Tensor</b> | data=[5.,3.] | req_grad=True   is_leaf=True | grad=[74.76,26.96]> shape=record]
-	2447619681632 [label=<<b>Tensor</b> | data=[1.2 ,0.13] | req_grad=True   is_leaf=False | grad=[1.,1.]> shape=record]
-	"2447619681632<Mul>" [label=<Mul>]
-	"2447619681632<Mul>" -> 2447619681632
-	2447619733968 [label=<<b>Tensor</b> | data=[125., 27.] | req_grad=True   is_leaf=False | grad=[1.,1.]> shape=record]
-	"2447619733968<Pow(3)>" [label=<Pow(3)>]
-	"2447619733968<Pow(3)>" -> 2447619733968
-	2447619733776 -> "2447619681632<Mul>"
-	2447619681632 -> "2447618189536<Add>"
-	2447619733968 -> "2447619733200<Add>"
-	2447619732816 -> "2447619733968<Pow(3)>"
-	2447619733296 -> "2447619733200<Add>"
-	2447619732816 -> "2447619682016<Pow(-1)>"
-	2447619733200 -> "2447618189536<Add>"
-	2447619682016 -> "2447619681632<Mul>"
+	2297232130592 [label=<<b>Tensor</b> | data=3. | req_grad=True   is_leaf=True | grad=11.75 | grad_fn=None > shape=record]
+	2297203738224 [label=<<b>Tensor</b> | data=[[-47.49, 14.49],
+ [-18.89,  3.71]] | req_grad=True   is_leaf=False | grad=[[1.,1.],
+ [1.,1.]] | grad_fn=MatmulBackward > shape=record]
+	"2297203738224Matmul" [label=Matmul]
+	"2297203738224Matmul" -> 2297203738224
+	2297232132944 [label=<<b>Tensor</b> | data=[[6. ,0.4],
+ [1.9,2. ]] | req_grad=True   is_leaf=True | grad=[[-17.97,-12.52],
+ [ -1.89,  4.43]] | grad_fn=None > shape=record]
+	2297203703760 [label=<<b>Tensor</b> | data=[[-21.3,  7. ],
+ [  7.4, -4.2]] | req_grad=True   is_leaf=False | grad=[[3.83,3.83],
+ [2.05,2.05]] | grad_fn=AddmmBackward > shape=record]
+	"2297203703760Addmm" [label=Addmm]
+	"2297203703760Addmm" -> 2297203703760
+	2297232133088 [label=<<b>Tensor</b> | data=[[-5., 3.],
+ [ 2.,-4.]] | req_grad=True   is_leaf=True | grad=[[24.5 ,14.93],
+ [13.1 , 7.98]] | grad_fn=None > shape=record]
+	2297203738608 [label=<<b>Tensor</b> | data=[[2.45,0.63],
+ [1.38,1.41]] | req_grad=True   is_leaf=False | grad=[[-14.3,  3.2],
+ [-14.3,  3.2]] | grad_fn=SqrtBackward > shape=record]
+	"2297203738608Sqrt" [label=Sqrt]
+	"2297203738608Sqrt" -> 2297203738608
+	2297232133088 -> "2297203703760Addmm"
+	2297232132944 -> "2297203703760Addmm"
+	2297203738608 -> "2297203738224Matmul"
+	2297232130592 -> "2297203703760Addmm"
+	2297203703760 -> "2297203738224Matmul"
+	2297232132944 -> "2297203738608Sqrt"
 }
