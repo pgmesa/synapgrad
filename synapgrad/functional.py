@@ -170,6 +170,58 @@ def matmul(x1:Tensor, x2:Tensor):
     return MatMul.apply(x1, x2)
 
 
+class Addmm(Function):
+    
+    @staticmethod
+    def forward(ctx:Context, x1:Tensor, x2:Tensor, x3:Tensor):
+        if not isinstance(x1, Tensor):
+            raise TypeError(f"Expected x1 to be a Tensor but got {type(x1)}")
+        if not isinstance(x2, Tensor):
+            raise TypeError(f"Expected x2 to be a Tensor but got {type(x2)}")
+        if not isinstance(x3, Tensor):
+            raise TypeError(f"Expected x3 to be a Tensor but got {type(x3)}")
+        
+        if x1.device == Device.CPU:
+            out_data = cpu_ops.addmm_forward(x1.data, x2.data, x3.data)
+        else:
+            raise RuntimeError(f"{ctx.fn_name}: {x1.device} not supported")
+            
+        out = Tensor(out_data, device=x1.device)
+        
+        ctx.save_for_backward(x1, x2, x3)
+        
+        return out
+    
+    def backward(ctx:Context, grad_output:Tensor):
+        x1, x2, x3 = ctx.saved_tensors
+        
+        if grad_output.device == Device.CPU:
+            a_grad, b_grad, c_grad = cpu_ops.addmm_backward(grad_output.data, x1.data, x2.data, x3.data)
+        else:
+            raise RuntimeError(f"{ctx.fn_name}: {grad_output.device} not supported")
+            
+        x1_grad = Tensor(a_grad, device=grad_output.device)
+        x2_grad = Tensor(b_grad, device=grad_output.device)
+        x3_grad = Tensor(c_grad, device=grad_output.device)
+
+        return x1_grad, x2_grad, x3_grad
+    
+
+def addmm(x1:Tensor, x2:Tensor, x3:Tensor):
+    """ 
+    Performs de operation a + x2 @ x3
+
+    Args:
+        x1 (Tensor): First tensor.
+        x2 (Tensor): Second tensor.
+        x3 (Tensor): Third tensor.
+
+    Returns:
+        Tensor: The result of the matrix multiplication.
+    """
+    return Addmm.apply(x1, x2, x3)
+
+
 class Pow(Function):
 
     @staticmethod
@@ -384,7 +436,13 @@ class Concat(Function):
             
         out = Tensor(out_data, device=x[0].device)
         
-        ctx.sections = [t.shape[dim] for t in x]
+        sections = []
+        for t in x[:-1]:
+            s = t.shape[dim]
+            if len(sections) > 0: s += sections[-1]
+            sections.append(s)
+    
+        ctx.sections = sections
         ctx.dim = dim
         
         return out
@@ -925,7 +983,7 @@ def min(x:Tensor, dim:int, keepdims:bool=False) -> 'Tensor':
 class Squeeze(Function):
     
     @staticmethod
-    def forward(ctx:Context, x:Tensor, dim:'int | tuple'):
+    def forward(ctx:Context, x:Tensor, dim:'int | tuple'=None):
         if not isinstance(x, Tensor):
             raise TypeError(f"Expected x to be a Tensor but got {type(x)}")
         

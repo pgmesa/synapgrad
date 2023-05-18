@@ -1,5 +1,4 @@
 import numpy as np
-from synapgrad.tensor import Tensor
 from synapgrad.tools import (
     recursively_seek_tensors,
     get_conv2d_output_size, get_conv1d_output_size,
@@ -72,6 +71,17 @@ def matmul_backward(grad:np.ndarray, a:np.ndarray, b:np.ndarray):
 
 
 @check_inputs
+def addmm_forward(a:np.ndarray, b:np.ndarray, c:np.ndarray):
+    return a + (b @ c)
+
+@check_inputs
+def addmm_backward(grad:np.ndarray, a:np.ndarray, b:np.ndarray, c:np.ndarray):
+    grad_a, grad_mm = add_backward(grad, a.shape, (b.shape[0], c.shape[1],))
+    grad_b, grad_c = matmul_backward(grad_mm, b, c)
+    return grad_a, grad_b, grad_c
+
+
+@check_inputs
 def pow_forward(a:np.ndarray, n:'int | float'):
     return a ** n
 
@@ -118,7 +128,6 @@ def concat_forward(a:np.ndarray, axis:int):
 
 @check_inputs
 def concat_backward(grad:np.ndarray, sections:list, axis:int):
-    sections = [s if i == 0 else sections[i-1] + s for i, s in enumerate(sections)]
     grads = np.split(grad, indices_or_sections=sections, axis=axis)
     return grads
 
@@ -265,7 +274,10 @@ def min_backward(grad, a, axis, keepdims):
 
 @check_inputs
 def squeeze_forward(a:np.ndarray, axis:'None | int | tuple'):
-    return np.squeeze(a, axis)
+    out = a
+    can_apply = len(a.shape) > 0 and (axis is None or a.shape[axis] == 1)
+    if can_apply: out = np.squeeze(a, axis)
+    return out
 
 @check_inputs
 def squeeze_backward(grad:np.ndarray, a_shape:tuple):

@@ -53,11 +53,7 @@ class Linear(nn.Module):
         
     def forward(self, x:Tensor) -> Tensor:
         assert x.shape[1] == self.input_size, f"Expected input size '{self.input_size}' but received '{x.shape[1]}'"
-
-        out = (x @ self.weight.transpose(0,1)) 
-        if self.bias: out += self.bias
-
-        return out
+        return F.linear(x, self.weight, self.bias)
 
 
 class Neuron(Linear):

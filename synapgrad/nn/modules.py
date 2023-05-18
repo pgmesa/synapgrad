@@ -6,7 +6,7 @@ from synapgrad.device import Device
 
 class Parameter(Tensor):
     """
-    Class that converts a Tensor into a Parameter
+    Wrapper class for Tensor that allows it to be used as a module parameter.
     """ 
     def __repr__(self) -> str:
         return f"Parameter containing:\n{super().__repr__()}"
@@ -83,7 +83,13 @@ class Module:
             object.__setattr__(self, __name, __value)
     
     def parameters(self) -> list['Parameter']:
-        return [p for m in [self] + self.submodules() for p in m._parameters.values()]
+        """
+        Returns a list of all parameters in the module
+        """
+        params = list(self._parameters.values())
+        for m in self.submodules():
+            params += m.parameters()
+        return params
     
     def submodules(self) -> list['Module']:
         return [m for m in self._submodules.values()]

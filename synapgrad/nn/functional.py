@@ -496,6 +496,79 @@ def cross_entropy(y_pred:Tensor, y_true:Tensor):
     """
     return CrossEntropyLoss.apply(y_pred, y_true)
 
+# *********************************
+# ******* Linear functions ********
+# *********************************
+
+class Linear(Function):
+    
+    @staticmethod
+    def forward(ctx:Context, x:Tensor, weight:Tensor, bias:Tensor=None):
+        if not isinstance(x, Tensor):
+            raise TypeError(f"Expected x to be a Tensor but got {type(x)}")
+        if not isinstance(weight, Tensor):
+            raise TypeError(f"Expected weight to be a Tensor but got {type(weight)}")
+        if bias is not None and not isinstance(bias, Tensor):
+            raise TypeError(f"Expected not None bias to be a Tensor but got {type(bias)}")
+        
+        if x.device == Device.CPU:
+            if bias is not None:
+                out_data = cpu_ops.addmm_forward(bias.data, x.data, weight.data.T)
+            else:
+                out_data = cpu_ops.matmul_forward(x.data, weight.data.T)
+        else:
+            raise RuntimeError(f"{ctx.fn_name}: {x.device} not supported")
+
+        out = Tensor(out_data, device=x.device, requires_grad=True)
+
+        if bias is not None:
+            ctx.save_for_backward(x, weight, bias)
+        else:
+            ctx.save_for_backward(x, weight)
+        
+        return out
+    
+    def backward(ctx:Context, grad_output:Tensor):
+        if len(ctx.saved_tensors) == 3:
+            x, weight, bias = ctx.saved_tensors
+        else:
+            x, weight = ctx.saved_tensors
+            bias = None
+        
+        if grad_output.device == Device.CPU:
+            if bias is not None:
+                bias_grad, x_grad, weight_grad = cpu_ops.addmm_backward(grad_output.data, bias.data, x.data, weight.data.T)
+            else:
+                x_grad, weight_grad = cpu_ops.matmul_backward(grad_output.data, x.data, weight.data.T)
+        else:
+            raise RuntimeError(f"{ctx.fn_name}: {grad_output.device} not supported")
+        
+        grad_input = Tensor(x_grad, device=grad_output.device)
+        grad_weight = Tensor(weight_grad.T, device=grad_output.device)
+        
+        out = [grad_input, grad_weight]
+        
+        if bias is not None:
+            grad_bias = Tensor(bias_grad, device=grad_output.device)
+            out.append(grad_bias)
+                   
+        return tuple(out)
+    
+    
+def linear(x:Tensor, weight:Tensor, bias:Tensor=None):
+    """ 
+    Linear function. x @ w.T + b
+
+    Args:
+        - x (Tensor): tensor
+        - weight (Tensor): tensor
+        - bias (Tensor): tensor. (default=None)
+
+    Returns:
+        Tensor: result
+    """
+    return Linear.apply(x, weight, bias)
+
 # *******************************
 # ******* Conv functions ********
 # *******************************
@@ -658,7 +731,7 @@ class Conv1d(Function):
         else:
             raise RuntimeError(f"{ctx.fn_name}: {x.device} not supported")
 
-        out = Tensor(out_data, device=x.device)
+        out = Tensor(out_data, device=x.device, requires_grad=True)
         
         ctx.x_shape = x.shape
         ctx.weight = weight
@@ -735,7 +808,7 @@ class Conv2d(Function):
         else:
             raise RuntimeError(f"{ctx.fn_name}: {x.device} not supported")
 
-        out = Tensor(out_data, device=x.device)
+        out = Tensor(out_data, device=x.device, requires_grad=True)
         
         ctx.x_shape = x.shape
         ctx.weight = weight
@@ -811,7 +884,7 @@ class MaxPool1d(Function):
         else:
             raise RuntimeError(f"{ctx.fn_name}: {x.device} not supported")
 
-        out = Tensor(out_data, device=x.device)
+        out = Tensor(out_data, device=x.device, requires_grad=True)
         
         ctx.kernel_size = kernel_size
         ctx.stride = stride
@@ -881,7 +954,7 @@ class MaxPool2d(Function):
         else:
             raise RuntimeError(f"{ctx.fn_name}: {x.device} not supported")
 
-        out = Tensor(out_data, device=x.device)
+        out = Tensor(out_data, device=x.device, requires_grad=True)
         
         ctx.kernel_size = kernel_size
         ctx.stride = stride
@@ -948,7 +1021,7 @@ class AvgPool1d(Function):
         else:
             raise RuntimeError(f"{ctx.fn_name}: {x.device} not supported")
 
-        out = Tensor(out_data, device=x.device)
+        out = Tensor(out_data, device=x.device, requires_grad=True)
         
         ctx.kernel_size = kernel_size
         ctx.stride = stride
@@ -1018,7 +1091,7 @@ class AvgPool2d(Function):
         else:
             raise RuntimeError(f"{ctx.fn_name}: {x.device} not supported")
 
-        out = Tensor(out_data, device=x.device)
+        out = Tensor(out_data, device=x.device, requires_grad=True)
         
         ctx.kernel_size = kernel_size
         ctx.stride = stride

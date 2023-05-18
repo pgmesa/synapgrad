@@ -65,10 +65,9 @@ class DataLoaderCallback(ABC):
         
 class DataLoader:
     
-    def __init__(self, X, y, batch_size, engine, transform:DataLoaderCallback=None) -> None:
+    def __init__(self, X, y, batch_size, transform:DataLoaderCallback=None) -> None:
         self.X = X; self.y = y
         self.batach_size = batch_size
-        self.engine = engine
         self.step = 0
         self.transform = transform
     
@@ -93,10 +92,5 @@ class DataLoader:
         
         X_batch = self.X[start:end]
         y_batch = self.y[start:end]
-        if self.transform is not None:
-            return self.transform(self, X_batch, y_batch)
         
-        x = self.engine.tensor(X_batch)
-        y = self.engine.tensor(y_batch)
-        
-        return x, y 
+        return self.transform(self, X_batch, y_batch)

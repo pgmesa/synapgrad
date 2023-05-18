@@ -311,7 +311,7 @@ class Tensor:
             if self.data.size > 1:
                 raise RuntimeError("grad must be specified for non-scalar tensors")
             else:
-                grad = Tensor(1.0, dtype=self.dtype, device=self.device)
+                grad = ones_like(self.data, device=self.device)
         
         assert tools.is_floating_point(grad), "expected float dtype for grad, got %s" % grad.dtype
           

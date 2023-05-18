@@ -60,6 +60,9 @@ def test_div():
 
 def test_matmul():
     op_tester([(3, 512, 512), (3, 512, 512)], lambda x,y: x@y, name='matmul')
+    
+def test_addmm():
+    op_tester([(10, 10), (10, 10), (10, 10)], lambda engine, x, y, z: engine.addmm(x, y, z), name='addmm', module_func=True)
 
 def test_rsub():
     op_tester([(500, 400, 3)], lambda x: 234 - x, name='rsub')
@@ -189,6 +192,15 @@ def test_unbind():
     op_tester([(100, 200, 300)], lambda engine, x: engine.unbind(x, dim=-1), name='unbind', module_func=True)
     op_tester([(100, 200, 300)], lambda engine, x: engine.unbind(x, dim=1), name='unbind', module_func=True)
 
+# **************************
+# ******* Linear ops *******
+# **************************
+
+def test_linear():
+    op_tester([(100, 200), (300, 200)], lambda F, x, w: F.linear(x, w), name='linear', module_func=True, nn_functional=True)
+    op_tester([(100, 200), (300, 200)], lambda F, x, w: F.linear(x, w), name='linear', module_func=True, nn_functional=True)
+    op_tester([(100, 200), (300, 200), (100, 300)], lambda F, x, w, b: F.linear(x, w, b), name='linear', module_func=True, nn_functional=True)
+
 # ************************
 # ******* Pool ops *******
 # ************************
@@ -236,8 +248,3 @@ def test_conv2d():
     op_tester([(32, 3, 64, 64)], lambda engine, x: engine.conv2d(x, weight=engine.ones((34, 3, 3, 3), requires_grad=True), bias=engine.zeros(34, requires_grad=True), stride=(1,1), padding=0, dilation=2), name='conv2d', module_func=True)
     op_tester([(32, 3, 64, 64)], lambda engine, x: engine.conv2d(x, weight=engine.ones((34, 3, 5, 3), requires_grad=True), bias=None, stride=(1,2), padding=1), name='conv2d', module_func=True)
     op_tester([(32, 3, 64, 64)], lambda engine, x: engine.conv2d(x, weight=engine.ones((34, 3, 7, 7), requires_grad=True), bias=engine.zeros(34, requires_grad=True), stride=(2,2), padding=(2, 3)), name='conv2d', module_func=True)
-
-# ******************************
-# ******* Batch norm ops *******
-# ******************************
-
