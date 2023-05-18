@@ -5,7 +5,7 @@ An autograd Tensor-based engine with a deep learning library built on top of it 
 [![Downloads](https://static.pepy.tech/personalized-badge/synapgrad?period=total&units=international_system&left_color=black&right_color=blue&left_text=Downloads)](https://pepy.tech/project/synapgrad)
 
 
-> :Note: There is a new branch available in this repo called `new_engine`, which is another implementation of synapgrad but with a new engine (more similar to torch) and with better-documented and structured code that includes new functionalities. You should definitely take a look at it first, as it will eventually replace this branch.
+> ⚠️: There is a new branch available in this repo called `new_engine`, which is another implementation of synapgrad but with a new engine (more similar to torch) and with better-documented and structured code that includes new functionalities. You should definitely take a look at it as well, as it will eventually replace this branch.
 
 ## Installation
 ```bash
