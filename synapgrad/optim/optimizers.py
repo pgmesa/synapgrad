@@ -1,8 +1,8 @@
-
 from abc import ABC, abstractmethod
 
-from .. import engine, Tensor
 import numpy as np
+import synapgrad
+from synapgrad.tensor import Tensor
 
 
 class Optimizer(ABC):
@@ -25,15 +25,14 @@ class Optimizer(ABC):
 
 
 class SGD(Optimizer):
-    """
-    Reference: 
-        https://pytorch.org/docs/stable/generated/torch.optim.SGD.html
-    """
     
     def __init__(self, parameters: list[Tensor], lr=0.001, momentum=0, dampening=0,
                  weight_decay=0, nesterov=False, maximize=False) -> None:
         """
         Implements stochastic gradient descent (optionally with momentum).
+        
+        Reference: 
+            - https://pytorch.org/docs/stable/generated/torch.optim.SGD.html
 
         Args:
             params (iterable): Iterable of parameters to optimize.
@@ -58,7 +57,7 @@ class SGD(Optimizer):
     
     def step(self):
         super().step()
-        with engine.no_grad():
+        with synapgrad.no_grad():
             for i, p in enumerate(self.parameters):
                 grad = p._grad
                 
@@ -87,15 +86,14 @@ class SGD(Optimizer):
         
     
 class Adam(Optimizer):
-    """
-    Reference: 
-        https://pytorch.org/docs/stable/generated/torch.optim.Adam.html
-    """
-    
+
     def __init__(self, parameters: list[Tensor], lr=0.001, betas=(0.9, 0.999), eps=1e-8,
                     weight_decay=0, maximize=False) -> None:
         """
         Implements Adam algorithm.
+        
+        Reference: 
+            - https://pytorch.org/docs/stable/generated/torch.optim.Adam.html
         
         Args:
             params (iterable): Iterable of model parameters to optimize.
@@ -119,7 +117,7 @@ class Adam(Optimizer):
     
     def step(self):
         super().step()
-        with engine.no_grad():
+        with synapgrad.no_grad():
             for i, p in enumerate(self.parameters):
                 grad = -p._grad if self.maximize else p._grad   
                     

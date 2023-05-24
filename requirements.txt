@@ -1,10 +1,16 @@
-numpy>=1.21.0 # --- SYNAPGRAD CORE
-# --- UTILS
-# pkbar
-# matplotlib
-# ipykernel
-# graphviz
-# scikit-learn
-# keras
-# --- FOR TESTING
-# torch
+# *********************
+# ***** synapgrad *****
+# *********************
+numpy==1.23.5 # Core
+graphviz==0.20.1 # Visualize graph
+
+# *********************************
+# ***** notebook requirements *****
+# *********************************
+# pkbar==0.5
+# matplotlib==3.7.0
+# ipykernel==6.19.2
+# scikit-learn==1.2.1
+# torchvision==0.13.1
+# # **** Also need it to run the tests *****
+# torch==1.12.1 # Install following the instructions in https://pytorch.org/

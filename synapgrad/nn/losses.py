@@ -1,175 +1,125 @@
 from typing import Any
-from abc import ABC, abstractmethod
-from .. import Tensor
-from .functional import (
-    mse_loss, nll_loss, cross_entropy_loss, bce_loss, softmax_fn,
-    bce_with_logits_loss, relu_fn, epsilon
-)
-import numpy as np
+
+from synapgrad.nn import Module
+from synapgrad.tensor import Tensor
+from synapgrad.nn import functional as F
 
 
-# ----------------------------- Modules -----------------------------
-# -------------------------------------------------------------------
-class Loss(ABC):
+# ******************************
+# ******* Loss Modules *********
+# ******************************
+
+class Loss(Module):
+    """ 
+    Generic class for loss functions.
+    """
     
     def __init__(self, reduction='mean') -> None:
+        super().__init__()
         self.reduction = reduction
         
     def __call__(self, y_pred:Tensor, y_true:Tensor) -> Any:
-        assert isinstance(y_pred, Tensor) and isinstance(y_true, Tensor), "Inputs must be Tensors"
-
-        loss = self.criterion(y_pred, y_true)
-        
+        loss = super().__call__(y_pred, y_true)
+                
         # Reduction
         if self.reduction == 'sum':
             reduction = loss.sum()
         elif self.reduction == 'mean':
             reduction = loss.mean()
         else:
-            reduction = loss    
-          
-        if self.reduction is not None:
-            reduction._operation = loss._operation.replace(">", reduction._operation.replace("<", ""))
+            reduction = loss 
             
         return reduction
-    
-    @abstractmethod
-    def criterion(self, y_pred:Tensor, y_true:Tensor) -> Tensor:
-        pass
 
 
 class MSELoss(Loss):
-    """ Mean Squared Error Loss: (y_pred - y_true)**2 """
+    """ 
+    Mean Squared Error Loss: (y_pred - y_true) ** 2. It is mostly used for regression problems.
     
-    def criterion(self, y_pred:Tensor, y_true:Tensor) -> Tensor:
-        assert y_pred.matches_shape(y_true), f"Inputs shape don't match y_pred={y_pred.shape}, y_true={y_true.shape}"
-        req_grad = y_pred.requires_grad or y_true.requires_grad
-        mse = mse_loss(y_pred.data, y_true.data)
-        loss = Tensor(mse, (y_pred, y_true), '<MSELoss>', requires_grad=req_grad)
-        
-        def _backward():
-            if y_pred.requires_grad: 
-                grad = 2*(y_pred.data - y_true.data) 
-                y_pred._grad += grad * loss._grad
-        
-        loss._backward = _backward
-        
-        return loss
+    Inputs:
+    - y_pred: output (logits) from fully connected layer (num_examples x num_classes)
+    - y_true: labels (num_examples x num_classes)
+    """
+    
+    def forward(self, y_pred:Tensor, y_true:Tensor) -> Tensor:
+        return F.mse_loss(y_pred, y_true)
 
 
 class NLLLoss(Loss):
     """ 
-    This class expects y_true to be the probabilities of a LogSoftmax function. Also, y_pred 
-    should be shape=(batch, num_classes). It expects to receive the probability of a sample to be of each class.
-    For binary classification problems, output should not be a scalar value (0 <= x <=1) but an array with 
-    the probability of each class [0.3, 0.7]
+    Negative Log Likelihood Loss
+    
+    Inputs:
+    - y_pred: log of the class probabilities returned by LogSoftmax function. shape=(num_examples, num_classes).
+        For binary classification problems, it should not be a scalar value (0 <= x <=1) but an array with 
+        the probability of each class [-0.523, -0.155]
+    - y_true: labels. shape=(num_examples,). Note that y is not a one-hot encoded vector but an array with each value in 
+        the range [0, num_classes-1]
     
     Reference: 
-        https://towardsdatascience.com/cross-entropy-negative-log-likelihood-and-all-that-jazz-47a95bd2e81    
+    - https://towardsdatascience.com/cross-entropy-negative-log-likelihood-and-all-that-jazz-47a95bd2e81    
     """
     
-    def criterion(self, y_pred: Tensor, y_true: Tensor) -> Tensor:
-        req_grad = y_pred.requires_grad or y_true.requires_grad
-        log_likelihood = nll_loss(y_pred.data, y_true.data)
-        loss = Tensor(log_likelihood, (y_pred, y_true), '<NLLLoss>', requires_grad=req_grad)
-        
-        def _backward():
-            # Hand made derivation
-            if y_pred.requires_grad:
-                grad = np.zeros(y_pred.shape)
-                grad[range(len(y_pred.data)), y_true.data] = -1.0
-                # for i, true in enumerate(y_true.data):
-                #     grad[i][true] = -1.0
-                y_pred._grad += (grad * loss._grad)
-        
-        loss._backward = _backward
-        
-        return loss
+    def forward(self, y_pred: Tensor, y_true: Tensor) -> Tensor:
+        return F.nll_loss(y_pred, y_true)
 
    
 class BCELoss(Loss):
+    """
+    Binary Cross Entropy loss function.
+
+    Inputs:
+    - y_pred: probabilities returned by Sigmoid function. Values in range [0, 1], shape=(num_examples,)
+    - y_true: binary labels. 0 or 1, shape=(num_examples,)
     
-    def criterion(self, y_pred: Tensor, y_true: Tensor) -> Tensor:
-        req_grad = y_pred.requires_grad or y_true.requires_grad
-        bce = bce_loss(y_pred.data, y_true.data)
-        loss = Tensor(bce, (y_pred, y_true), '<BCELoss>', requires_grad=req_grad)
-        
-        def _backward():
-            # Hand made derivation
-            if y_pred.requires_grad:
-                term_0 = -(1 - y_true.data + epsilon) / ((1 - y_pred.data) + epsilon)
-                term_1 = (y_true.data + epsilon) / (y_pred.data + epsilon)
-                y_pred._grad += -(term_0 + term_1) * loss._grad
-        
-        loss._backward = _backward
-        
-        return loss
+    References:
+    - https://pytorch.org/docs/stable/generated/torch.nn.BCELoss.html
+    """
+    
+    def forward(self, y_pred: Tensor, y_true: Tensor) -> Tensor:
+        return F.binary_cross_entropy(y_pred, y_true)
 
 
 class BCEWithLogitsLoss(Loss):
     """ 
+    Binary Cross Entropy with Logits loss function.
+    
     This loss combines a Sigmoid layer and the BCELoss in one single class.
     This version is more numerically stable than using a plain Sigmoid followed by a BCELoss as,
     by combining the operations into one layer, we take advantage of the log-sum-exp
     trick for numerical stability
     
+    Inputs:
+    - y_pred: output (logits) from fully connected layer. shape=(num_examples,)
+    - y_true: binary labels. 0 or 1, shape=(num_examples,)
+    
     References:
-        https://pytorch.org/docs/stable/generated/torch.nn.BCEWithLogitsLoss.html
-        https://stackoverflow.com/questions/66906884/how-is-pytorchs-class-bcewithlogitsloss-exactly-implemented
+    - https://pytorch.org/docs/stable/generated/torch.nn.BCEWithLogitsLoss.html
+    - https://stackoverflow.com/questions/66906884/how-is-pytorchs-class-bcewithlogitsloss-exactly-implemented
     """
     
-    def criterion(self, y_pred: Tensor, y_true: Tensor) -> Tensor:
-        req_grad = y_pred.requires_grad or y_true.requires_grad
-        bce = bce_with_logits_loss(y_pred.data, y_true.data)
-        loss = Tensor(bce, (y_pred, y_true), '<BCEWithLogitsLoss>', requires_grad=req_grad)
-        
-        def _backward():
-            # Hand made derivation
-            if y_pred.requires_grad:
-                tn = -relu_fn(y_pred.data)
-                dtn = np.where(tn == 0, 0, -1)
-                div1 = -dtn*np.exp(-tn) + (-1-dtn)*np.exp((-y_pred.data-tn))
-                div2 = np.exp(-tn) + np.exp((-y_pred.data-tn))
-                grad = (1 - y_true.data) + dtn + (div1/(div2 + epsilon))
-                
-                y_pred._grad += grad * loss._grad
-        
-        loss._backward = _backward
-        
-        return loss
+    def forward(self, y_pred: Tensor, y_true: Tensor) -> Tensor:
+        return F.binary_cross_entropy_with_logits(y_pred, y_true)
     
     
 class CrossEntropyLoss(Loss):
     """ 
+    Cross Entropy Loss function.
+    
     Same as:
+    - log_probs = LogSoftmax(dim=1)(y_pred)
+    - loss = NLLLoss(reduction=None)(log_probs, y_true)
     
-    log_softmax = LogSoftmax(dim=1)(y_pred)
+    Inputs:
+    - y_pred: output (logits) from fully connected layer. shape=(num_examples, num_classes)
+    - y_true: labels. shape=(num_examples,). Note that y is not a one-hot encoded vector but an array with each value in 
+        the range [0, num_classes-1]
     
-    loss = NLLLoss(reduction=None)(log_softmax, y_true)
-    
-    Reference: https://deepnotes.io/softmax-crossentropy#:~:text=Cross%20entropy%20indicates%20the%20distance,used%20alternative%20of%20squared%20error
+    References: 
+    - https://pytorch.org/docs/stable/generated/torch.nn.CrossEntropyLoss.html
+    - https://deepnotes.io/softmax-crossentropy#:~:text=Cross%20entropy%20indicates%20the%20distance,used%20alternative%20of%20squared%20error
     """
     
-    def criterion(self, y_pred: Tensor, y_true: Tensor) -> Tensor:
-        """
-        y_pred is the output (logits) from fully connected layer (num_examples x num_classes)
-        y_true is labels (num_examples x 1)
-            Note that y is not one-hot encoded vector. 
-            It can be computed as y.argmax(axis=1) from one-hot encoded vectors of labels if required.
-        """
-        req_grad = y_pred.requires_grad or y_true.requires_grad
-        cross_entropy = cross_entropy_loss(y_pred.data, y_true.data)
-        loss = Tensor(cross_entropy, (y_pred, y_true), '<CrossEntropyLoss>', requires_grad=req_grad)
-        
-        def _backward():
-            # Hand made derivation
-            if y_pred.requires_grad:
-                dlogits = softmax_fn(y_pred.data, 1)
-                n = y_pred.shape[0]
-                dlogits[range(n), y_true.data] -= 1
-                y_pred._grad += (dlogits * loss._grad)
-        
-        loss._backward = _backward
-        
-        return loss
+    def forward(self, y_pred: Tensor, y_true: Tensor) -> Tensor:
+        return F.cross_entropy(y_pred, y_true)
         

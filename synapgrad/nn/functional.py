@@ -1,189 +1,325 @@
 import numpy as np
 
-
-epsilon = 1e-12
-
-# ---------------------------- Functions ----------------------------
-# -------------------------------------------------------------------
-def relu_fn(data:np.ndarray) -> np.ndarray:
-    return np.maximum(0, data)
+from synapgrad.tensor import Tensor
+from synapgrad import cpu_ops
+from synapgrad.device import Device
+from synapgrad.functional import BackwardFunction
 
 
-def tanh_fn(data:np.ndarray) -> np.ndarray:
-    return np.tanh(data)
+# ************************************
+# ******* Activation functions *******
+# ************************************
 
-
-def sigmoid_fn(data:np.ndarray) -> np.ndarray:
-    return 1/(1 + np.exp(-data))
-
-
-def softmax_fn(data:np.ndarray, dim:int) -> np.ndarray:
-    # Shift to make it numerically stable (with large values 'inf' appears)
-    shiftx = data - data.max(axis=dim, keepdims=True) 
-    exps = np.exp(shiftx)
-    exp_sums = exps.sum(axis=dim, keepdims=True)
-    return exps / exp_sums
-
-
-def log_softmax_fn(data:np.ndarray, dim:int) -> np.ndarray:
-    # Using log-sum-exp trick for numerical stability
-    max_val = data.max(axis=dim, keepdims=True)
-    substract = data - max_val
-    exp = np.exp(substract)
-    lse = max_val + np.log(exp.sum(axis=dim, keepdims=True))
-    log_softmax = data - lse
-    return log_softmax
-
-# ----------------------------- Losses ------------------------------
-# -------------------------------------------------------------------
-def mse_loss(y_pred: np.ndarray, y_true: np.ndarray) -> np.ndarray:
-    loss = (y_pred - y_true)**2
-    return loss
+def relu(x:Tensor):
+    """ 
+    ReLU activation function. 
     
-    
-def nll_loss(y_pred: np.ndarray, y_true: np.ndarray) -> np.ndarray:
-    loss = -y_pred[range(len(y_pred)), y_true].reshape((-1, 1))
-    return loss
-
-
-def bce_loss(y_pred: np.ndarray, y_true: np.ndarray) -> np.ndarray:
-    assert y_pred.max() <= 1 and y_pred.min() >= 0, "BCELoss inputs must be between 0 and 1"
-    loss = - (y_true * np.log(y_pred + epsilon) + (1 - y_true) * np.log(1 - y_pred + epsilon))
-    # For compatibility with pytorch (returns 100 when y_pred=0 and y_true=1; vice versa)
-    loss = np.where(loss == -np.log(epsilon), 100, loss) 
-    return loss
-
-
-def bce_with_logits_loss(y_pred: np.ndarray, y_true: np.ndarray) -> np.ndarray:
-    tn = -relu_fn(y_pred)
-    loss = (1-y_true) * y_pred + tn + np.log(np.exp(-tn) + np.exp((-y_pred-tn)))
-    return loss
-
-
-def cross_entropy_loss(y_pred: np.ndarray, y_true: np.ndarray) -> np.ndarray:
-    softmax = np.log(softmax_fn(y_pred, 1) + epsilon)
-    log_likelihood = nll_loss(softmax, y_true)
-    return log_likelihood
-
-# ----------------------- Special Functions -------------------------
-# -------------------------------------------------------------------
-def unfold(tensor:np.ndarray, kernel_size, stride=1, padding=0, dilation=1, pad_value=0) -> np.ndarray:
-    """
-    Unfold a tensor of shape (N, C, H, W) to a tensor in the shape of (N, C*kH*kW, L)
-    
-    Reference: 
-        https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html
+    The ReLU activation function is defined as:
+    f(x) = max(0, x)
 
     Args:
-        tensor (numpy.ndarray): Input tensor of shape (N, C, H, W).
-        kernel_size (int or tuple): Size of the sliding window.
-        stride (int or tuple, optional): Stride size. Defaults to 1.
-        padding (int or tuple, optional): Padding size. Defaults to 0.
-        dilation (int or tuple, optional): Dilation factor. Defaults to 1.
+        x (Tensor): tensor
 
     Returns:
-        numpy.ndarray: Output tensor of shape (N, C*kH*kW, L).
+        Tensor: result
     """
-    assert len(tensor.shape) == 4, "Input tensor must be of shape (N, C, H, W)"
-    N, C, H, W = tensor.shape
-    kernel_size = np.broadcast_to(kernel_size, 2)
-    dilation = np.broadcast_to(dilation, 2)
-    padding = np.broadcast_to(padding, 2)
-    stride = np.broadcast_to(stride, 2)
+    if not isinstance(x, Tensor):
+        raise TypeError(f"Expected x to be a Tensor but got {type(x)}")
+    
+    if x.device == Device.CPU:
+        out_data = cpu_ops.relu_forward(x.data)
+    else:
+        raise RuntimeError(f"{x.device} not supported")
 
-    # Calculate output spatial size
-    lH = int(np.floor((H + 2 * padding[0] - dilation[0] * (kernel_size[0] - 1) - 1) / stride[0] + 1))
-    lW = int(np.floor((W + 2 * padding[1] - dilation[1] * (kernel_size[1] - 1) - 1) / stride[1] + 1))
-    L = lH*lW
+    out = Tensor(out_data, device=x.device, children=(x,), requires_grad=x.requires_grad, operation="Relu")
     
-    if L <= 0:
-        raise RuntimeError('Cannot unfold a tensor with zero or negative spatial size (L='+str(L)+
-            ') for kernel_size='+str(kernel_size)+', stride='+str(stride)+', padding='+str(padding)+
-            ', dilation='+str(dilation)+' and tensor shape='+str(tensor.shape))
+    def backward():
+        grad_output = out.grad
+        if grad_output.device == Device.CPU:
+            a_grad = cpu_ops.relu_backward(grad_output.data, x.data)
+        else:
+            raise RuntimeError(f"{grad_output.device} not supported")
+        
+        if x.requires_grad: x._grad += a_grad 
     
-    # Pad input
-    padded_input = np.pad(
-        tensor, ((0, 0), (0, 0)) + tuple((padding[d], padding[d]) for d in range(2)),
-        mode='constant', constant_values=pad_value)
+    if out.requires_grad: out.grad_fn = BackwardFunction(backward, out._operation)
+        
+    return out
+
+
+def log_softmax(x:Tensor, dim:int):
+    """ 
+    LogSoftmax activation function. 
     
-    # Initialize output tensor
-    output_size = (N, C * np.prod(kernel_size), L)
-    output = np.zeros(output_size, dtype=tensor.dtype)
+    The LogSoftmax activation function is defined as:
+    f(x) = log(exp(x) / sum(exp(x))) = log(softmax(x))
+
+    Args:
+        x (Tensor): tensor
+
+    Returns:
+        Tensor: result
+    """
+    if not isinstance(x, Tensor):
+        raise TypeError(f"Expected x to be a Tensor but got {type(x)}")
     
-    # Extract sliding window for each input channel and put it in the output tensor
-    for i in range(lH):
-        for j in range(lW):
-            # Height parameters
-            h_start = i * stride[0]
-            h_end = i * stride[0] + kernel_size[0] + (dilation[0] - 1) * (kernel_size[0] - 1)
-            h_step = dilation[0]
-            # Width parameters
-            w_start = j * stride[1]
-            w_end = j * stride[1] + kernel_size[1] + (dilation[1] - 1) * (kernel_size[1] - 1)
-            w_step = dilation[1]
-            # Extract sliding window
-            window = padded_input[:, :, h_start:h_end:h_step, w_start:w_end:w_step]
-            output[:, :, i*lW + j] = window.ravel().reshape(output[:, :, i*lW + j].shape)
+    if x.device == Device.CPU:
+        out_data = cpu_ops.log_softmax_forward(x.data, dim)
+    else:
+        raise RuntimeError(f"{x.device} not supported")
+
+    out = Tensor(out_data, device=x.device, children=(x,), requires_grad=x.requires_grad, operation="LogSoftmax")
+
+    def backward():
+        grad_output = out.grad
+        if grad_output.device == Device.CPU:
+            a_grad = cpu_ops.log_softmax_backward(grad_output.data, out.data, dim)
+        else:
+            raise RuntimeError(f"{grad_output.device} not supported")
+        
+        if x.requires_grad: x._grad += a_grad 
+    
+    if out.requires_grad: out.grad_fn = BackwardFunction(backward, out._operation)
+
+    return out
+
+# ******************************
+# ******* Loss functions *******
+# ******************************
+
+def nll_loss(y_pred:Tensor, y_true:Tensor):
+    """ 
+    Negative Log Likelihood loss function.
+
+    Args:
+        - y_pred (Tensor): tensor
+        - y_true (Tensor): tensor
+
+    Returns:
+        Tensor: result
+    """
+    if not isinstance(y_pred, Tensor):
+        raise TypeError(f"Expected y_pred to be a Tensor but got {type(y_pred)}")
+    if not isinstance(y_true, Tensor):
+        raise TypeError(f"Expected y_true to be a Tensor but got {type(y_true)}")
+    
+    if y_pred.device == Device.CPU:
+        loss_data = cpu_ops.nll_loss_forward(y_pred.data, y_true.data)
+    else:
+        raise RuntimeError(f"{y_pred.device} not supported")
+
+    loss = Tensor(loss_data, device=y_pred.device, children=(y_pred, y_true), requires_grad=True, operation="NLLLoss")
+    
+    def backward():
+        grad_output = loss.grad
+        if grad_output.device == Device.CPU:
+            loss_grad_data = cpu_ops.nll_loss_backward(grad_output.data, y_pred.data, y_true.data)
+        else:
+            raise RuntimeError(f"{grad_output.device} not supported")
+        
+        if y_pred.requires_grad: y_pred._grad += loss_grad_data
+    
+    if loss.requires_grad: loss.grad_fn = BackwardFunction(backward, loss._operation)
+    
+    return loss
+
+def cross_entropy(y_pred:Tensor, y_true:Tensor):
+    """ 
+    Cross Entropy loss function.
+
+    Args:
+        - y_pred (Tensor): tensor
+        - y_true (Tensor): tensor
+
+    Returns:
+        Tensor: result
+    """
+    if not isinstance(y_pred, Tensor):
+        raise TypeError(f"Expected y_pred to be a Tensor but got {type(y_pred)}")
+    if not isinstance(y_true, Tensor):
+        raise TypeError(f"Expected y_true to be a Tensor but got {type(y_true)}")
+    
+    if y_pred.device == Device.CPU:
+        loss_data = cpu_ops.cross_entropy_loss_forward(y_pred.data, y_true.data)
+    else:
+        raise RuntimeError(f"{y_pred.device} not supported")
+
+    loss = Tensor(loss_data, device=y_pred.device, children=(y_pred, y_true), requires_grad=True, operation="CrossEntropyLoss")
+    
+    def backward():
+        grad_output = loss.grad
+        if grad_output.device == Device.CPU:
+            loss_grad_data = cpu_ops.cross_entropy_loss_backward(grad_output.data, y_pred.data, y_true.data)
+        else:
+            raise RuntimeError(f"{grad_output.device} not supported")
+        
+        if y_pred.requires_grad: y_pred._grad += loss_grad_data
+    
+    if loss.requires_grad: loss.grad_fn = BackwardFunction(backward, loss._operation)
+    
+    return loss
+
+# *********************************
+# ******* Linear functions ********
+# *********************************
+
+def linear(x:Tensor, weight:Tensor, bias:Tensor=None):
+    """ 
+    Linear function. x @ w.T + b
+
+    Args:
+        - x (Tensor): tensor
+        - weight (Tensor): tensor
+        - bias (Tensor): tensor. (default=None)
+
+    Returns:
+        Tensor: result
+    """
+    if not isinstance(x, Tensor):
+        raise TypeError(f"Expected x to be a Tensor but got {type(x)}")
+    if not isinstance(weight, Tensor):
+        raise TypeError(f"Expected weight to be a Tensor but got {type(weight)}")
+    if bias is not None and not isinstance(bias, Tensor):
+        raise TypeError(f"Expected not None bias to be a Tensor but got {type(bias)}")
+    
+    if x.device == Device.CPU:
+        if bias:
+            out_data = cpu_ops.addmm_forward(bias.data, x.data, weight.data.T)
+        else:
+            out_data = cpu_ops.matmul_forward(x.data, weight.data.T)
+    else:
+        raise RuntimeError(f"{x.device} not supported")
+    
+    if bias: inputs = (x, weight, bias)
+    else: inputs = (x, weight)
+        
+    out = Tensor(out_data, device=x.device, children=inputs, requires_grad=True, operation="Linear")
+        
+    def backward():
+        grad_output = out.grad
+        if out.device == Device.CPU:
+            if bias:
+                bias_grad, x_grad, weight_grad = cpu_ops.addmm_backward(grad_output.data, bias.data, x.data, weight.data.T)
+            else:
+                x_grad, weight_grad = cpu_ops.matmul_backward(grad_output.data, x.data, weight.data.T)
+        else:
+            raise RuntimeError(f"{out.device} not supported")
+        
+        if x.requires_grad: 
+            x._grad += x_grad
+        if weight.requires_grad: 
+            weight._grad += weight_grad.T
+        if bias and bias.requires_grad: 
+            bias._grad += bias_grad
             
-    return output
+    if out.requires_grad: out.grad_fn = BackwardFunction(backward, out._operation)
+    
+    return out
 
+# *******************************
+# ******* Conv functions ********
+# *******************************
 
-def fold(tensor:np.ndarray, output_size, kernel_size, stride=1, padding=0, dilation=1):
-    """
-    Fold a tensor of shape (N, C*kH*kW, L) to a tensor in the shape of (N, C, H, W).
+def max_pool2d(x:Tensor, kernel_size, stride=None, padding=0, dilation=1):
+    """ 
+    Max-pooling function.
     
     Reference:
-        https://pytorch.org/docs/stable/generated/torch.nn.Fold.html
+        https://pytorch.org/docs/stable/generated/torch.nn.MaxPool2d.html
 
     Args:
-        tensor (numpy.ndarray): Input tensor of shape (N, C*kH*kW, L).
-        kernel_size (int or tuple): Size of the sliding window.
-        output_size (tuple): Desired output size of the folded tensor, in the form of (H, W).
-        stride (int or tuple, optional): Stride size. Defaults to 1.
-        padding (int or tuple, optional): Padding size. Defaults to 0.
-        dilation (int or tuple, optional): Dilation factor. Defaults to 1.
+        - tensor (numpy.ndarray): Input tensor of shape (N, C, H, W).
+        - kernel_size (int or tuple): Size of the sliding window.
+        - stride (int or tuple, optional): Stride size. Defaults to kernel_size.
+        - padding (int or tuple, optional): Padding size. Defaults to 0.
+        - dilation (int or tuple, optional): Dilation factor. Defaults to 1.
 
     Returns:
-        numpy.ndarray: Output tensor of shape (N, C, H, W).
+        numpy.ndarray: Output tensor of shape (N, C, lH, lW).
     """
-    N, CkHkW, L = tensor.shape
-    kernel_size = np.broadcast_to(kernel_size, 2)
-    dilation = np.broadcast_to(dilation, 2)
-    padding = np.broadcast_to(padding, 2)
-    stride = np.broadcast_to(stride, 2)
-
-    C = CkHkW // np.prod(kernel_size)
-    H, W = output_size
+    if stride is None: stride = kernel_size
     
-    H_with_pad = H + 2 * padding[0]
-    W_with_pad = W + 2 * padding[1]
+    if not isinstance(x, Tensor):
+        raise TypeError(f"Expected x to be a Tensor but got {type(x)}")
     
-    # Calculate input spatial size
-    lH = int(np.floor((H_with_pad - dilation[0] * (kernel_size[0] - 1) - 1) / stride[0] + 1))
-    lW = int(np.floor((W_with_pad - dilation[1] * (kernel_size[1] - 1) - 1) / stride[1] + 1))
+    if len(x.shape) != 4:
+        raise ValueError(f"Input tensor must be of shape (N, C, H, W), but got {x.shape}")
+    
+    if x.device == Device.CPU:
+        out_data, *bw_data = cpu_ops.max_pool2d_forward(x.data, kernel_size, stride, padding, dilation)
+    else:
+        raise RuntimeError(f"{x.device} not supported")
 
-    # Initialize output tensor
-    output = np.zeros((N, C, H_with_pad, W_with_pad), dtype=tensor.dtype)
+    out = Tensor(out_data, device=x.device, children=(x,), requires_grad=True, operation="MaxPool2d")
+    
+    def backward():
+        grad_output = out.grad
+        if grad_output.device == Device.CPU:
+            x_grad = cpu_ops.max_pool2d_backward(grad_output.data, kernel_size, stride, padding, dilation, *bw_data)
+        else:
+            raise RuntimeError(f"{grad_output.device} not supported")
+        
+        if x.requires_grad: x._grad += x_grad
+            
+    if out.requires_grad: out.grad_fn = BackwardFunction(backward, out._operation)
+    
+    return out
 
-    # Reshape input tensor to match the expected shape of the output tensor
-    tensor = tensor.reshape((N, C, np.prod(kernel_size), L))
 
-    # Undo the sliding window operation and place the values back in the output tensor
-    for i in range(lH):
-        for j in range(lW):
-            h_start = i * stride[0]
-            h_end = i * stride[0] + kernel_size[0] + (dilation[0] - 1) * (kernel_size[0] - 1)
-            h_step = dilation[0]
-            w_start = j * stride[1]
-            w_end = j * stride[1] + kernel_size[1] + (dilation[1] - 1) * (kernel_size[1] - 1)
-            w_step = dilation[1]
-            # Calculate the output window
-            o = output[:, :, h_start:h_end:h_step, w_start:w_end:w_step]
-            window = tensor[:, :, :, i*lW + j].reshape(o.shape)
-            output[:, :, h_start:h_end:h_step, w_start:w_end:w_step] = o + window
+def conv2d(x:Tensor, weight:Tensor, bias:Tensor=None, stride=1, padding=0, dilation=1) -> Tensor:
+    """
+    Applies 2D convolution to an input tensor.
+    
+    Reference:
+        https://pytorch.org/docs/stable/generated/torch.nn.Conv2d.html
 
-    # Remove padding if necessary
-    if padding[0] > 0 or padding[1] > 0:
-        output = output[:, :, padding[0]:H_with_pad-padding[0], padding[1]:W_with_pad-padding[1]]
+    Args:
+        - x (Tensor): Input tensor of shape (N, C, H, W).
+        - weight (Tensor): Weight tensor of shape (C_out, C, kH, kW).
+        - bias (Tensor, optional): Bias tensor of shape (C_out). Defaults to None.
+        - stride (tuple | int, optional): Stride size. Defaults to 1.
+        - padding (tuple | int, optional): Padding size. Defaults to 0.
+        - dilation (tuple | int, optional): Dilation factor. Defaults to 1.
 
-    return output
+    Returns:
+        Tensor: Output tensor of shape (N, C_out, lH, lW).
+    """
+    
+    if not isinstance(x, Tensor):
+        raise TypeError(f"Expected x to be a Tensor but got {type(x)}")
+    
+    if not isinstance(weight, Tensor):
+        raise TypeError(f"Expected weight to be a Tensor but got {type(weight)}")
+    
+    if bias is not None and not isinstance(bias, Tensor):
+        raise TypeError(f"Expected bias to be a Tensor but got {type(bias)}")
+    
+    if x.device == Device.CPU:
+        bias_data = bias.data if bias is not None else None
+        out_data, *bw_data = cpu_ops.conv2d_forward(x.data, weight.data, bias_data, stride, padding, dilation)
+    else:
+        raise RuntimeError(f"{x.device} not supported")
+
+    if bias: inputs = (x, weight, bias)
+    else: inputs = (x, weight)
+    out = Tensor(out_data, device=x.device, children=inputs, requires_grad=True, operation="Conv2d")
+    
+    def backward():
+        grad_output = out.grad
+        if grad_output.device == Device.CPU:
+            bias_data = bias.data if bias is not None else None
+            x_grad, weight_grad, bias_grad = cpu_ops.conv2d_backward(grad_output.data, x.shape, weight.data,
+                                                        bias_data, stride, padding, dilation, *bw_data)
+        else:
+            raise RuntimeError(f"{grad_output.device} not supported")
+        
+        if x.requires_grad:
+            x._grad += x_grad
+        if weight.requires_grad:
+            weight._grad += weight_grad    
+        if bias and bias.requires_grad:
+            bias._grad += bias_grad
+            
+    if out.requires_grad: out.grad_fn = BackwardFunction(backward, out._operation)
+    
+    return out

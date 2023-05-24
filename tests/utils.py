@@ -1,8 +1,17 @@
+from time import time
+
 import torch
 import numpy as np
 from synapgrad import Tensor
 import warnings
 
+
+def time_fun(function, *args, **kwargs):
+    t0 = time()
+    out = function(*args, **kwargs)
+    tf = time()
+    
+    return out, tf - t0 
 
 def check_tensors(t1:'Tensor | np.ndarray', t2:torch.Tensor, atol=1e-6, rtol=1e-4, as_np_array=False) -> bool:
     """Returns if 2 tensors have the same values and shape

@@ -1,6 +1,7 @@
 import numpy as np
 
-# Referece to keras code: https://github.com/keras-team/keras/blob/998efc04eefa0c14057c1fa87cab71df5b24bf7e/keras/initializations.py
+# Referece to keras code: 
+# https://github.com/keras-team/keras/blob/998efc04eefa0c14057c1fa87cab71df5b24bf7e/keras/initializations.py
 
 
 weight_initializers = ['glorot_normal', 'glorot_uniform', 'he_normal', 'he_uniform', 'lecun_uniform']
@@ -32,7 +33,8 @@ def normal(shape, scale=0.05) -> np.ndarray:
 
 
 def lecun_uniform(shape) -> np.ndarray:
-    ''' Reference: LeCun 98, Efficient Backprop
+    ''' 
+    Reference: LeCun 98, Efficient Backprop
         http://yann.lecun.com/exdb/publis/pdf/lecun-98b.pdf
     '''
     fan_in, fan_out = get_fans(shape)
@@ -41,7 +43,8 @@ def lecun_uniform(shape) -> np.ndarray:
 
 
 def glorot_normal(shape) -> np.ndarray:
-    ''' Reference: Glorot & Bengio, AISTATS 2010
+    ''' 
+    Reference: Glorot & Bengio, AISTATS 2010
     '''
     fan_in, fan_out = get_fans(shape)
     s = np.sqrt(2. / (fan_in + fan_out))
@@ -55,7 +58,8 @@ def glorot_uniform(shape) -> np.ndarray:
 
 
 def he_normal(shape) -> np.ndarray:
-    ''' Reference:  He et al., http://arxiv.org/abs/1502.01852
+    ''' 
+    Reference:  He et al., http://arxiv.org/abs/1502.01852
     '''
     fan_in, fan_out = get_fans(shape)
     s = np.sqrt(2. / fan_in)
@@ -69,7 +73,8 @@ def he_uniform(shape) -> np.ndarray:
 
 
 def orthogonal(shape, scale=1.1) -> np.ndarray:
-    ''' From Lasagne. Reference: Saxe et al., http://arxiv.org/abs/1312.6120
+    ''' 
+    From Lasagne. Reference: Saxe et al., http://arxiv.org/abs/1312.6120
     '''
     flat_shape = (shape[0], np.prod(shape[1:]))
     a = np.random.normal(0.0, 1.0, flat_shape)
