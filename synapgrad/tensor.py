@@ -9,12 +9,12 @@ from synapgrad.device import Device
 default_type__ = np.float32
 
 F = None
-tools = None
+utils = None
 
 def lazy_import():
-    global F, autograd, tools
+    global F, autograd, utils
     F = importlib.import_module("synapgrad.functional")
-    tools = importlib.import_module("synapgrad.tools")
+    utils = importlib.import_module("synapgrad.utils")
     
 
 # ********************************
@@ -213,7 +213,7 @@ class Tensor:
     
     @property
     def is_floating_point(self) -> bool:
-        return tools.is_floating_point(self.data)
+        return utils.is_floating_point(self.data)
     
     @property
     def is_initialized(self) -> bool:
@@ -346,7 +346,7 @@ class Tensor:
             else:
                 grad = ones_like(self.data, device=self.device)
         
-        assert tools.is_floating_point(grad), "expected float dtype for grad, got %s" % grad.dtype
+        assert utils.is_floating_point(grad), "expected float dtype for grad, got %s" % grad.dtype
           
         if not isinstance(grad, Tensor):
             raise ValueError("Gradient parameter must be a Tensor")
@@ -534,7 +534,7 @@ class Tensor:
         return self.__repr__()
         
     def __repr__(self) -> str:
-        pretty_data_str = tools.pretty_numpy(self.data, separator=", ")
+        pretty_data_str = utils.pretty_numpy(self.data, separator=", ")
         beggining = "Tensor("
         data_str = ""
         for i, line in enumerate(pretty_data_str.splitlines(keepends=True)):

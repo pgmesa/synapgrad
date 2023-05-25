@@ -1,4 +1,4 @@
-from synapgrad.tools import pretty_numpy
+from synapgrad.utils import pretty_numpy
 from graphviz import Digraph
 
 

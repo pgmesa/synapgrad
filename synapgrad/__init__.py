@@ -10,7 +10,7 @@ from synapgrad.functional import (
     #clone, exp, log, sqrt, sum, mean, max, min, squeeze, unsqueeze,
     #reshape, movedim, transpose, flatten, unfold_dim 
 )
-from synapgrad.tools import manual_seed
+from synapgrad.utils import manual_seed
 
 # from synapgrad.nn.functional import (
 #     relu, tanh, sigmoid, softmax, log_softmax,
@@ -19,6 +19,5 @@ from synapgrad.tools import manual_seed
 # )
 
 from synapgrad import (
-    cpu_ops, device, functional, tools, 
-    nn, optim, visual
+    cpu_ops, conv_tools, device, functional, nn, optim, utils, visual
 )

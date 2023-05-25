@@ -1,5 +1,5 @@
 import numpy as np
-from synapgrad.tools import (
+from synapgrad.conv_tools import (
     get_conv2d_output_size, get_conv1d_output_size,
     im2col, col2im, im2col_fast, col2im_fast, arr2col, col2arr
 )
