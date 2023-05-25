@@ -1,5 +1,6 @@
 import numpy as np
 
+
 # **************************
 # ******* Conv tools *******
 # **************************
@@ -21,171 +22,6 @@ def get_conv1d_output_size(input_length:int, kernel_size:int, stride:int, paddin
     length_padded = input_length + 2 * padding
     num_windows = int(np.floor((length_padded - dilation * (kernel_size - 1) - 1) / stride + 1))
     return num_windows
-
-
-def get_arr2col_indices(arr_shape, kernel_size, dilation=1, stride=1, padding=0) -> tuple:
-    """
-    Compute the indices of the input array for the 1d convolution operation.
-
-    Parameters
-    ----------
-    arr_shape : tuple
-        Shape of the input array.
-    kernel_size : int
-        Size of the kernel used in the convolution operation.
-    dilation : int
-        Dilation rate used in the convolution operation.
-    stride : int
-        Stride value used in the convolution operation.
-    padding : int
-        Padding value or tuple of values used in the convolution operation.
-
-    Returns
-    -------
-    tuple
-        Tuple of 1d arrays of indices.
-
-    Example
-    -------
-    >>> arr_shape = (1, 1, 9)
-    >>> get_arr2col_indices(arr_shape, kernel_size=3, stride=2, padding=0)
-    Output:
-    (array([0, 1, 2]), array([2, 3, 4]), array([4, 5, 6]), array([6, 7, 8]),)
-    """
-    if padding > kernel_size / 2:
-            raise ValueError("Invalid padding: pad should be smaller than or equal to half " +
-                    "of kernel size, but got pad = {}, kernel_size = {}.".format(padding, kernel_size))
-    
-    L = get_conv1d_output_size(arr_shape[2], kernel_size, stride, padding, dilation)
-    
-    if L == 0:
-        raise RuntimeError('Cannot get indices of an array with zero or negative spatial size (L='+str(L)+
-            ') for kernel_size='+str(kernel_size)+', stride='+str(stride)+', padding='+str(padding)+
-            ', dilation='+str(dilation)+' and shape='+str(arr_shape))
-    
-    window_size = kernel_size + (dilation - 1) * (kernel_size - 1)
-    indices = tuple([np.arange(i*stride, (i*stride)+window_size, dilation) for i in range(L)])
-    return indices
-    
-    
-def arr2col(arr, kernel_size, dilation=1, stride=1, padding=0, pad_value=0, unf_indices=None, return_indices=False):
-    """
-    Convert a 3D (N, C, W) dimension array to a 4D (N, C, L, kW) dimension array by unfolding the 3nd dimension.
-    
-    Where:
-        - L = number of windows (determined by kernel_size, dilation, stride and padding)
-        - kW = kernel width (equal to kernel_size)
-    
-    Parameters
-    ----------
-    arr : array-like
-        3D input array
-    kernel_size : int
-        Size of the kernel used in the convolution operation.
-    dilation : int
-        Dilation rate used in the convolution operation.
-    stride : int
-        Stride value used in the convolution operation.
-    padding : int
-        Padding value or tuple of values used in the convolution operation.
-    pad_value : scalar, optional (default=0)
-        Value used for padding the input array.
-    unf_indices : tuple
-        Precomputed indices of the input array.
-    return_indices : bool
-        If True, the function returns the indices of the input array.
-
-    Returns
-    -------
-    array
-        An array representing the unfolded array.
-
-    Example
-    -------
-    >>> arr = np.array([[[1, 2, 3, 4, 5, 6, 7, 8, 9]]])
-    >>> arr2col(arr, kernel_size=3, dilation=1, stride=2, padding=0)
-    Output:
-    array([[[[1, 2, 3],
-             [3, 4, 5],
-             [5, 6, 7],
-             [7, 8, 9]]]])
-    """
-    if len(arr.shape) != 3:
-        raise ValueError("array must be a 3D array, but got shape = {}".format(arr.shape))
-    
-    if not unf_indices:
-        unf_indices = get_arr2col_indices(arr.shape, kernel_size, dilation, stride, padding)
-    
-    if padding > 0:
-        arr = np.pad(arr, ((0,0), (0,0), (padding, padding)), mode='constant', constant_values=pad_value)
-    
-    unfolded = np.take(arr, unf_indices, axis=2)
-    
-    out = unfolded if not return_indices else (unfolded, unf_indices)
-    return out
-
-
-def col2arr(unfolded, arr_shape, kernel_size, dilation=1, stride=1, padding=0, unf_indices=None, return_indices=False):
-    """
-    Converts a 4D (N, C, L, KW) array to a 3D (N, C, W) array by folding the 3rd dimension
-    
-    Where:
-        - L = number of windows (determined by kernel_size, dilation, stride and padding)
-        - kW = kernel width (equal to kernel_size)
-
-    Parameters
-    ----------
-    unfolded : array-like
-        4D input array to fold
-    arr_shape : tuple
-        Shape of the output array
-    kernel_size : int
-        Size of the kernel used in the convolution operation.
-    dilation : int
-        Dilation rate used in the convolution operation.
-    stride : int
-        Stride value used in the convolution operation.
-    padding : int
-        Padding value or tuple of values used in the convolution operation.
-    unf_indices : tuple
-        Precomputed indices in arr2col.
-    return_indices : bool
-        If True, the function returns the indices of the input array.
-
-    Returns
-    -------
-    array
-        An array representing the folded array.
-
-    Example
-    -------
-    >>> unfolded = np.array([[1, 2, 3],
-    ...                      [3, 4, 5],
-    ...                      [4, 6, 7],
-    ...                      [7, 8, 9]])
-    >>> indices = (array([0, 1, 2]), array([2, 3, 4]), array([4, 5, 6]), array([6, 7, 8]),)
-    >>> col2arr(unfolded, (1,1,9), kernel_size=3, dilation=1, stride=2, padding=0, unf_indices=indices)
-    Output:
-    array([[[1, 2, 3+3, 4, 5+5, 6, 7+7, 8, 9]]])
-    """
-    if len(unfolded.shape) != 4:
-        raise ValueError("Input array must be 4D, but got shape="+str(unfolded.shape))
-    
-    if len(arr_shape) != 3:
-        raise ValueError("Output array must be 3D, but got shape="+str(arr_shape))
-    
-    output = np.zeros((arr_shape[0], arr_shape[1], arr_shape[2] + 2 * padding))
-  
-    if unf_indices is None:
-        unf_indices = get_arr2col_indices(arr_shape, kernel_size, dilation, stride, padding)
-    
-    np.add.at(output, (slice(None), slice(None), unf_indices), unfolded)
-    
-    if padding > 0:
-        output = output[:, :, padding:-padding]
-    
-    out = output if not return_indices else (output, unf_indices)
-    return out
 
 
 def get_conv2d_output_size(shape:tuple, kernel_size, dilation, stride, padding) -> tuple:
@@ -231,7 +67,149 @@ def get_conv2d_output_size(shape:tuple, kernel_size, dilation, stride, padding) 
     lW = int(np.floor((W_with_pad - dilation[1] * (kernel_size[1] - 1) - 1) / stride[1] + 1))
     
     return lH, lW
+
+
+# ******************************
+# ******* Sliding window *******
+# ******************************
+
+def extract_windows(a, kernel_size, step, padding, dilation=1, pad_value=0):
+    """ 
+    Create a sliding window view over a 3D or 4D tensor
     
+    - if `a` is 4D tensor (N, C, H, W) --> (lH, lH, N, C, kH, kW) (6D)
+    - if `a` is 3D tensor (N, C, W) --> (lW, N, C, kW) (4D)
+    
+    Args:
+        - a (np.ndarray): input array
+        - kernel_size (int or tuple): size of the kernel
+        - step (int or tuple): step value
+        - padding (int or tuple): padding value
+        - dilation (int or tuple): dilation value
+        - pad_value (float): padding value
+    
+    Returns:
+        - np.ndarray: sliding window view
+    
+    Reference: 
+        - https://mygrad.readthedocs.io/en/latest/_modules/mygrad/nnet/layers/utils.html
+    """
+    if len(a.shape) == 3: dims = 1
+    elif len(a.shape) == 4: dims = 2
+    else: raise ValueError("`a` must be 3D or 4D") 
+    
+    if not a.flags["C_CONTIGUOUS"]:
+        a = np.ascontiguousarray(a)
+
+    kernel_size = np.broadcast_to(kernel_size, dims)
+    dilation = np.broadcast_to(dilation, dims)
+    step = np.broadcast_to(step, dims)
+    padding = np.broadcast_to(padding, dims)
+    
+    if dims == 1: sizes = get_conv1d_output_size(a.shape[-1], kernel_size, step, padding, dilation)
+    elif dims == 2: sizes = get_conv2d_output_size(a.shape, kernel_size, dilation, step, padding)
+    L = int(np.prod(sizes))
+    
+    if L == 0:
+        raise RuntimeError('Cannot create windows on a tensor with zero or negative spatial size (L='+str(L)+
+            ') for kernel_size='+str(kernel_size)+', stride='+str(stride)+', padding='+str(padding)+
+            ', dilation='+str(dilation)+' and tensor shape='+str(a.shape))
+    
+    a = np.pad(
+        a, ((0, 0), (0, 0)) + tuple((padding[d], padding[d]) for d in range(dims)),
+        mode='constant', constant_values=pad_value)
+
+    in_shape = np.array(a.shape[-len(step) :])  # (x, ... , z)
+    nbyte = a.strides[-1]  # size, in bytes, of element in `arr`
+
+    # per-byte strides required to fill a window
+    win_stride = tuple(np.cumprod(a.shape[:0:-1])[::-1]) + (1,)
+
+    # per-byte strides required to advance the window
+    step_stride = tuple(win_stride[-len(step) :] * step)
+
+    # update win_stride to accommodate dilation
+    win_stride = np.array(win_stride)
+    win_stride[-len(step) :] *= dilation
+    win_stride = tuple(win_stride)
+
+    stride = tuple(int(nbyte * i) for i in step_stride + win_stride)
+
+    # number of window placements along x-dim: X = (x - (Wx - 1)*Dx + 1) // Sx + 1
+    out_shape = tuple((in_shape - ((kernel_size - 1) * dilation + 1)) // step + 1)
+
+    # ([X, (...), Z], ..., [Wx, (...), Wz])
+    out_shape = out_shape + a.shape[: -len(step)] + tuple(kernel_size)
+    out_shape = tuple(int(i) for i in out_shape)
+
+    return np.lib.stride_tricks.as_strided(a, shape=out_shape, strides=stride, writeable=False)
+
+
+def place_windows(windows, out_shape, kernel_size, step, padding, dilation=1):
+    """ 
+    Places back the windows extracted (in `extract_windows` function) into an array of shape=out_shape.
+    
+    - if `windows` is 6D tensor (lH, lH, N, C, kH, kW) --> (N, C, H, W) (4D)
+    - if `windows` is 4D tensor (lW, N, C, kW) --> (N, C, W) (3D)
+    
+    Args:
+        - windows (np.ndarray): extracted windows
+        - out_shape (tuple): output shape
+        - kernel_size (int or tuple): size of the kernel
+        - step (int or tuple): step value
+        - padding (int or tuple): padding value
+        - dilation (int or tuple): dilation value
+    
+    Returns:
+        - np.ndarray: output array
+   
+    Example:
+        - windows = extract_windows(a, kernel_size, step, padding, dilation)
+        - output = place_windows(windows, a.shape, kernel_size, step, padding, dilation)    
+    """
+    if len(windows.shape) == 4:
+        dims = 1
+        N, C, W = out_shape
+    elif len(windows.shape) == 6:
+        dims = 2
+        N, C, H, W = out_shape
+        
+    kernel_size = np.broadcast_to(kernel_size, dims)
+    dilation = np.broadcast_to(dilation, dims)
+    step = np.broadcast_to(step, dims)
+    padding = np.broadcast_to(padding, dims)
+    
+    windows = np.moveaxis(windows, dims, 0)
+    
+    if dims == 1: 
+        sizes = get_conv1d_output_size(W, kernel_size, step, padding, dilation)
+        W_with_pad = W + 2 * padding[0]
+        # Initialize output tensor
+        output = np.zeros((N, C, W_with_pad), dtype=windows.dtype)
+    elif dims == 2: 
+        sizes = get_conv2d_output_size(out_shape, kernel_size, dilation, step, padding)
+        H_with_pad = H + 2 * padding[0]
+        W_with_pad = W + 2 * padding[1]
+        # Initialize output tensor
+        output = np.zeros((N, C, H_with_pad, W_with_pad), dtype=windows.dtype)
+    
+    for ind in np.ndindex(sizes):
+        slices = tuple(
+            slice(i * s, i * s + w * d, d)
+            for i, w, s, d in zip(ind, kernel_size, step, dilation)
+        )
+        output[(..., *slices)] += windows[(slice(None), *ind, ...)]
+        
+    # remove padding from dx
+    if sum(padding):
+        no_pads = tuple(slice(p, -p if p else None) for p in padding)
+        output = output[(..., *no_pads)]
+    
+    return output
+
+# **************************
+# ******* im2col fns *******
+# **************************
 
 def get_im2col_indices(a_shape:tuple, kernel_size, dilation=1, stride=1, padding=0):
     """
@@ -453,58 +431,9 @@ def col2im(a:np.ndarray, output_shape, kernel_size, dilation, stride, padding, c
     return out
 
 
-def im2col_fast(a:np.ndarray, kernel_size, dilation=1, stride=1, padding=0, pad_value=0, as_unfold=False):
+def im2col_v2(a:np.ndarray, kernel_size, dilation=1, stride=1, padding=0, pad_value=0, as_unfold=False):
     """ 
-    A faster implementation of the original im2col version
-    
-    Maps an input matrix to a column matrix using a specified kernel size.
-    
-    (N, C, H, W) -> im2col -> (C * kH * kW, N * L) or (N, C * kH * kW, L) where L = lH * lW.
-
-    Parameters
-    ----------
-    a : np.ndarray
-        Input array of shape (N, C, H, W).
-    kernel_size : int or tuple
-        Size of the kernel for the mapping. If an integer is provided, the kernel will be a square of size (kernel_size, kernel_size). If a tuple is provided, it should specify the height and width of the kernel (kernel_size[0], kernel_size[1]).
-    dilation : int or tuple, optional (default=1)
-        Dilation rate for the kernel. It specifies the spacing between kernel elements.
-    stride : int or tuple, optional (default=1)
-        Stride value for the kernel. It specifies the step size between successive kernel positions.
-    padding : int or tuple, optional (default=0)
-        Padding value or tuple of values for the input array. If an integer is provided, the same padding value will be applied to all sides. If a tuple is provided, it should specify the padding value for the top, bottom, left, and right sides, respectively.
-    pad_value : scalar, optional (default=0)
-        Value used for padding the input array.
-    col_indices : tuple, optional
-        Precomputed indices for the column mapping. If not provided, they will be calculated using the input shape and other parameters.
-    return_indices : bool, optional (default=False)
-        If True, the function returns the column matrix and the computed indices used for mapping.
-    as_unfold : bool, optional (default=False)
-        If True, the output matrix will have shape (N, C*kH*kW, L), where L is the number of mapped positions
-
-    Returns
-    -------
-    np.ndarray
-        The mapped column matrix. If `return_indices` is True, a tuple `(cols, col_indices)` is returned.
-
-    Output size
-    -----------
-    - 2D: The usual shape of the im2col output matrix (C * kH * kW, N * L) where L = lH * lW.
-    - 3D: If `as_unfold` is True, the output shape is (N, C * kH * kW, L), where L is the number of mapped positions.
-
-    Example
-    -------
-    >>> a = np.array([
-            [[1, 2, 3],
-             [4, 5, 6],
-             [7, 8, 9]]
-        ])
-    >>> im2col(a, kernel_size=2, stride=2)
-    Output:
-    array([[1., 2., 4., 5.],
-           [2., 3., 5., 6.],
-           [4., 5., 7., 8.],
-           [5., 6., 8., 9.]])
+    Another version of im2col
     """
     assert len(a.shape) == 4, "Input tensor must be of shape (N, C, H, W)"
     N, C, H, W = a.shape
@@ -554,58 +483,9 @@ def im2col_fast(a:np.ndarray, kernel_size, dilation=1, stride=1, padding=0, pad_
     return output
 
 
-def col2im_fast(a:np.ndarray, output_shape, kernel_size, dilation, stride, padding):
+def col2im_v2(a:np.ndarray, output_shape, kernel_size, dilation, stride, padding):
     """ 
-    A faster implementation of the original col2im version
-    
-    Maps a column matrix back to the original input matrix shape.
-    
-    (C * kH * kW, N * L) or (N, C * kH * kW, L) -> col2im -> (N, C, H, W)
-    
-    where L = lH * lW. 
-
-    Parameters
-    ----------
-    a : np.ndarray
-        Column matrix of shape 2D or 3D=(N, C*kH*kW, L).
-    output_shape : tuple
-        Desired shape of the output matrix.
-    kernel_size : int or tuple
-        Size of the kernel used in the original im2col operation.
-    dilation : int
-        Dilation rate used in the original im2col operation.
-    stride : int
-        Stride value used in the original im2col operation.
-    padding : int or tuple
-        Padding value or tuple of values used in the original im2col operation.
-    col_indices : tuple, optional
-        Precomputed indices used in the im2col operation. If not provided, they will be calculated.
-    return_indices : bool, optional (default=False)
-        If True, the function returns the output matrix and the computed indices used for mapping.
-
-    Returns
-    -------
-    np.ndarray
-        The output matrix. If `return_indices` is True, a tuple `(output, col_indices)` is returned.
-
-    Raises
-    ------
-    ValueError
-        If the shape of the input tensor is invalid (should be 2 or 3-dimensional).
-
-    Example
-    -------
-    >>> a = np.array([
-        [a b c d]
-        [e f g h]  
-        [i j k l]
-        [m n o p]
-    ])
-    >>> col2im(a, output_shape=(1, 1, 3, 3), kernel_size=2, dilation=1, stride=2, padding=0)
-    Output:
-    array([[[[ a      e+b      f ]
-             [i+c  m+j+k+g+d  n+h]
-             [ k      o+l      p ]]]])
+    Another version of col2im
     """
     kernel_size = np.broadcast_to(kernel_size, 2)
     padding = np.broadcast_to(padding, 2)
@@ -664,3 +544,57 @@ def col2im_fast(a:np.ndarray, output_shape, kernel_size, dilation, stride, paddi
         output = output[:, :, padding[0]:H_with_pad-padding[0], padding[1]:W_with_pad-padding[1]]
 
     return output
+
+
+def im2col_fast(a:np.ndarray, kernel_size, dilation=1, stride=1, padding=0, pad_value=0, as_unfold=False):
+    """ 
+    Fast implementation of im2col
+    """
+    assert len(a.shape) == 4, "Input tensor must be of shape (N, C, H, W)"
+    N, C, H, W = a.shape
+    
+    windows = extract_windows(a, kernel_size=kernel_size, step=stride, padding=padding, dilation=dilation, pad_value=pad_value)
+    
+    # Calculate output spatial size
+    L = int(np.prod(windows.shape[:2]))
+    
+    if as_unfold:
+        cols = np.moveaxis(windows.reshape(L, N, C * kernel_size[0] * kernel_size[1]), 0, 2)
+    else:
+        cols = windows.reshape(N * L, C * kernel_size[0] * kernel_size[1]).T
+    
+    return cols
+
+
+def col2im_fast(a:np.ndarray, output_shape, kernel_size, dilation, stride, padding):
+    """ 
+    Fast implementation of col2im
+    """
+    kernel_size = np.broadcast_to(kernel_size, 2)
+    padding = np.broadcast_to(padding, 2)
+    
+    if len(a.shape) == 2:
+        mode = 'col2im'
+        N, C, H, W = output_shape
+    elif len(a.shape) == 3:
+        mode = 'fold'
+        if len(output_shape) == 2:
+            N, CkHkW, L = a.shape
+            C = CkHkW // np.prod(kernel_size)
+            H, W = output_shape
+        else:
+            N, C, H, W = output_shape
+    else:
+        raise ValueError('Invalid shape of input tensor (should be 2 or 3-dimensional)')
+        
+    lW, lH = get_conv2d_output_size(output_shape, kernel_size, dilation, stride, padding)
+    
+    if mode == 'col2im':
+        windows = a.T.reshape(lH, lW, N, C, kernel_size[0], kernel_size[1])
+    elif mode == 'fold':
+        windows = np.moveaxis(a, 2, 0).reshape(lH, lW, N, C, kernel_size[0], kernel_size[1])
+    
+    output = place_windows(windows, output_shape, kernel_size, stride, padding, dilation)
+    
+    return output
+    

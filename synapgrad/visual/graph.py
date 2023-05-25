@@ -15,10 +15,11 @@ def trace(root):
     return nodes, edges
     
 
-def draw(root, format='svg', rankdir='LR'):
+def draw(root, format='svg', rankdir='LR', data_length:int=50):
     """
     format: png | svg | ...
     rankdir: TB (top to bottom graph) | LR (left to right)
+    data_length: Number of characters to show in data and grad fields
     """
     assert rankdir in ['LR', 'TB'], "rankdir must be 'LR' or 'TB'"
     nodes, edges = trace(root)
@@ -27,10 +28,14 @@ def draw(root, format='svg', rankdir='LR'):
     for n in nodes:
         nid = str(id(n))
         data_str = pretty_numpy(n.data, precision=2)
+        if len(data_str) > data_length + 3:
+            data_str = data_str[:data_length] + " ..."
         grad_str = 'None' if not n.has_grad() else pretty_numpy(n._grad, precision=2)
+        if len(grad_str) > data_length + 3:
+            grad_str = grad_str[:data_length] + " ..."
         grad_fn = 'None' if n.grad_fn is None else n.grad_fn.name()
         header = f"Tensor ({n.name})" if n.name != "" else "Tensor"
-        dot.node(name=nid, label=f"<<b>{header}</b> | data={data_str} | req_grad={n.requires_grad}   is_leaf={n.is_leaf} | grad={grad_str} | grad_fn={grad_fn} >", shape='record')
+        dot.node(name=nid, label=f"<<b>{header}</b> | data={data_str} | shape={n.shape}   is_leaf={n.is_leaf} | req_grad={n.requires_grad}   grad_fn={grad_fn} | grad={grad_str} >", shape='record')
         if n._operation:
             dot.node(name=nid + n._operation, label=n._operation)
             dot.edge(nid + n._operation, nid)
