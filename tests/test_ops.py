@@ -213,7 +213,7 @@ def test_max_pool1d():
 def test_max_pool2d():
     op_tester([(32, 3, 64, 64)], lambda engine, x: engine.max_pool2d(x, kernel_size=(2,2), stride=(1,1)), name='max_pool2d', module_func=True)
     op_tester([(32, 3, 64, 64)], lambda engine, x: engine.max_pool2d(x, kernel_size=(3,2), stride=(1,2)), name='max_pool2d', module_func=True)
-    op_tester([(32, 3, 64, 64)], lambda engine, x: engine.max_pool2d(x, kernel_size=(5,5), stride=(3,3), padding=(2,1)), name='max_pool2d', module_func=True)
+    op_tester([(32, 3, 64, 64)], lambda engine, x: engine.max_pool2d(x, kernel_size=(5,3), stride=(3,3), padding=(2,1)), name='max_pool2d', module_func=True)
 
 def test_avg_pool1d():
     op_tester([(32, 3, 64)], lambda engine, x: engine.avg_pool1d(x, kernel_size=2, stride=1), name='avg_pool1d', module_func=True)
@@ -223,7 +223,7 @@ def test_avg_pool1d():
 def test_avg_pool2d():
     op_tester([(32, 3, 64, 64)], lambda F, x: F.avg_pool2d(x, kernel_size=(2,2), stride=(1,1)), name='avg_pool2d', module_func=True, nn_functional=True)
     op_tester([(32, 3, 64, 64)], lambda F, x: F.avg_pool2d(x, kernel_size=(3,2), stride=(1,2)), name='avg_pool2d', module_func=True, nn_functional=True)
-    op_tester([(32, 3, 64, 64)], lambda F, x: F.avg_pool2d(x, kernel_size=(5,5), stride=(3,3), padding=(2,1)), name='avg_pool2d', module_func=True, nn_functional=True)
+    op_tester([(32, 3, 64, 64)], lambda F, x: F.avg_pool2d(x, kernel_size=(5,3), stride=(3,3), padding=(2,1)), name='avg_pool2d', module_func=True, nn_functional=True)
     
 # ************************
 # ******* Conv ops *******

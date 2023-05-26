@@ -2,7 +2,7 @@
 # ***** synapgrad *****
 # *********************
 numpy==1.23.5 # Core
-graphviz==0.20.1 # Visualize graph
+# graphviz==0.20.1 # (Optional) Visualize graph
 
 # *********************************
 # ***** notebook requirements *****

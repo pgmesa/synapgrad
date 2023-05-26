@@ -239,6 +239,9 @@ def unsqueeze_forward(a:np.ndarray, axis:'int | tuple'):
 def unsqueeze_backward(grad:np.ndarray, axis:'int | tuple'):
     return np.squeeze(grad, axis)
 
+# *************************
+# ******* View ops ********
+# *************************
 
 def reshape_forward(a:np.ndarray, shape:tuple):
     return a.reshape(shape)
@@ -409,78 +412,52 @@ def cross_entropy_loss_backward(grad: np.ndarray, y_pred: np.ndarray, y_true: np
 # ************************
     
 def max_pool1d_forward(a, kernel_size, stride, padding, dilation):
-    unfolded, indices = arr2col(a, kernel_size, dilation, stride, padding, pad_value=-np.inf, return_indices=True)
-    out = unfolded.max(axis=3)
-
-    return out, unfolded, indices
+    windows = extract_windows(a, kernel_size, stride, padding, dilation, pad_value=-np.inf)
+    maxed_windows = windows.max(axis=-1).transpose(1, 2, 0)
+    return maxed_windows, a.shape, windows
     
-def max_pool1d_backward(grad, kernel_size, stride, padding, dilation, a_shape, unfolded, unf_indices):
-    max_grad = max_backward(grad, unfolded, 3, False)
-    out_grad = col2arr(max_grad, a_shape, kernel_size, dilation, stride, padding, unf_indices=unf_indices)
-    
+def max_pool1d_backward(grad, kernel_size, stride, padding, dilation, a_shape, windows):
+    grad = grad.transpose(2, 0, 1)
+    windows_grad = max_backward(grad, windows, -1, False)
+    out_grad = place_windows(windows_grad, a_shape, kernel_size, stride, padding, dilation)
     return out_grad
     
     
 def avg_pool1d_forward(a, kernel_size, stride, padding, dilation):
-    unfolded, indices = arr2col(a, kernel_size, dilation, stride, padding, pad_value=0, return_indices=True)
-    out = unfolded.mean(axis=3)
+    windows = extract_windows(a, kernel_size, stride, padding, dilation, pad_value=0)
+    averaged_windows = windows.mean(axis=-1).transpose(1, 2, 0)
+    return averaged_windows, a.shape, windows
 
-    return out, unfolded, indices
-
-def avg_pool1d_backward(grad, kernel_size, stride, padding, dilation, a_shape, unfolded, unf_indices):
-    mean_grad = mean_backward(grad, unfolded.shape, 3, False)
-    out_grad = col2arr(mean_grad, a_shape, kernel_size, dilation, stride, padding, unf_indices=unf_indices)
-    
+def avg_pool1d_backward(grad, kernel_size, stride, padding, dilation, a_shape, windows):
+    grad = grad.transpose(2, 0, 1)
+    windows_grad = mean_backward(grad, windows.shape, -1, False)
+    out_grad = place_windows(windows_grad, a_shape, kernel_size, stride, padding, dilation)
     return out_grad
 
 
 def max_pool2d_forward(a, kernel_size, stride, padding, dilation):
-    N, C, H, W = a.shape
-    lH, lW = get_conv2d_output_size(a.shape, kernel_size, dilation, stride, padding)
-    
-    x_split = a.reshape(N * C, 1, H, W)
-    x_cols = im2col_fast(x_split, kernel_size, dilation=dilation, stride=stride, padding=padding, pad_value=-np.inf)
-    
-    x_cols_argmax = np.argmax(x_cols, axis=0, keepdims=True)
-    x_cols_max = x_cols[x_cols_argmax, np.arange(x_cols.shape[1])]
-    out = x_cols_max.reshape(lH, lW, N, C).transpose(2,3,0,1)
-    return out, a.shape, x_cols, x_cols_argmax
+    windows = extract_windows(a, kernel_size, stride, padding, dilation, pad_value=-np.inf)
+    maxed_windows = windows.reshape(*windows.shape[:-2], -1).max(axis=-1).transpose(2, 3, 0, 1)
+    return maxed_windows, a.shape, windows
 
-def max_pool2d_backward(grad, kernel_size, stride, padding, dilation, a_shape, x_cols, max_indices):
-    # flatten the gradient
-    grad = grad.transpose(2,3,0,1).ravel()
-    out_grad = max_backward(grad, x_cols, 0, False, max_indices=max_indices)
-    # Another way to do it: out_grad = np.zeros_like(x_cols); out_grad[max_indices, range(max_indices.size)] = grad
-    
-    N, C, H, W = a_shape
-    # get the original X_reshaped structure from col2im
-    shape = (N*C, 1, H, W)
-    out_grad = col2im_fast(out_grad, shape, kernel_size, dilation, stride, padding)
-    out_grad = out_grad.reshape(N, C, H, W)
+def max_pool2d_backward(grad, kernel_size, stride, padding, dilation, a_shape, windows):
+    grad = grad.transpose(2, 3, 0, 1)
+    windows_grad = max_backward(grad, windows.reshape(*windows.shape[:-2], -1), -1, False)
+    windows_grad = windows_grad.reshape(windows.shape)
+    out_grad = place_windows(windows_grad, a_shape, kernel_size, stride, padding, dilation)
     return out_grad
     
 
 def avg_pool2d_forward(a, kernel_size, stride, padding, dilation):
-    N, C, H, W = a.shape
-    lH, lW = get_conv2d_output_size(a.shape, kernel_size, dilation, stride, padding)
-    
-    x_split = a.reshape(N * C, 1, H, W)
-    x_cols = im2col_fast(x_split, kernel_size, dilation=dilation, stride=stride, padding=padding, pad_value=0)
-    
-    x_cols_avg = np.mean(x_cols, axis=0)
-    out = x_cols_avg.reshape(lH, lW, N, C).transpose(2,3,0,1)
-    return out, a.shape, x_cols.shape
+    windows = extract_windows(a, kernel_size, stride, padding, dilation, pad_value=0)
+    averaged_windows = windows.reshape(*windows.shape[:-2], -1).mean(axis=-1).transpose(2, 3, 0, 1)
+    return averaged_windows, a.shape, windows
 
-def avg_pool2d_backward(grad, kernel_size, stride, padding, dilation, a_shape, x_cols_shape):
-    # flatten the gradient
-    grad = grad.transpose(2,3,0,1).ravel()
-    out_grad = mean_backward(grad, x_cols_shape, 0, False)
-    
-    N, C, H, W = a_shape
-    # get the original X_reshaped structure from col2im
-    shape = (N*C, 1, H, W)
-    out_grad = col2im_fast(out_grad, shape, kernel_size, dilation, stride, padding)
-    out_grad = out_grad.reshape(N, C, H, W)
+def avg_pool2d_backward(grad, kernel_size, stride, padding, dilation, a_shape, windows):
+    grad = grad.transpose(2, 3, 0, 1)
+    windows_grad = mean_backward(grad, windows.reshape(*windows.shape[:-2], -1).shape, -1, False)
+    windows_grad = windows_grad.reshape(windows.shape)
+    out_grad = place_windows(windows_grad, a_shape, kernel_size, stride, padding, dilation)
     return out_grad
 
 # ************************
@@ -488,46 +465,41 @@ def avg_pool2d_backward(grad, kernel_size, stride, padding, dilation, a_shape, x
 # ************************
 
 def conv1d_forward(a, weight, bias, stride, padding, dilation):
-    N, C, W = a.shape
     C_out, C_in, kW = weight.shape
     kernel_size = kW
     
-    L = get_conv1d_output_size(a.shape[2], kernel_size, stride, padding, dilation)
-    cols, indices = arr2col(a, kernel_size, dilation, stride, padding, return_indices=True)
+    windows = extract_windows(a, kernel_size, stride, padding, dilation)
     
-    weight_cols = weight.reshape(C_out, kW * C_in).T
-    cols = cols.transpose(0, 2, 1, 3).reshape(N, L, -1)
+    conv_out = np.tensordot(weight, windows, axes=[(1,2), (2,3)])
+    if bias is not None: conv_out += bias.reshape(-1, 1, 1)
+    out = np.moveaxis(conv_out, source=-1, destination=0)
     
-    out = (cols @ weight_cols)
-    if bias is not None:
-        out += bias 
-    out = out.transpose(0, 2, 1).reshape(N, C_out, L)
-
-    return out, cols, indices
+    return out, windows
     
-def conv1d_backward(grad, a_shape, weight, bias, stride, padding, dilation, cols, unf_indices):
-    N, C, W = a_shape
+def conv1d_backward(grad, a_shape, weight, bias, stride, padding, dilation, windows):
     C_out, C_in, kW = weight.shape
     kernel_size = kW
     
-    L = get_conv1d_output_size(a_shape[2], kernel_size, stride, padding, dilation)
+    # input grad
+    a_grad_windows = np.tensordot(grad, weight, axes=[[1], [0]])
+    a_grad_windows = np.moveaxis(a_grad_windows, source=0, destination=1)
+    a_grad = place_windows(a_grad_windows, a_shape, kernel_size, stride, padding, dilation)
     
-    grad = grad.reshape(N, C_out, -1).transpose(0, 2, 1)
-    weight_cols = weight.reshape(C_out, kW * C_in).T
-    cols_grad, weight_grad = matmul_backward(grad, cols, weight_cols)
-
-    weight_grad = weight_grad.T.reshape(weight.shape)
+    # weight grad
+    weight_grad = np.tensordot(grad, windows, axes=[(2,0), (0,1)])
+    # bias grad
     bias_grad = None
     if bias is not None:
-        bias_grad = grad.sum(axis=(0, 1))
+        bias_grad = grad.sum(axis=(0,2))
         
-    cols_grad = cols_grad.reshape(N, L, C_in, kW).transpose(0, 2, 1, 3)
-    a_grad = col2arr(cols_grad, a_shape, kernel_size, dilation, stride, padding, unf_indices=unf_indices)
-    
     return a_grad, weight_grad, bias_grad
     
     
-def conv2d_forward2(a, weight, bias, stride, padding, dilation):
+def conv2d_forward(a, weight, bias, stride, padding, dilation):
+    """ 
+    Reference to N dimensional convolution:
+    - https://github.com/rsokl/MyGrad/blob/master/src/mygrad/nnet/layers/conv.py
+    """
     C_out, C_in, kH, kW = weight.shape
     kernel_size = (kH, kW)
     
@@ -549,59 +521,14 @@ def conv2d_backward(grad, a_shape, weight, bias, stride, padding, dilation, wind
     a_grad = place_windows(a_grad_windows, a_shape, kernel_size, stride, padding, dilation)
     
     # weight grad
-    num_conv_channels = grad.ndim - 2
-    grad_axes = list(range(2, num_conv_channels + 2)) + [0]  # (G0, ..., N)
-    window_axes = list(range(num_conv_channels + 1))  # (G0, ..., N)
-    print(num_conv_channels, grad_axes, window_axes)
-    print(grad.shape, windows.shape)
-    weight_grad = np.tensordot(grad, windows, axes=[grad_axes, window_axes])
-    # np.tensordot(conv_out, a_grad_windows, axes=[(1,2,3), (3,4,5)])
-    
+    weight_grad = np.tensordot(grad, windows, axes=[(2,3,0), (0,1,2)])
     # bias grad
-    bias_grad =  np.zeros(bias.shape)# conv_out.sum(axis=(1,2,3))
-    
-    return a_grad, weight_grad, bias_grad
-
-
-def conv2d_forward(a, weight, bias, stride, padding, dilation):
-    N, C, H, W = a.shape
-    C_out, C_in, kH, kW = weight.shape
-    kernel_size = (kH, kW)
-    
-    lH,lW = get_conv2d_output_size(a.shape, kernel_size, dilation, stride, padding)
-    cols = im2col_fast(a, kernel_size, dilation, stride, padding, as_unfold=True)
-    
-    weight_cols = weight.reshape(C_out, kH * kW * C_in).T
-    out = (cols.transpose(0, 2, 1) @ weight_cols)
-    
-    if bias is not None:
-        out += bias
-    out = out.transpose(0, 2, 1).reshape(N, C_out, lH, lW)
-    
-    return out, cols
-    
-def conv2d_backward2(grad, a_shape, weight, bias, stride, padding, dilation, cols):
-    N, C, H, W = a_shape
-    C_out, C_in, kH, kW = weight.shape
-    kernel_size = (kH, kW)
-    
-    grad = grad.reshape(N, C_out, -1).transpose(0, 2, 1)
-    weight_cols = weight.reshape(C_out, kH * kW * C_in).T
-    cols_grad, weight_grad = matmul_backward(grad, cols.transpose(0, 2, 1), weight_cols)
-    
-    weight_grad = weight_grad.T.reshape(weight.shape)
     bias_grad = None
     if bias is not None:
-        bias_grad = grad.sum(axis=(0, 1))
-    a_grad = col2im_fast(cols_grad.transpose(0, 2, 1), a_shape, kernel_size, dilation, stride, padding)
+        bias_grad = grad.sum(axis=(0,2,3))
     
     return a_grad, weight_grad, bias_grad
     
 # ******************************
 # ******* Batch norm ops *******
 # ******************************
-
-
-# *************************************
-# ******* Other implementations *******
-# *************************************

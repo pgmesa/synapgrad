@@ -16,7 +16,6 @@ def lazy_import():
     F = importlib.import_module("synapgrad.functional")
     utils = importlib.import_module("synapgrad.utils")
     
-
 # ********************************
 # ******* Context Managers *******
 # ********************************

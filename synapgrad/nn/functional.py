@@ -1,7 +1,7 @@
 import numpy as np
 
 from synapgrad.tensor import Tensor
-from synapgrad import cpu_ops
+from synapgrad import cpu_ops, conv_tools
 from synapgrad.device import Device
 from synapgrad.functional import BackwardFunction
 
@@ -108,7 +108,9 @@ def nll_loss(y_pred:Tensor, y_true:Tensor):
     else:
         raise RuntimeError(f"{y_pred.device} not supported")
 
-    loss = Tensor(loss_data, device=y_pred.device, children=(y_pred, y_true), requires_grad=True, operation="NLLLoss")
+    inputs = (y_pred, y_true)
+    req_grad = any([inp.requires_grad for inp in inputs])
+    loss = Tensor(loss_data, device=y_pred.device, children=inputs, requires_grad=req_grad, operation="NLLLoss")
     
     def backward():
         grad_output = loss.grad
@@ -144,7 +146,9 @@ def cross_entropy(y_pred:Tensor, y_true:Tensor):
     else:
         raise RuntimeError(f"{y_pred.device} not supported")
 
-    loss = Tensor(loss_data, device=y_pred.device, children=(y_pred, y_true), requires_grad=True, operation="CrossEntropyLoss")
+    inputs = (y_pred, y_true)
+    req_grad = any([inp.requires_grad for inp in inputs])
+    loss = Tensor(loss_data, device=y_pred.device, children=inputs, requires_grad=req_grad, operation="CrossEntropyLoss")
     
     def backward():
         grad_output = loss.grad
@@ -192,8 +196,9 @@ def linear(x:Tensor, weight:Tensor, bias:Tensor=None):
     
     if bias: inputs = (x, weight, bias)
     else: inputs = (x, weight)
-        
-    out = Tensor(out_data, device=x.device, children=inputs, requires_grad=True, operation="Linear")
+    
+    req_grad = any([inp.requires_grad for inp in inputs])
+    out = Tensor(out_data, device=x.device, children=inputs, requires_grad=req_grad, operation="Linear")
         
     def backward():
         grad_output = out.grad
@@ -217,8 +222,55 @@ def linear(x:Tensor, weight:Tensor, bias:Tensor=None):
     return out
 
 # *******************************
-# ******* Conv functions ********
+# ******* Pool functions ********
 # *******************************
+
+def max_pool1d(x:Tensor, kernel_size, stride=None, padding=0, dilation=1):
+    """
+    Max-pooling operation for 1D data.
+    
+    Reference:
+        https://pytorch.org/docs/stable/generated/torch.nn.MaxPool1d.html
+
+    Args:
+        - x (Tensor): Input tensor of shape (N, C, W).
+        - kernel_size (int): Size of the sliding window.
+        - stride (int, optional): Stride size. Defaults to kernel_size.
+        - padding (int, optional): Padding size. Defaults to 0.
+        - dilation (int, optional): Dilation factor. Defaults to 1.
+
+    Returns:
+        Tensor: Output tensor of shape (N, C, L).
+    """
+    if stride is None: stride = kernel_size
+    
+    if not isinstance(x, Tensor):
+        raise TypeError(f"Expected x to be a Tensor but got {type(x)}")
+    
+    if len(x.shape) != 3:
+        raise ValueError(f"Input tensor must be of shape (N, C, L), but got {x.shape}")
+    
+    if x.device == Device.CPU:
+        out_data, *bw_data = cpu_ops.max_pool1d_forward(x.data, kernel_size, stride, padding, dilation)
+    else:
+        raise RuntimeError(f"{x.device} not supported")
+
+    out = Tensor(out_data, device=x.device, children=(x,), requires_grad=x.requires_grad, operation="MaxPool1d")
+    
+    def backward():
+        grad_output = out.grad
+        if grad_output.device == Device.CPU:
+            x_grad = \
+                cpu_ops.max_pool1d_backward(grad_output.data, kernel_size, stride, padding, dilation, *bw_data)
+        else:
+            raise RuntimeError(f"{grad_output.device} not supported")
+        
+        if x.requires_grad: x._grad += x_grad
+            
+    if out.requires_grad: out.grad_fn = BackwardFunction(backward, out._operation)
+    
+    return out
+
 
 def max_pool2d(x:Tensor, kernel_size, stride=None, padding=0, dilation=1):
     """ 
@@ -250,7 +302,7 @@ def max_pool2d(x:Tensor, kernel_size, stride=None, padding=0, dilation=1):
     else:
         raise RuntimeError(f"{x.device} not supported")
 
-    out = Tensor(out_data, device=x.device, children=(x,), requires_grad=True, operation="MaxPool2d")
+    out = Tensor(out_data, device=x.device, children=(x,), requires_grad=x.requires_grad, operation="MaxPool2d")
     
     def backward():
         grad_output = out.grad
@@ -263,6 +315,253 @@ def max_pool2d(x:Tensor, kernel_size, stride=None, padding=0, dilation=1):
             
     if out.requires_grad: out.grad_fn = BackwardFunction(backward, out._operation)
     
+    return out
+
+
+def avg_pool1d(x:Tensor, kernel_size, stride=None, padding=0, dilation=1):
+    """ 
+    Average-pooling function.
+    
+    Reference:
+        https://pytorch.org/docs/stable/generated/torch.nn.AvgPool1d.html
+
+    Args:
+        - tensor (numpy.ndarray): Input tensor of shape (N, C, W).
+        - kernel_size (int or tuple): Size of the sliding window.
+        - stride (int or tuple, optional): Stride size. Defaults to kernel_size.
+        - padding (int or tuple, optional): Padding size. Defaults to 0.
+        - dilation (int or tuple, optional): Dilation factor. Defaults to 1.
+
+    Returns:
+        numpy.ndarray: Output tensor of shape (N, C, L).
+    """
+    if stride is None: stride = kernel_size
+    
+    if not isinstance(x, Tensor):
+        raise TypeError(f"Expected x to be a Tensor but got {type(x)}")
+    
+    if len(x.shape) != 3:
+        raise ValueError(f"Input tensor must be of shape (N, C, L), but got {x.shape}")
+    
+    if x.device == Device.CPU:
+        out_data, *bw_data = cpu_ops.avg_pool1d_forward(x.data, kernel_size, stride, padding, dilation)
+    else:
+        raise RuntimeError(f"{x.device} not supported")
+
+    out = Tensor(out_data, device=x.device, children=(x,), requires_grad=x.requires_grad, operation="AvgPool1d")
+    
+    def backward():
+        grad_output = out.grad
+        if grad_output.device == Device.CPU:
+            x_grad = cpu_ops.avg_pool1d_backward(grad_output.data, kernel_size, stride, padding, dilation, *bw_data)
+        else:
+            raise RuntimeError(f"{grad_output.device} not supported")
+        
+        if x.requires_grad: x._grad += x_grad
+            
+    if out.requires_grad: out.grad_fn = BackwardFunction(backward, out._operation)
+    
+    return out
+
+
+def avg_pool2d(x:Tensor, kernel_size, stride=None, padding=0, dilation=1):
+    """ 
+    Average-pooling function.
+    
+    Reference:
+        https://pytorch.org/docs/stable/generated/torch.nn.AvgPool2d.html
+
+    Args:
+        - tensor (numpy.ndarray): Input tensor of shape (N, C, H, W).
+        - kernel_size (int or tuple): Size of the sliding window.
+        - stride (int or tuple, optional): Stride size. Defaults to kernel_size.
+        - padding (int or tuple, optional): Padding size. Defaults to 0.
+        - dilation (int or tuple, optional): Dilation factor. Defaults to 1.
+
+    Returns:
+        numpy.ndarray: Output tensor of shape (N, C, lH , lW).
+    """
+    if stride is None: stride = kernel_size
+    
+    if not isinstance(x, Tensor):
+        raise TypeError(f"Expected x to be a Tensor but got {type(x)}")
+    
+    if len(x.shape) != 4:
+        raise ValueError(f"Input tensor must be of shape (N, C, H, W), but got {x.shape}")
+    
+    if x.device == Device.CPU:
+        out_data, *bw_data = cpu_ops.avg_pool2d_forward(x.data, kernel_size, stride, padding, dilation)
+    else:
+        raise RuntimeError(f"{x.device} not supported")
+
+    out = Tensor(out_data, device=x.device, children=(x,), requires_grad=x.requires_grad, operation="AvgPool2d")
+    
+    def backward():
+        grad_output = out.grad
+        if grad_output.device == Device.CPU:
+            x_grad = cpu_ops.avg_pool2d_backward(grad_output.data, kernel_size, stride, padding, dilation, *bw_data)
+        else:
+            raise RuntimeError(f"{grad_output.device} not supported")
+        
+        if x.requires_grad: x._grad += x_grad
+            
+    if out.requires_grad: out.grad_fn = BackwardFunction(backward, out._operation)
+    
+    return out
+
+# *******************************
+# ******* Conv functions ********
+# *******************************
+
+def unfold(x:Tensor, kernel_size:'int | tuple', dilation:'int | tuple'=1, stride:'int | tuple'=1, padding:'int | tuple'=0, pad_value=0) -> Tensor:
+    """
+    Unfold a tensor of shape (N, C, H, W) to a tensor in the shape of (N, C*kH*kW, L)
+    
+    Reference: 
+        https://pytorch.org/docs/stable/generated/torch.nn.Unfold.html
+
+    Args:
+        - tensor (numpy.ndarray): Input tensor of shape (N, C, H, W).
+        - kernel_size (int or tuple): Size of the sliding window.
+        - dilation (int or tuple, optional): Dilation factor. Defaults to 1.
+        - stride (int or tuple, optional): Stride size. Defaults to 1.
+        - padding (int or tuple, optional): Padding size. Defaults to 0.
+
+    Returns:
+        numpy.ndarray: Output tensor of shape (N, C*kH*kW, L).
+    """
+    if not isinstance(x, Tensor):
+        raise TypeError(f"Expected x to be a Tensor but got {type(x)}")
+    
+    if len(x.shape) != 4:
+        raise ValueError(f"Input tensor must be of shape (N, C, H, W), but got {x.shape}")
+    
+    if x.device == Device.CPU:
+        out_data = \
+            cpu_ops.im2col_fast(x.data, kernel_size, dilation, stride, padding, pad_value, as_unfold=True)
+    else:
+        raise RuntimeError(f"{x.device} not supported")
+
+    out = Tensor(out_data, device=x.device, children=(x,), requires_grad=x.requires_grad, operation="Unfold")
+    
+    def backward():
+        grad_output = out.grad
+        if grad_output.device == Device.CPU:
+            x_grad = cpu_ops.col2im_fast(grad_output.data, x.shape, kernel_size, dilation, stride, padding)
+        else:
+            raise RuntimeError(f"{grad_output.device} not supported")
+        
+        if x.requires_grad: x._grad += x_grad
+            
+    if out.requires_grad: out.grad_fn = BackwardFunction(backward, out._operation)
+    
+    return out
+
+
+def fold(x:Tensor, output_size:tuple, kernel_size:'int | tuple', dilation:'int | tuple'=1, stride:'int | tuple'=1, padding:'int | tuple'=0) -> Tensor:
+    """
+    Fold a tensor of shape (N, C*kH*kW, L) to a tensor in the shape of (N, C, H, W).
+    
+    Reference:
+        https://pytorch.org/docs/stable/generated/torch.nn.Fold.html
+
+    Args:
+        - tensor (numpy.ndarray): Input tensor of shape (N, C*kH*kW, L).
+        - output_size (tuple): Desired output size of the folded tensor, in the form of (H, W).
+        - kernel_size (int or tuple): Size of the sliding window.
+        - dilation (int or tuple, optional): Dilation factor. Defaults to 1.
+        - stride (int or tuple, optional): Stride size. Defaults to 1.
+        - padding (int or tuple, optional): Padding size. Defaults to 0.
+
+    Returns:
+        numpy.ndarray: Output tensor of shape (N, C, H, W).
+    """
+    if not isinstance(x, Tensor):
+        raise TypeError(f"Expected x to be a Tensor but got {type(x)}")
+    
+    if len(x.shape) != 3:
+        raise ValueError(f"Input tensor must be of shape (N, C*kH*kW, L), but got {x.shape}")
+    
+    if x.device == Device.CPU:
+        out_data = \
+            cpu_ops.col2im_fast(x.data, output_size, kernel_size, dilation, stride, padding)
+    else:
+        raise RuntimeError(f"{x.device} not supported")
+
+    out = Tensor(out_data, device=x.device, children=(x,), requires_grad=x.requires_grad, operation="Fold")
+    
+    def backward():
+        grad_output = out.grad
+        if grad_output.device == Device.CPU:
+            x_grad = \
+                conv_tools.im2col_fast(grad_output.data, kernel_size, dilation, stride, padding, as_unfold=True)
+        else:
+            raise RuntimeError(f"{grad_output.device} not supported")
+        
+        if x.requires_grad: x._grad += x_grad
+            
+    if out.requires_grad: out.grad_fn = BackwardFunction(backward, out._operation)
+    
+    return out
+
+
+def conv1d(x:Tensor, weight:Tensor, bias:Tensor=None, stride:int=1, padding:int=0, dilation:int=1) -> Tensor:
+    """
+    1D convolution.
+    
+    Reference:
+        https://pytorch.org/docs/stable/generated/torch.nn.Conv1d.html
+
+    Args:
+        - x (Tensor): Input tensor of shape (N, C, W).
+        - weight (Tensor): Weight tensor of shape (C_out, C, kW).
+        - bias (Tensor, optional): Bias tensor of shape (C_out,). Defaults to None.
+        - stride (int, optional): Stride size. Defaults to 1.
+        - padding (int, optional): Padding size. Defaults to 0.
+        - dilation (int, optional): Dilation factor. Defaults to 1.
+
+    Returns:
+        numpy.ndarray: Output tensor of shape (N, C_out, L).
+    """
+    if not isinstance(x, Tensor):
+        raise TypeError(f"Expected x to be a Tensor but got {type(x)}")
+    
+    if not isinstance(weight, Tensor):
+        raise TypeError(f"Expected weight to be a Tensor but got {type(weight)}")
+    
+    if bias is not None and not isinstance(bias, Tensor):
+        raise TypeError(f"Expected bias to be a Tensor but got {type(bias)}")
+    
+    if x.device == Device.CPU:
+        bias_data = bias.data if bias is not None else None
+        out_data, *bw_data = cpu_ops.conv1d_forward(x.data, weight.data, bias_data, stride, padding, dilation)
+    else:
+        raise RuntimeError(f"{x.device} not supported")
+
+    if bias: inputs = (x, weight, bias)
+    else: inputs = (x, weight)
+    
+    req_grad = any([inp.requires_grad for inp in inputs])
+    out = Tensor(out_data, device=x.device, children=inputs, requires_grad=req_grad, operation="Conv1d")
+
+    def backward():
+        grad_output = out.grad
+        if grad_output.device == Device.CPU:
+            bias_data = bias.data if bias is not None else None
+            x_grad, weight_grad, bias_grad = cpu_ops.conv1d_backward(grad_output.data, x.shape, weight.data,
+                                                        bias_data, stride, padding, dilation, *bw_data)
+        else:
+            raise RuntimeError(f"{grad_output.device} not supported")
+        
+        if x.requires_grad:
+            x._grad += x_grad
+        if weight.requires_grad:
+            weight._grad += weight_grad    
+        if bias and bias.requires_grad:
+            bias._grad += bias_grad
+            
+    if out.requires_grad: out.grad_fn = BackwardFunction(backward, out._operation)
+
     return out
 
 
@@ -302,7 +601,9 @@ def conv2d(x:Tensor, weight:Tensor, bias:Tensor=None, stride=1, padding=0, dilat
 
     if bias: inputs = (x, weight, bias)
     else: inputs = (x, weight)
-    out = Tensor(out_data, device=x.device, children=inputs, requires_grad=True, operation="Conv2d")
+    
+    req_grad = any([inp.requires_grad for inp in inputs])
+    out = Tensor(out_data, device=x.device, children=inputs, requires_grad=req_grad, operation="Conv2d")
     
     def backward():
         grad_output = out.grad

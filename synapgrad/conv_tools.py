@@ -73,7 +73,7 @@ def get_conv2d_output_size(shape:tuple, kernel_size, dilation, stride, padding) 
 # ******* Sliding window *******
 # ******************************
 
-def extract_windows(a, kernel_size, step, padding, dilation=1, pad_value=0):
+def extract_windows(a, kernel_size, step=1, padding=0, dilation=1, pad_value=0):
     """ 
     Create a sliding window view over a 3D or 4D tensor
     
@@ -145,7 +145,7 @@ def extract_windows(a, kernel_size, step, padding, dilation=1, pad_value=0):
     return np.lib.stride_tricks.as_strided(a, shape=out_shape, strides=stride, writeable=False)
 
 
-def place_windows(windows, out_shape, kernel_size, step, padding, dilation=1):
+def place_windows(windows, out_shape, kernel_size, step=1, padding=0, dilation=1):
     """ 
     Places back the windows extracted (in `extract_windows` function) into an array of shape=out_shape.
     
@@ -586,6 +586,8 @@ def col2im_fast(a:np.ndarray, output_shape, kernel_size, dilation, stride, paddi
             N, C, H, W = output_shape
     else:
         raise ValueError('Invalid shape of input tensor (should be 2 or 3-dimensional)')
+    
+    output_shape = (N,C,H,W)
         
     lW, lH = get_conv2d_output_size(output_shape, kernel_size, dilation, stride, padding)
     
