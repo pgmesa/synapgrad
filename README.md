@@ -1,10 +1,6 @@
 #  SynapGrad
 
-This is another implementation of synapgrad (not available in PyPI at the moment), but with a more Torch-like engine. It is a better-documented and structured project that additionally includes new functionalities. It is not in the main branch because, currently, this implementation, despite being in my opinion a better project, is somewhat slower than my previous implementation. 
-
-I need to investigate the cause of this slowdown. The backward pass is specially slow compared to my first implementation. If I manage to identify the bottleneck and fix it, I will update the main branch with this implementation.
-
-If someone discovers the issue causing the slowdown and knows how to fix it, please don't hesitate to create a pull request or contact me.
+This is another implementation of synapgrad but with a more torch-like engine. However, this version is outdated and not as efficient as synapgrad's main branch. Despite that, I still recommend taking a look at it as it replicates better how pytorch engine works.
 
 ## Autograd
 Automatic gradient calculation and backpropagation algorithm
@@ -56,7 +52,7 @@ matplotlib==3.7.0
 ipykernel==6.19.2
 scikit-learn==1.2.1
 torchvision==0.13.1
-# **** Also need it to run the tests *****
+# **** Also required to run the tests *****
 torch==1.12.1 # Install following the instructions in https://pytorch.org/
 ```
 
