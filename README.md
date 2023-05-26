@@ -4,13 +4,13 @@ An autograd Tensor-based engine with a deep learning library built on top of it 
 
 [![Downloads](https://static.pepy.tech/personalized-badge/synapgrad?period=total&units=international_system&left_color=black&right_color=blue&left_text=Downloads)](https://pepy.tech/project/synapgrad)
 
-
-> ⚠️: This main branch is being updated with `new_engine` one
-
 ## Installation
 ```bash
 pip install synapgrad
 ```
+
+> :Note: There is another branch in this repository called `synaptorch`, which presents an alternative implementation of synapgrad with a more torch-like engine. However, this version is outdated and not as efficient. Despite that, I still recommend taking a look at it as it replicates better how pytorch engine works.
+
 
 ## Technical Description
 This project implements a completely functional engine for tracking operations between Tensors, by dynamically building a Directed Acyclic Graph (DAG), and an automatic backpropagation algorithm (reverse-mode autodiff) over this DAG.
@@ -20,43 +20,43 @@ Built on top of the engine, the deep learning library implements the most common
 This library tries to mimic Pytorch in a simplified way, but with similar functions and behaviour. 
 
 ## Aim of the project
-The aim of this project is to create a deep learning library from scratch, without using any existing framework (such as keras, pytorch, tensorflow, sklearn, etc) in order to fully understand the core aspects of how they work. Specifically, this time I have focused on pytorch.
+The objective of this project is to develop a deep learning library entirely from scratch, without relying on any existing frameworks (such as Keras, PyTorch, TensorFlow, scikit-learn, etc.). The primary goal is to gain an in-depth comprehension of the fundamental mechanisms underlying deep learning.
 
-However, some of these external frameworks have been used for the following reasons:
+## Autograd Engine
+Automatic gradient calculation and backpropagation algorithm
 
-- (pytorch) to check gradient calculation is correct.
-- (keras) to download handwritten digits MNIST dataset
-- (sklearn) to create 'make_moons' dataset
-
-This project stems from the amazing educational project `micrograd` by `karpathy` (https://github.com/karpathy/micrograd)
-
-Note: Supporting GPU execution is out of the scope of this project
-
-## Autograd Example
-Below is a random example of some of the operations that can be tracked with synapgrad.Tensor
-```python
-from synapgrad import Tensor
-
-l1 = [[-4.0, 0, 5.0], [6.3, 3.2, 1.3]]
-l2 = [[2.0, 2,  3.0], [2.4, 1.7, 0.5]]
-
-a = Tensor(l1, requires_grad=True).unsqueeze(0)**2
-a.retain_grad()
-b = 2**Tensor(l2, requires_grad=True).unsqueeze(0)
-b.retain_grad()
-c = Tensor(4.0, requires_grad=True)
-
-out1 = Tensor.stack((a.squeeze(), b.squeeze()))[0]
-out2 = Tensor.concat((a*c, b), dim=1).transpose(0, 1)[0, :]
-out = out1 @ out2.view(3).unsqueeze(1)
-print(out) # outcome of this forward pass
-out.sum().backward()
-
-print(a.grad) # dout/da
-print(c.grad) # dout/dc
+### Requirements
+```r
+numpy==1.23.5 # Core
+# graphviz==0.20.1 # (Optional) Visualize DAG
 ```
 
-## Training examples using synapgrad
+In the `examples/visualize_graph.ipynb` notebook there is an example of how to display the graph that synapgrad creates in the background as operations are chained.
+
+```python
+import synapgrad
+
+with synapgrad.retain_grads():
+    x1 = synapgrad.tensor([[-5.0, 3.0], [2.0, -4.0]], requires_grad=True)
+    x2 = synapgrad.tensor([[6.0, 0.4], [1.9,  2.0]], requires_grad=True)
+    x3 = synapgrad.tensor(3.0, requires_grad=True)
+    y = synapgrad.addmm(x3, x1, x2) # x3 + x1 @ x2
+    z = x2.sqrt() @ y
+    z.backward(synapgrad.ones(z.shape))
+z.draw_graph()
+```
+![Graph Image](/.github/graph_example.svg)
+
+## Deep learning library
+Built on top of the engine, synapgrad has a deep learning library that implements the following features:
+
+- `Weight initialization`: Xavier Glorot uniform, Xavier Glorot normal, He Kaiming uniform, He Kaiming normal, LeCun uniform
+- `Activations`: ReLU, Tanh, Sigmoid, Softmax, LogSoftmax
+- `Convolutions`: MaxPool1d, MaxPool2d, AvgPool1d, AvgPool2d, Conv1d, Conv2d
+- `Layers`: Linear, Unfold, Fold, BatchNorm1d, BatchNorm2d, Flatten, Dropout
+- `Optimizers`: SGD, Adam
+- `Losses`: MSELoss, NLLLoss, BCELoss, BCEWithLogitsLoss, CrossEntropyLoss
+
 
 This project comes with 3 jupyter notebooks (in `examples/`) that solve 3 beginner's problems in AI:
 
@@ -64,45 +64,23 @@ This project comes with 3 jupyter notebooks (in `examples/`) that solve 3 beginn
 - [x] 2. MLP for handwritten digits classification (MNIST dataset) 
 - [x] 3. CNN for handwritten digits classification (MNIST dataset)
 
-Example 1 (synapgrad MLP solution)     |  Example 2 and 3
-:-------------------------:|:-------------------------:
-![Image 1](/.github/example_moons.png) | ![Image 2](/.github/example_mnist.png) 
-
-## Comparisons with other frameworks
-In order to see the efficiency of synapgrad, it is compared with other existing engines (in this case torch and micrograd). All trainings have been runned on a laptop with an Intel Core i7 10th generation processor.
-
-| Training Example | synapgrad | torch | micrograd |
-|     :---:        |  :---:  |  :---:  |   :---:   |  
-| 1 | 1.7 s | 1.5 s | 1 min 43 s |
-| 2 | 2 min 8 s | 53 s | - |
-| 3 |  25 min 10 s  |  2 min 5 s  | - |
-| 2 (without batchnorm) | 52 s |  31 s | - |
-| 3 (without batchnorm) |  16 min 7 s  |  1 min 52 s  | - |
-
-As can be observed, conv2d and batchnorm are currently much better optimized in Pytorch. I may attempt to optimize these layers in a future version.
-
-## Graph Visualization
-In the `examples/trace_graph.ipynb` notebook there is an example of how to display the graph that synapgrad creates in the background as operations are chained.
-
-```python
-import synapgrad
-from synapgrad import nn, utils
-
-with synapgrad.retain_grads():
-    x = synapgrad.tensor([5.0, 3.0], requires_grad=True)
-    x2 = synapgrad.tensor([6.0, 0.4], requires_grad=True)
-    y = (x ** 3 + 3) 
-    y2 = (x2 / x)
-    z = y * y2 * x2
-    z = z.sum()
-    z.backward()
-utils.graph.draw(z)
+### Notebook requirements
+```r
+pkbar==0.5
+matplotlib==3.7.0
+ipykernel==6.19.2
+scikit-learn==1.2.1
+torchvision==0.13.1
+# **** Also required to run the tests *****
+torch==1.12.1 # Install following the instructions in https://pytorch.org/
 ```
 
-![Graph Image](/.github/graph_example.svg)
-
 ## Running tests
-To run the unit tests you will have to install PyTorch. In these tests, gradients calculation as well as losses, layers, etc, are assessed with pytorch to check everything is working fine. To run the tests:
+To run the unit tests you will have to install PyTorch, which is used to check whether the gradients are calculated correctly
 ```bash
 python -m pytest
+```
+To compare the speed of `torch` and `synapgrad` in each operation, run the command below:
+```
+python -m pytest ./tests/test_ops.py -s
 ```

@@ -180,7 +180,7 @@ def matmul(x1:Tensor, x2:Tensor):
 
 def addmm(x1:Tensor, x2:Tensor, x3:Tensor):
     """ 
-    Performs de operation a + x2 @ x3
+    Performs de operation x1 + x2 @ x3
 
     Args:
         x1 (Tensor): First tensor.
