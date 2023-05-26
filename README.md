@@ -9,7 +9,7 @@ An autograd Tensor-based engine with a deep learning library built on top of it 
 pip install synapgrad
 ```
 
-> :Note: There is another branch in this repository called `synaptorch`, which presents an alternative implementation of synapgrad with a more torch-like engine. However, this version is outdated and not as efficient. Despite that, I still recommend taking a look at it as it replicates better how pytorch engine works.
+> :Note: There is another branch in this repository called `synaptorch`, which presents an alternative implementation of synapgrad with a more torch-like engine. However, this version is outdated and far less efficient. Despite that, I still recommend taking a look at it as it replicates better how pytorch engine works.
 
 
 ## Technical Description
