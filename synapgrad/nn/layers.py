@@ -3,7 +3,7 @@ import synapgrad
 from synapgrad import nn
 from synapgrad.tensor import Tensor
 from synapgrad.nn import functional as F
-from .initializations import init_weights
+from synapgrad.nn.initializations import init_weights
 
 
 class Linear(nn.Module):

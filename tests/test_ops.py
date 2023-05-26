@@ -6,7 +6,7 @@ from utils import check_tensors, time_fun
 
 atol = 1e-8; rtol = 1e-5
 
-def op_tester(inputs:list, function, name, device=Device.CPU, module_func=False, nn_functional=False, factor=1, offset=0):    
+def op_tester(inputs:list, function, name, device=Device.CPU, module_func=False, nn_functional=False, factor=1, offset=0, backward=True):    
     torch_inputs = [torch.tensor(np.random.rand(*shape)*factor+offset, requires_grad=True, dtype=torch.float32, device=device.value) for shape in inputs]
     if module_func: 
         if nn_functional:
@@ -16,7 +16,8 @@ def op_tester(inputs:list, function, name, device=Device.CPU, module_func=False,
     torch_out, torch_fw_time = time_fun(function, *torch_inputs)
     if not isinstance(torch_out, torch.Tensor):
         torch_out = torch_out[0]
-    _, torch_bw_time = time_fun(torch_out.backward, torch.ones_like(torch_out))
+    if backward:
+        _, torch_bw_time = time_fun(torch_out.backward, torch.ones_like(torch_out))
     
     torch_inputs = torch_inputs[1:] if module_func else torch_inputs
     
@@ -29,18 +30,24 @@ def op_tester(inputs:list, function, name, device=Device.CPU, module_func=False,
     syn_out, syn_fw_time = time_fun(function, *syn_inputs)
     if not isinstance(syn_out, synapgrad.Tensor):
         syn_out = syn_out[0]
-    _, syn_bw_time = time_fun(syn_out.backward, synapgrad.ones_like(syn_out))
+    if backward:
+        _, syn_bw_time = time_fun(syn_out.backward, synapgrad.ones_like(syn_out))
     
     syn_inputs = syn_inputs[1:] if module_func else syn_inputs 
     
-    print(f'\n{name},  device: {device},  torch/synapgrad ' + 
-              f'fp: {torch_fw_time*1000:.2f} / {syn_fw_time*1000:.2f} ms, ' + 
-              f'bp: {torch_bw_time*1000:.2f} / {syn_bw_time*1000:.2f} ms')
+    if backward:
+        print(f'\n{name},  device: {device},  torch/synapgrad ' + 
+                f'fp: {torch_fw_time*1000:.2f} / {syn_fw_time*1000:.2f} ms, ' + 
+                f'bp: {torch_bw_time*1000:.2f} / {syn_bw_time*1000:.2f} ms')
+    else:
+        print(f'\n{name},  device: {device},  torch/synapgrad ' + 
+                f'fp: {torch_fw_time*1000:.2f} / {syn_fw_time*1000:.2f} ms')
     
     assert check_tensors(syn_out, torch_out, atol=atol, rtol=rtol)
-    for synap_inp, torch_inp in zip(syn_inputs, torch_inputs):
-        assert check_tensors(synap_inp, torch_inp, atol=atol, rtol=rtol)
-        assert check_tensors(synap_inp.grad, torch_inp.grad, atol=atol, rtol=rtol)
+    if backward:
+        for synap_inp, torch_inp in zip(syn_inputs, torch_inputs):
+            assert check_tensors(synap_inp, torch_inp, atol=atol, rtol=rtol)
+            assert check_tensors(synap_inp.grad, torch_inp.grad, atol=atol, rtol=rtol)
 
 # *************************
 # ******* Basic ops *******

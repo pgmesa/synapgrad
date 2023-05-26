@@ -589,7 +589,7 @@ def col2im_fast(a:np.ndarray, output_shape, kernel_size, dilation, stride, paddi
     
     output_shape = (N,C,H,W)
         
-    lW, lH = get_conv2d_output_size(output_shape, kernel_size, dilation, stride, padding)
+    lH, lW = get_conv2d_output_size(output_shape, kernel_size, dilation, stride, padding)
     
     if mode == 'col2im':
         windows = a.T.reshape(lH, lW, N, C, kernel_size[0], kernel_size[1])

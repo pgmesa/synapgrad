@@ -1,9 +1,5 @@
 import numpy as np
-from synapgrad.conv_tools import (
-    get_conv2d_output_size, get_conv1d_output_size,
-    im2col, col2im, im2col_v2, col2im_v2, im2col_fast, col2im_fast,
-    extract_windows, place_windows
-)
+from synapgrad.conv_tools import extract_windows, place_windows
 
 epsilon = 1e-12
 

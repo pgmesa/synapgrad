@@ -47,6 +47,114 @@ def relu(x:Tensor):
     return out
 
 
+def tanh(x:Tensor):
+    """ 
+    Tanh activation function.
+
+    Args:
+        x (Tensor): tensor
+
+    Returns:
+        Tensor: result
+    """
+    if not isinstance(x, Tensor):
+        raise TypeError(f"Expected x to be a Tensor but got {type(x)}")
+    
+    if x.device == Device.CPU:
+        out_data = cpu_ops.tanh_forward(x.data)
+    else:
+        raise RuntimeError(f"{x.device} not supported")
+
+    out = Tensor(out_data, device=x.device, children=(x,), requires_grad=x.requires_grad, operation="Tanh")
+    
+    def backward():
+        grad_output = out.grad
+        if grad_output.device == Device.CPU:
+            a_grad = cpu_ops.tanh_backward(grad_output.data, out.data)
+        else:
+            raise RuntimeError(f"{grad_output.device} not supported")
+        
+        if x.requires_grad: x._grad += a_grad 
+    
+    if out.requires_grad: out.grad_fn = BackwardFunction(backward, out._operation)
+    
+    return out
+
+
+def sigmoid(x:Tensor):
+    """ 
+    Sigmoid activation function. 
+    
+    The Sigmoid activation function is defined as:
+    f(x) = 1 / (1 + exp(-x))
+
+    Args:
+        x (Tensor): tensor
+
+    Returns:
+        Tensor: result
+    """
+    if not isinstance(x, Tensor):
+        raise TypeError(f"Expected x to be a Tensor but got {type(x)}")
+    
+    if x.device == Device.CPU:
+        out_data = cpu_ops.sigmoid_forward(x.data)
+    else:
+        raise RuntimeError(f"{x.device} not supported")
+
+    out = Tensor(out_data, device=x.device, children=(x,), requires_grad=x.requires_grad, operation="Sigmoid")
+    
+    def backward():
+        grad_output = out.grad
+        if grad_output.device == Device.CPU:
+            a_grad = cpu_ops.sigmoid_backward(grad_output.data, out.data)
+        else:
+            raise RuntimeError(f"{grad_output.device} not supported")
+        
+        if x.requires_grad: x._grad += a_grad 
+    
+    if out.requires_grad: out.grad_fn = BackwardFunction(backward, out._operation)
+    
+    return out
+
+
+def softmax(x:Tensor, dim:int):
+    """ 
+    Softmax activation function. 
+    
+    The Softmax activation function is defined as:
+    f(x) = exp(x) / sum(exp(x))
+
+    Args:
+        x (Tensor): tensor
+
+    Returns:
+        Tensor: result
+    """
+    if not isinstance(x, Tensor):
+        raise TypeError(f"Expected x to be a Tensor but got {type(x)}")
+    
+    if x.device == Device.CPU:
+        out_data = cpu_ops.softmax_forward(x.data, dim)
+    else:
+        raise RuntimeError(f"{x.device} not supported")
+
+    out = Tensor(out_data, device=x.device, children=(x,), requires_grad=x.requires_grad, operation="Softmax")
+    
+    def backward():
+        grad_output = out.grad
+        if grad_output.device == Device.CPU:
+            a_grad = cpu_ops.softmax_backward(grad_output.data, out.data, dim)
+        else:
+            raise RuntimeError(f"{grad_output.device} not supported")
+        
+        if x.requires_grad: x._grad += a_grad 
+    
+    if out.requires_grad: out.grad_fn = BackwardFunction(backward, out._operation)
+    
+    return out
+
+
 def log_softmax(x:Tensor, dim:int):
     """ 
     LogSoftmax activation function. 
@@ -87,6 +195,48 @@ def log_softmax(x:Tensor, dim:int):
 # ******* Loss functions *******
 # ******************************
 
+def mse_loss(y_pred:Tensor, y_true:Tensor):
+    """ 
+    Mean Squared Error loss function.
+
+    Args:
+        - y_pred (Tensor): tensor
+        - y_true (Tensor): tensor
+
+    Returns:
+        Tensor: result
+    """
+    if not isinstance(y_pred, Tensor):
+        raise TypeError(f"Expected y_pred to be a Tensor but got {type(y_pred)}")
+    if not isinstance(y_true, Tensor):
+        raise TypeError(f"Expected y_true to be a Tensor but got {type(y_true)}")
+    
+    if not y_pred.matches_shape(y_true):
+        raise ValueError(f"Inputs shape don't match y_pred={y_pred.shape}, y_true={y_true.shape}")
+    
+    if y_pred.device == Device.CPU:
+        loss_data = cpu_ops.mse_loss_forward(y_pred.data, y_true.data)
+    else:
+        raise RuntimeError(f"{y_pred.device} not supported")
+
+    inputs = (y_pred, y_true)
+    req_grad = any([inp.requires_grad for inp in inputs])
+    loss = Tensor(loss_data, device=y_pred.device, children=inputs, requires_grad=req_grad, operation="MSELoss")
+    
+    def backward():
+        grad_output = loss.grad
+        if grad_output.device == Device.CPU:
+            loss_grad_data = cpu_ops.mse_loss_backward(grad_output.data, y_pred.data, y_true.data)
+        else:
+            raise RuntimeError(f"{grad_output.device} not supported")
+        
+        if y_pred.requires_grad: y_pred._grad += loss_grad_data
+    
+    if loss.requires_grad: loss.grad_fn = BackwardFunction(backward, loss._operation)
+    
+    return loss
+
+
 def nll_loss(y_pred:Tensor, y_true:Tensor):
     """ 
     Negative Log Likelihood loss function.
@@ -125,6 +275,85 @@ def nll_loss(y_pred:Tensor, y_true:Tensor):
     
     return loss
 
+
+def binary_cross_entropy(y_pred:Tensor, y_true:Tensor):
+    """ 
+    Binary Cross Entropy loss function.
+
+    Args:
+        - y_pred (Tensor): tensor
+        - y_true (Tensor): tensor
+
+    Returns:
+        Tensor: result
+    """
+    if not isinstance(y_pred, Tensor):
+        raise TypeError(f"Expected y_pred to be a Tensor but got {type(y_pred)}")
+    if not isinstance(y_true, Tensor):
+        raise TypeError(f"Expected y_true to be a Tensor but got {type(y_true)}")
+    
+    if y_pred.device == Device.CPU:
+        loss_data = cpu_ops.bce_loss_forward(y_pred.data, y_true.data)
+    else:
+        raise RuntimeError(f"{y_pred.device} not supported")
+
+    inputs = (y_pred, y_true)
+    req_grad = any([inp.requires_grad for inp in inputs])
+    loss = Tensor(loss_data, device=y_pred.device, children=inputs, requires_grad=req_grad, operation="BCELoss")
+    
+    def backward():
+        grad_output = loss.grad
+        if grad_output.device == Device.CPU:
+            loss_grad_data = cpu_ops.bce_loss_backward(grad_output.data, y_pred.data, y_true.data)
+        else:
+            raise RuntimeError(f"{grad_output.device} not supported")
+        
+        if y_pred.requires_grad: y_pred._grad += loss_grad_data
+    
+    if loss.requires_grad: loss.grad_fn = BackwardFunction(backward, loss._operation)
+    
+    return loss
+
+
+def binary_cross_entropy_with_logits(y_pred:Tensor, y_true:Tensor):
+    """ 
+    Binary Cross Entropy with Logits loss function.
+
+    Args:
+        - y_pred (Tensor): tensor
+        - y_true (Tensor): tensor
+
+    Returns:
+        Tensor: result
+    """
+    if not isinstance(y_pred, Tensor):
+        raise TypeError(f"Expected y_pred to be a Tensor but got {type(y_pred)}")
+    if not isinstance(y_true, Tensor):
+        raise TypeError(f"Expected y_true to be a Tensor but got {type(y_true)}")
+    
+    if y_pred.device == Device.CPU:
+        loss_data = cpu_ops.bce_with_logits_loss_forward(y_pred.data, y_true.data)
+    else:
+        raise RuntimeError(f"{y_pred.device} not supported")
+
+    inputs = (y_pred, y_true)
+    req_grad = any([inp.requires_grad for inp in inputs])
+    loss = Tensor(loss_data, device=y_pred.device, children=inputs, requires_grad=req_grad, operation="BCEWithLogitsLoss")
+    
+    def backward():
+        grad_output = loss.grad
+        if grad_output.device == Device.CPU:
+            loss_grad_data = cpu_ops.bce_with_logits_loss_backward(grad_output.data, y_pred.data, y_true.data)
+        else:
+            raise RuntimeError(f"{grad_output.device} not supported")
+        
+        if y_pred.requires_grad: y_pred._grad += loss_grad_data
+    
+    if loss.requires_grad: loss.grad_fn = BackwardFunction(backward, loss._operation)
+    
+    return loss
+    
+    
 def cross_entropy(y_pred:Tensor, y_true:Tensor):
     """ 
     Cross Entropy loss function.
@@ -438,7 +667,7 @@ def unfold(x:Tensor, kernel_size:'int | tuple', dilation:'int | tuple'=1, stride
     
     if x.device == Device.CPU:
         out_data = \
-            cpu_ops.im2col_fast(x.data, kernel_size, dilation, stride, padding, pad_value, as_unfold=True)
+            conv_tools.im2col_fast(x.data, kernel_size, dilation, stride, padding, pad_value, as_unfold=True)
     else:
         raise RuntimeError(f"{x.device} not supported")
 
@@ -447,7 +676,7 @@ def unfold(x:Tensor, kernel_size:'int | tuple', dilation:'int | tuple'=1, stride
     def backward():
         grad_output = out.grad
         if grad_output.device == Device.CPU:
-            x_grad = cpu_ops.col2im_fast(grad_output.data, x.shape, kernel_size, dilation, stride, padding)
+            x_grad = conv_tools.col2im_fast(grad_output.data, x.shape, kernel_size, dilation, stride, padding)
         else:
             raise RuntimeError(f"{grad_output.device} not supported")
         
@@ -484,7 +713,7 @@ def fold(x:Tensor, output_size:tuple, kernel_size:'int | tuple', dilation:'int |
     
     if x.device == Device.CPU:
         out_data = \
-            cpu_ops.col2im_fast(x.data, output_size, kernel_size, dilation, stride, padding)
+            conv_tools.col2im_fast(x.data, output_size, kernel_size, dilation, stride, padding)
     else:
         raise RuntimeError(f"{x.device} not supported")
 
