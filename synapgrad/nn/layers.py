@@ -474,7 +474,7 @@ class Conv2d(nn.Module):
     
 class BatchNorm(nn.Module):
     
-    def __init__(self, mode:str, num_features:int, eps:float=1e-5, momentum:float=0.1, affine:bool=True,
+    def __init__(self, num_features:int, eps:float=1e-5, momentum:float=0.1, affine:bool=True,
                  track_running_stats:bool=True, dtype=None) -> None:
         super().__init__()
         self.num_features = num_features
@@ -483,13 +483,7 @@ class BatchNorm(nn.Module):
         self.affine = affine
         self.track_running_stats = track_running_stats
         self.num_batches_tracked = 0
-        
-        valid_modes = ['1d', '2d']
-        
-        if mode not in valid_modes:
-            raise ValueError(f"'{mode}' is not a valid mode, expected one of {valid_modes}")
-        self.mode = mode
-        
+
         if dtype is None:
             dtype = np.float32
         
@@ -507,30 +501,15 @@ class BatchNorm(nn.Module):
             # beta
             beta = synapgrad.zeros(num_features, requires_grad=True, dtype=dtype, name="beta")
             self.bias = nn.Parameter(beta)
+        else:
+            self.weight = None
+            self.bias = None
                 
     def forward(self, x: Tensor) -> Tensor:
-        if self.mode == '2d':
-            if len(x.shape) == 4:
-                N, C, H, W = x.shape
-                n = N*H*W # num_samples
-                dims = (0,2,3)
-                view_shape = (1,C,1,1)
-            else: raise RuntimeError(f"Expected 4D tensor, but got {len(x.shape)}D")
-        elif self.mode == '1d':
-            if len(x.shape) == 3:
-                N, C, L = x.shape
-                n = N*L # num_samples
-                dims = (0,2)
-                view_shape = (1,C,1)
-            elif len(x.shape) == 2:
-                N, C = x.shape
-                n = N # num_samples
-                dims = (0,)
-                view_shape = (1,C)
-            else: raise RuntimeError(f"Expected 2D or 3D tensor, but got {len(x.shape)}D")
-        assert C == self.num_features, f"Expected {self.num_features} channels, got {C}."
-        
-        exponential_average_factor = 0.0
+        if self.momentum is None:
+            exponential_average_factor = 0.0
+        else:
+            exponential_average_factor = self.momentum
 
         if self.training and self.track_running_stats:
             if self.num_batches_tracked is not None:
@@ -539,6 +518,17 @@ class BatchNorm(nn.Module):
                     exponential_average_factor = 1.0 / float(self.num_batches_tracked)
                 else:  # use exponential moving average
                     exponential_average_factor = self.momentum
+                    
+        if self.training:
+            bn_training = True
+        else:
+            bn_training = (self.running_mean is None) and (self.running_var is None)
+        
+        running_mean = self.running_mean if not self.training or self.track_running_stats else None
+        running_var = self.running_var if not self.training or self.track_running_stats else None
+            
+        return F.batch_norm(x, self.weight, self.bias, running_mean, running_var,
+                                                bn_training, exponential_average_factor, self.eps)
 
         # calculate running estimates
         if self.training:
@@ -563,21 +553,17 @@ class BatchNorm(nn.Module):
             out = out * self.weight.reshape(view_shape) + self.bias.reshape(view_shape)
 
         return out
-        
-    def parameters(self) -> list[Tensor]:
-        return [self.weight, self.bias] if self.affine else []
 
 
 class BatchNorm1d(BatchNorm):
-    """
-    Reference:
-        https://pytorch.org/docs/stable/generated/torch.nn.BatchNorm1d.html
-    """
-    
+
     def __init__(self, num_features:int, eps:float=1e-5, momentum:float=0.1, affine:bool=True,
                  track_running_stats:bool=True, dtype=None) -> None:
         """
         Computes the batchnorm of a 2 or 3 dimensional tensor (N, C) or (N, C, L) 
+        
+        Reference:
+            - https://pytorch.org/docs/stable/generated/torch.nn.BatchNorm1d.html
 
         Arguments:
         num_features (int): C from an expected input size (N, C) or (N, C, L).
@@ -594,19 +580,18 @@ class BatchNorm1d(BatchNorm):
             module always uses batch statistics. in both training and eval modes. 
             Default: True
         """
-        super().__init__('1d', num_features, eps, momentum, affine, track_running_stats, dtype)
+        super().__init__(num_features, eps, momentum, affine, track_running_stats, dtype)
 
     
 class BatchNorm2d(BatchNorm):
-    """
-    Reference:
-        https://pytorch.org/docs/stable/generated/torch.nn.BatchNorm2d.html
-    """
-    
+
     def __init__(self, num_features:int, eps:float=1e-5, momentum:float=0.1, affine:bool=True,
                  track_running_stats:bool=True, dtype=None) -> None:
         """
         Computes the batchnorm of a 4-dimensional tensor (N, C, H, W) 
+
+        Reference:
+            - https://pytorch.org/docs/stable/generated/torch.nn.BatchNorm2d.html
 
         Arguments:
         num_features (int): C from an expected input size (N, C, H, W).
@@ -623,4 +608,4 @@ class BatchNorm2d(BatchNorm):
             module always uses batch statistics. in both training and eval modes. 
             Default: True
         """
-        super().__init__('2d', num_features, eps, momentum, affine, track_running_stats, dtype)
+        super().__init__(num_features, eps, momentum, affine, track_running_stats, dtype)

@@ -528,3 +528,52 @@ def conv2d_backward(grad, a_shape, weight, bias, stride, padding, dilation, wind
 # ******************************
 # ******* Batch norm ops *******
 # ******************************
+
+def batch_norm_forward(x, gamma, beta, running_mean, running_var, training, momentum, eps):
+    normed_dims = tuple(i for i in range(x.ndim) if i != 1)
+    keepdims_shape = tuple(1 if n != 1 else d for n, d in enumerate(x.shape))
+    
+    # normalize x
+    mean = running_mean if running_mean is not None else x.mean(axis=normed_dims)
+    var = running_var if running_var is not None else x.var(axis=normed_dims)
+    std = np.sqrt(var + eps)
+    
+    if running_mean is not None:
+        running_mean = running_mean * momentum + mean * (1 - momentum)
+    if running_var is not None:
+        running_var = running_var * momentum + var * (1 - momentum)
+    
+    x_norm = (x - mean.reshape(keepdims_shape)) / std.reshape(keepdims_shape)
+    # optional affine transformation
+    if gamma is not None:
+        x_norm *= gamma.reshape(keepdims_shape)
+
+    if beta is not None:
+        x_norm += beta.reshape(keepdims_shape)
+    
+    return x_norm, running_mean, running_var
+
+def batch_norm_backward(grad, x, gamma, beta, running_mean, running_var, training, momentum, eps, x_norm):
+    normed_dims = tuple(i for i in range(x.ndim) if i != 1)
+    keepdims_shape = tuple(1 if n != 1 else d for n, d in enumerate(x.shape))
+    
+    N = x.size / x.shape[1]
+
+    # all sums carried over non-channel dims
+    # (1/sqrt(var + eps)) * [dL - dL.mean() - (1/N)*x_norm*(x_norm @ dL)]
+    input_grad = grad - np.mean(grad, axis=normed_dims, keepdims=True)
+
+    rterm = x_norm * np.reshape(
+        np.einsum(grad, range(x.ndim), x_norm, range(x.ndim), [1]),
+        keepdims_shape,
+    )
+    rterm = rterm / N
+    input_grad = (input_grad - rterm) / std
+    if (gamma is not None):  # backprop through optional affine transformation
+        input_grad *= gamma.reshape(keepdims_shape)
+        gamma_grad = np.einsum(grad, range(x.ndim), x_norm, range(x.ndim), [1])
+        
+    if (beta is not None):
+        beta_grad = grad.sum(axis=normed_dims)
+    
+    return input_grad

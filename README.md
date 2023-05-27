@@ -9,9 +9,6 @@ An autograd Tensor-based engine with a deep learning library built on top of it 
 pip install synapgrad
 ```
 
-> :Note: There is another branch in this repository called `synaptorch`, which presents an alternative implementation of synapgrad with a more torch-like engine. However, this version is outdated and far less efficient. Despite that, I still recommend taking a look at it as it replicates better how pytorch engine works.
-
-
 ## Technical Description
 This project implements a completely functional engine for tracking operations between Tensors, by dynamically building a Directed Acyclic Graph (DAG), and an automatic backpropagation algorithm (reverse-mode autodiff) over this DAG.
 

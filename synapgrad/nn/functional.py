@@ -853,3 +853,84 @@ def conv2d(x:Tensor, weight:Tensor, bias:Tensor=None, stride=1, padding=0, dilat
     if out.requires_grad: out.grad_fn = BackwardFunction(backward, out._operation)
     
     return out
+
+# *************************************
+# ******* Batch norm functions ********
+# *************************************
+
+def batch_norm(x:Tensor, weight:Tensor=None, bias:Tensor=None, running_mean:Tensor=None, running_var:Tensor=None,
+                training=True, momentum=0.1, eps=1e-5) -> Tensor:
+    """
+    Applies batch normalization to an input tensor.
+    
+    Reference:
+        - https://pytorch.org/docs/stable/generated/torch.nn.BatchNorm1d.html
+        - https://pytorch.org/docs/stable/generated/torch.nn.BatchNorm2d.html
+
+    Args:
+        - x (Tensor): Input tensor of shape (N, C, *).
+        - running_mean (Tensor, optional): Running mean tensor of shape (C,). Defaults to None.
+        - running_var (Tensor, optional): Running variance tensor of shape (C,). Defaults to None.
+        - weight (Tensor, optional): Weight tensor of shape (C,) also called `gamma`. Defaults to None.
+        - bias (Tensor, optional): Bias tensor of shape (C,) also called `beta`. Defaults to None.
+        - training (bool, optional): If true, use batch norm in training mode. Defaults to True.
+        - momentum (float, optional): Momentum. Defaults to 0.1.
+        - eps (float, optional): Epsilon. Defaults to 1e-5.
+
+    Returns:
+        Tensor: Output tensor batch normalized of shape (N, C, *)
+    """
+    if not isinstance(x, Tensor):
+        raise TypeError(f"Expected x to be a Tensor but got {type(x)}")
+    
+    if running_mean is not None and not isinstance(running_mean, Tensor):
+        raise TypeError(f"Expected running_mean to be a Tensor but got {type(running_mean)}")
+    
+    if running_var is not None and not isinstance(running_var, Tensor):
+        raise TypeError(f"Expected running_var to be a Tensor but got {type(running_var)}")
+    
+    if weight is not None and not isinstance(weight, Tensor):
+        raise TypeError(f"Expected weight to be a Tensor but got {type(weight)}")
+    
+    if bias is not None and not isinstance(bias, Tensor):
+        raise TypeError(f"Expected bias to be a Tensor but got {type(bias)}")
+    
+    running_mean_data = running_mean.data if running_mean is not None else None
+    running_var_data = running_var.data if running_var is not None else None
+    weight_data = weight.data if weight is not None else None
+    bias_data = bias.data if bias is not None else None
+    
+    if x.device == Device.CPU:
+        out_data, new_running_mean, new_running_var = cpu_ops.batch_norm_forward(x.data, weight_data, bias_data,
+                                              running_mean_data, running_var_data, training, momentum, eps)
+    else:
+        raise RuntimeError(f"{x.device} not supported")
+    
+    if new_running_mean is not None: running_mean.data = new_running_mean
+    if new_running_var is not None: running_var.data = new_running_var
+    
+    inputs = (x,)
+    if weight is not None: inputs += (weight,)
+    if bias is not None: inputs += (bias,)
+    req_grad = any([inp.requires_grad for inp in inputs])
+    out = Tensor(out_data, device=x.device, children=inputs, requires_grad=req_grad, operation="BatchNorm")
+    
+    def backward():
+        grad_output = out.grad
+        if grad_output.device == Device.CPU:
+            x_grad, weight_grad, bias_grad = \
+                cpu_ops.batch_norm_backward(grad_output.data, weight_data, bias_data,
+                            running_mean_data, running_var_data, training, momentum, eps, out_data)
+        else:
+            raise RuntimeError(f"{grad_output.device} not supported")
+        
+        if x.requires_grad:
+            x._grad += x_grad
+        if weight is not None and weight.requires_grad:
+            weight._grad += weight_grad    
+        if bias is not None and bias.requires_grad:
+            bias._grad += bias_grad
+            
+    if out.requires_grad: out.grad_fn = BackwardFunction(backward, out._operation)
+    
+    return out
