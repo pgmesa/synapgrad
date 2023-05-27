@@ -1,4 +1,3 @@
-# from synapgrad.autograd import no_grad, retain_grads, retain_children, retain_all
 from synapgrad.tensor import (
     Tensor, tensor, ones, ones_like, zeros, zeros_like, 
     arange, rand, randn, normal, randint, eye, no_grad,
@@ -10,6 +9,7 @@ from synapgrad.functional import (
     clone, exp, log, sqrt, sum, mean, max, min, squeeze, unsqueeze,
     reshape, movedim, transpose, flatten, unfold_dim
 )
+
 from synapgrad.utils import manual_seed
 
 from synapgrad.nn.functional import (
