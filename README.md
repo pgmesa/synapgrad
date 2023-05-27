@@ -10,11 +10,11 @@ pip install synapgrad
 ```
 
 ## Technical Description
-This project implements a completely functional engine for tracking operations between Tensors, by dynamically building a Directed Acyclic Graph (DAG), and an automatic backpropagation algorithm (reverse-mode autodiff) over this DAG.
+This project implements a completely functional engine for tracking operations between Tensors, by dynamically building a Directed Acyclic Graph (DAG), and an automatic gradient calculation and backpropagation algorithm (reverse-mode autodiff) over this DAG.
 
 Built on top of the engine, the deep learning library implements the most common functions, layers, losses and optimizers in order to create AI models able to solve real problems.
 
-This library tries to mimic Pytorch in a simplified way, but with similar functions and behaviour. 
+This library mimics Pytorch in a simplified way, but with similar functions and behaviour. 
 
 ## Aim of the project
 The objective of this project is to develop a deep learning library entirely from scratch, without relying on any existing frameworks (such as Keras, PyTorch, TensorFlow, scikit-learn, etc.). The primary goal is to gain an in-depth comprehension of the fundamental mechanisms underlying deep learning.
@@ -54,8 +54,7 @@ Built on top of the engine, synapgrad has a deep learning library that implement
 - `Optimizers`: SGD, Adam
 - `Losses`: MSELoss, NLLLoss, BCELoss, BCEWithLogitsLoss, CrossEntropyLoss
 
-
-This project comes with 3 jupyter notebooks (in `examples/`) that solve 3 beginner's problems in AI:
+This project includes three Jupyter notebooks (located in `examples/`) that tackle three beginner-level AI problems.
 
 - [x] 1. Basic MLP for binary classification (sklearn 'make_moons' toy dataset)
 - [x] 2. MLP for handwritten digits classification (MNIST dataset) 
@@ -68,12 +67,28 @@ matplotlib==3.7.0
 ipykernel==6.19.2
 scikit-learn==1.2.1
 torchvision==0.13.1
-# **** Also required to run the tests *****
+# **** torch required if you want to use torch engine instead of synapgrad's *****
 torch==1.12.1 # Install following the instructions in https://pytorch.org/
 ```
 
+### Comparisons with pytorch
+To measure the efficiency of synapgrad, all three examples were compared to PyTorch. All training sessions were conducted on a laptop with an Intel Core i7 10th generation processor and 16 GB of RAM.
+
+| Notebook Example | torch | synapgrad | Model params | Dataset size | Batch size | Epochs | Modules used |
+|     :---:        |  :---:  |  :---:  | :---:  | :---:  | :---:  | :---:  |  :---:  |
+| 1 (MLP) | 1.5 s | 1.6 s | 337 | [150, 2] | 4 | 50 | Linear, ReLU, MSELoss
+| 2 (MLP) | 41 s | 1 min 28 s | 178_710 |  [60_000, 28, 28]  | 64 | 20 | Flatten, Linear, BatchNorm1d, ReLU, Dropout, LogSoftmax, NLLLoss  
+| 3 (CNN) |  2 min 5 s  |  13 min 10 s |  20_586  | [60_000, 1, 28, 28]  |  128  | 5 | Conv2d, BatchNorm2d, ReLU, Dropout, MaxPool2d, Flatten, Linear, CrossEntropyLoss 
+
 ## Running tests
-To run the unit tests you will have to install PyTorch, which is used to check whether the gradients are calculated correctly
+
+To run the unit tests you will have to install pytest and PyTorch, which is used to check whether the gradients are calculated correctly
+```r
+pytest==7.3.1
+torch==1.12.1 # Install following the instructions in https://pytorch.org/
+```
+
+Run all the tests:
 ```bash
 python -m pytest
 ```

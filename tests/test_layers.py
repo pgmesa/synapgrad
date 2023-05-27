@@ -326,16 +326,20 @@ def test_dropout():
     
     
 def test_batchnorm1d():
-    for _ in range(5):
+    for i in range(5):
         scale = np.random.randint(1, 10, (1,)).astype(np.float32)
         bias = np.random.randint(-10, 10, (1,)).astype(np.float32)
         l = np.random.randn(10, 64).astype(np.float32) * scale + bias
-        momentum = 0.5; affine = True; track_running_stats = True; eps = 1e-5
+        
+        momentum = 0.1 + 0.1*i; affine = True if i % 2 == 0 else False; track_running_stats = True if i == 0 or i == 4 else False
+        eps = 1e-5
+        training = True if i % 2 == 0 else False
 
         bnorm_t = torch.nn.BatchNorm1d(
             l.shape[1], momentum=momentum, affine=affine,
             track_running_stats=track_running_stats, eps=eps)
-
+        if not training:
+            bnorm_t.eval()
         inp_t = torch.tensor(l.copy(), requires_grad=True)
         out_t = bnorm_t(inp_t)
         out_t.sum().backward()
@@ -344,6 +348,8 @@ def test_batchnorm1d():
         bnorm = nn.BatchNorm1d(
             inp.shape[1], momentum=momentum, affine=affine,
             track_running_stats=track_running_stats, eps=eps)
+        if not training:
+            bnorm.eval()
         out = bnorm(inp)
         out.sum().backward()
         
@@ -356,17 +362,20 @@ def test_batchnorm1d():
 
 
 def test_batchnorm2d():
-    for _ in range(5):
+    for i in range(5):
         scale = np.random.randint(1, 10, (1,)).astype(np.float32)
         bias = np.random.randint(-10, 10, (1,)).astype(np.float32)
         l = np.random.randn(10, 3, 100, 100).astype(np.float32) * scale + bias
         
-        momentum = 0.5; affine = True; track_running_stats = True; eps = 1e-5
+        momentum = 0.1 + 0.1*i; affine = True if i % 2 == 0 else False; track_running_stats = True if i == 0 or i == 4 else False
+        eps = 1e-5
+        training = True if i % 2 == 0 else False
 
         bnorm_t = torch.nn.BatchNorm2d(
             l.shape[1], momentum=momentum, affine=affine,
             track_running_stats=track_running_stats, eps=eps)
-
+        if not training:
+            bnorm_t.eval()
         inp_t = torch.tensor(l.copy(), requires_grad=True)
         out_t = bnorm_t(inp_t)
         out_t.sum().backward()
@@ -375,6 +384,8 @@ def test_batchnorm2d():
         bnorm = nn.BatchNorm2d(
             inp.shape[1], momentum=momentum, affine=affine,
             track_running_stats=track_running_stats, eps=eps)
+        if not training:
+            bnorm.eval()
         out = bnorm(inp)
         out.sum().backward()
         

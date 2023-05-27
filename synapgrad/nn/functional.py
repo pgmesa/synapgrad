@@ -901,7 +901,7 @@ def batch_norm(x:Tensor, weight:Tensor=None, bias:Tensor=None, running_mean:Tens
     bias_data = bias.data if bias is not None else None
     
     if x.device == Device.CPU:
-        out_data, new_running_mean, new_running_var = cpu_ops.batch_norm_forward(x.data, weight_data, bias_data,
+        out_data, new_running_mean, new_running_var, *bw_data = cpu_ops.batch_norm_forward(x.data, weight_data, bias_data,
                                               running_mean_data, running_var_data, training, momentum, eps)
     else:
         raise RuntimeError(f"{x.device} not supported")
@@ -918,9 +918,10 @@ def batch_norm(x:Tensor, weight:Tensor=None, bias:Tensor=None, running_mean:Tens
     def backward():
         grad_output = out.grad
         if grad_output.device == Device.CPU:
+            track_running_stats = running_mean is not None and running_var is not None
             x_grad, weight_grad, bias_grad = \
-                cpu_ops.batch_norm_backward(grad_output.data, weight_data, bias_data,
-                            running_mean_data, running_var_data, training, momentum, eps, out_data)
+                cpu_ops.batch_norm_backward(grad_output.data, x.data, weight_data, bias_data,
+                                                            track_running_stats, training, eps, *bw_data)
         else:
             raise RuntimeError(f"{grad_output.device} not supported")
         

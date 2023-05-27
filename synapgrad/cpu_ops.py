@@ -494,7 +494,7 @@ def conv1d_backward(grad, a_shape, weight, bias, stride, padding, dilation, wind
 def conv2d_forward(a, weight, bias, stride, padding, dilation):
     """ 
     Reference to N dimensional convolution:
-    - https://github.com/rsokl/MyGrad/blob/master/src/mygrad/nnet/layers/conv.py
+        - https://github.com/rsokl/MyGrad/blob/master/src/mygrad/nnet/layers/conv.py
     """
     C_out, C_in, kH, kW = weight.shape
     kernel_size = (kH, kW)
@@ -532,48 +532,57 @@ def conv2d_backward(grad, a_shape, weight, bias, stride, padding, dilation, wind
 def batch_norm_forward(x, gamma, beta, running_mean, running_var, training, momentum, eps):
     normed_dims = tuple(i for i in range(x.ndim) if i != 1)
     keepdims_shape = tuple(1 if n != 1 else d for n, d in enumerate(x.shape))
+    n = x.size / x.shape[1]
     
     # normalize x
-    mean = running_mean if running_mean is not None else x.mean(axis=normed_dims)
-    var = running_var if running_var is not None else x.var(axis=normed_dims)
+    mean = running_mean if running_mean is not None and not training else x.mean(axis=normed_dims)
+    var = running_var if running_var is not None and not training else x.var(axis=normed_dims)
     std = np.sqrt(var + eps)
-    
-    if running_mean is not None:
-        running_mean = running_mean * momentum + mean * (1 - momentum)
-    if running_var is not None:
-        running_var = running_var * momentum + var * (1 - momentum)
     
     x_norm = (x - mean.reshape(keepdims_shape)) / std.reshape(keepdims_shape)
     # optional affine transformation
     if gamma is not None:
         x_norm *= gamma.reshape(keepdims_shape)
-
     if beta is not None:
         x_norm += beta.reshape(keepdims_shape)
+        
+    if running_mean is not None and training:
+        running_mean = mean * momentum + running_mean * (1 - momentum)
+    if running_var is not None and training:
+        unbiased_var = var * (n / (n - 1))
+        running_var = unbiased_var * momentum + running_var * (1 - momentum)
     
-    return x_norm, running_mean, running_var
+    return x_norm, running_mean, running_var, mean, var
 
-def batch_norm_backward(grad, x, gamma, beta, running_mean, running_var, training, momentum, eps, x_norm):
+def batch_norm_backward(grad, x, gamma, beta, track_running_stats, training, eps, mean, variance):
+    """ 
+    References:
+        - https://stackoverflow.com/questions/67968913/derivative-of-batchnorm2d-in-pytorch
+        - https://github.com/renan-cunha/BatchNormalization/blob/master/src/feed_forward/layers.py
+    """
     normed_dims = tuple(i for i in range(x.ndim) if i != 1)
     keepdims_shape = tuple(1 if n != 1 else d for n, d in enumerate(x.shape))
+    n = x.size / x.shape[1]
     
-    N = x.size / x.shape[1]
-
-    # all sums carried over non-channel dims
-    # (1/sqrt(var + eps)) * [dL - dL.mean() - (1/N)*x_norm*(x_norm @ dL)]
-    input_grad = grad - np.mean(grad, axis=normed_dims, keepdims=True)
-
-    rterm = x_norm * np.reshape(
-        np.einsum(grad, range(x.ndim), x_norm, range(x.ndim), [1]),
-        keepdims_shape,
-    )
-    rterm = rterm / N
-    input_grad = (input_grad - rterm) / std
-    if (gamma is not None):  # backprop through optional affine transformation
-        input_grad *= gamma.reshape(keepdims_shape)
-        gamma_grad = np.einsum(grad, range(x.ndim), x_norm, range(x.ndim), [1])
+    mean = mean.reshape(keepdims_shape)
+    variance = variance.reshape(keepdims_shape)
+    x_norm = (x - mean) / np.sqrt(variance + eps)
+    
+    dL_dxi_hat = grad
+    dL_dgamma = None
+    if gamma is not None:
+        dL_dxi_hat = grad * gamma.reshape(keepdims_shape)
+        dL_dgamma = (grad * x_norm).sum(normed_dims)
         
-    if (beta is not None):
-        beta_grad = grad.sum(axis=normed_dims)
+    dL_dbeta = None
+    if beta is not None:
+        dL_dbeta = grad.sum(normed_dims)
     
-    return input_grad
+    if training or not track_running_stats:
+        dL_dvar = (-0.5 * dL_dxi_hat * (x - mean)).sum(normed_dims, keepdims=True)  * ((variance + eps) ** -1.5)
+        dL_davg = (-1.0 / np.sqrt(variance + eps) * dL_dxi_hat).sum(normed_dims, keepdims=True) + (dL_dvar * (-2.0 * (x - mean)).sum(normed_dims, keepdims=True) / n)
+        dL_dxi = (dL_dxi_hat / np.sqrt(variance + eps)) + (2.0 * dL_dvar * (x - mean) / n) + (dL_davg / n)
+    else:
+        dL_dxi = dL_dxi_hat
+    
+    return dL_dxi, dL_dgamma, dL_dbeta

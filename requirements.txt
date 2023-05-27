@@ -3,7 +3,7 @@
 # *********************
 numpy==1.23.5 # Core
 # graphviz==0.20.1 # (Optional) Visualize graph
-
+# pytest==7.3.1 # (Optional) To tun the tests
 # *********************************
 # ***** notebook requirements *****
 # *********************************

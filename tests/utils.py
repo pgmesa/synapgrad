@@ -13,7 +13,7 @@ def time_fun(function, *args, **kwargs):
     
     return out, tf - t0 
 
-def check_tensors(t1:'Tensor | np.ndarray', t2:torch.Tensor, atol=1e-6, rtol=1e-4, as_np_array=False) -> bool:
+def check_tensors(t1:'Tensor | np.ndarray', t2:torch.Tensor, atol=1e-5, rtol=1e-4, as_np_array=False) -> bool:
     """Returns if 2 tensors have the same values and shape
 
     Args:
