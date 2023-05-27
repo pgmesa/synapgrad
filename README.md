@@ -25,10 +25,10 @@ Automatic gradient calculation and backpropagation algorithm
 ### Requirements
 ```r
 numpy==1.23.5 # Core
-# graphviz==0.20.1 # (Optional) Visualize DAG
+graphviz==0.20.1 # (Optional) Visualize DAG
 ```
 
-In the `examples/visualize_graph.ipynb` notebook there is an example of how to display the graph that synapgrad creates in the background as operations are chained.
+In the `examples/visualize_graph.ipynb` notebook there is an example of how to display the graph that synapgrad creates in the background as operations are chained:
 
 ```python
 import synapgrad
@@ -40,6 +40,8 @@ with synapgrad.retain_grads():
     y = synapgrad.addmm(x3, x1, x2) # x3 + x1 @ x2
     z = x2.sqrt() @ y
     z.backward(synapgrad.ones(z.shape))
+    
+# graphviz is required to draw the graph (pip install graphviz==0.20.1)
 z.draw_graph()
 ```
 ![Graph Image](/.github/graph_example.svg)
@@ -54,7 +56,7 @@ Built on top of the engine, synapgrad has a deep learning library that implement
 - `Optimizers`: SGD, Adam
 - `Losses`: MSELoss, NLLLoss, BCELoss, BCEWithLogitsLoss, CrossEntropyLoss
 
-This project includes three Jupyter notebooks (located in `examples/`) that tackle three beginner-level AI problems.
+This project includes three Jupyter notebooks (located in `examples/`) that tackle three beginner-level AI problems:
 
 - [x] 1. Basic MLP for binary classification (sklearn 'make_moons' toy dataset)
 - [x] 2. MLP for handwritten digits classification (MNIST dataset) 
@@ -74,15 +76,15 @@ torch==1.12.1 # Install following the instructions in https://pytorch.org/
 ### Comparisons with pytorch
 To measure the efficiency of synapgrad, all three examples were compared to PyTorch. All training sessions were conducted on a laptop with an Intel Core i7 10th generation processor and 16 GB of RAM.
 
-| Notebook Example | torch | synapgrad | Model params | Dataset size | Batch size | Epochs | Modules used |
-|     :---:        |  :---:  |  :---:  | :---:  | :---:  | :---:  | :---:  |  :---:  |
-| 1 (MLP) | 1.5 s | 1.6 s | 337 | [150, 2] | 4 | 50 | Linear, ReLU, MSELoss
-| 2 (MLP) | 41 s | 1 min 28 s | 178_710 |  [60_000, 28, 28]  | 64 | 20 | Flatten, Linear, BatchNorm1d, ReLU, Dropout, LogSoftmax, NLLLoss  
-| 3 (CNN) |  2 min 5 s  |  13 min 10 s |  20_586  | [60_000, 1, 28, 28]  |  128  | 5 | Conv2d, BatchNorm2d, ReLU, Dropout, MaxPool2d, Flatten, Linear, CrossEntropyLoss 
+| Notebook Example | torch | synapgrad | Model params | Dataset size | Batch size | Epochs |
+|     :---:        |  :---:  |  :---:  | :---:  | :---:  | :---:  | :---:  |
+| 1 (MLP) | 1.5 s | 1.6 s | 337 | [150, 2] | 4 | 50 |
+| 2 (MLP) | 41 s | 1 min 28 s | 178_710 |  [60_000, 28, 28]  | 64 | 20 | 
+| 3 (CNN) |  2 min 5 s  |  13 min 10 s |  20_586  | [60_000, 1, 28, 28]  |  128  | 5 |
 
 ## Running tests
 
-To run the unit tests you will have to install pytest and PyTorch, which is used to check whether the gradients are calculated correctly
+To run the unit tests you will have to install Pytest and PyTorch, which is used to check whether the gradients are calculated correctly
 ```r
 pytest==7.3.1
 torch==1.12.1 # Install following the instructions in https://pytorch.org/
