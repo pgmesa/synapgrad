@@ -1,6 +1,6 @@
 #  SynapGrad
 
-This is another implementation of synapgrad but with a more torch-like engine. However, this version is outdated and not as efficient as synapgrad's main branch. Despite that, I still recommend taking a look at it as it replicates better how pytorch engine works.
+This is another implementation of synapgrad but with a more torch-like engine. However, this version is outdated and far less efficient than synapgrad's main branch. Despite that, I still recommend taking a look at it as it replicates better how pytorch autograd engine works.
 
 ## Autograd
 Automatic gradient calculation and backpropagation algorithm
