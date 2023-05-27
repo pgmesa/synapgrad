@@ -1,6 +1,6 @@
 #  SynapGrad
 
-An autograd Tensor-based engine with a deep learning library built on top of it made from scratch
+A lightweight autograd Tensor-based engine with a deep learning library built on top of it made from scratch
 
 [![Downloads](https://static.pepy.tech/personalized-badge/synapgrad?period=total&units=international_system&left_color=black&right_color=blue&left_text=Downloads)](https://pepy.tech/project/synapgrad)
 
@@ -17,7 +17,7 @@ Built on top of the engine, the deep learning library implements the most common
 This library mimics Pytorch in a simplified way, but with similar functions and behaviour. 
 
 ## Aim of the project
-The objective of this project is to develop a deep learning library entirely from scratch, without relying on any existing frameworks (such as Keras, PyTorch, TensorFlow, scikit-learn, etc.). The primary goal is to gain an in-depth comprehension of the fundamental mechanisms underlying deep learning.
+The objective of this project is to develop a lightweight deep learning library entirely from scratch, without relying on any existing frameworks (such as Keras, PyTorch, TensorFlow, scikit-learn, etc.), using only the `numpy` library.
 
 ## Autograd Engine
 Automatic gradient calculation and backpropagation algorithm
