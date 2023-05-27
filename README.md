@@ -76,11 +76,11 @@ torch==1.12.1 # Install following the instructions in https://pytorch.org/
 ### Comparisons with pytorch
 To measure the efficiency of synapgrad, all three examples were compared to PyTorch. All training sessions were conducted on a laptop with an Intel Core i7 10th generation processor and 16 GB of RAM.
 
-| Notebook Example | torch | synapgrad | Model params | Dataset size | Batch size | Epochs |
-|     :---:        |  :---:  |  :---:  | :---:  | :---:  | :---:  | :---:  |
-| 1 (MLP) | 1.5 s | 1.6 s | 337 | [150, 2] | 4 | 50 |
-| 2 (MLP) | 41 s | 1 min 28 s | 178_710 |  [60_000, 28, 28]  | 64 | 20 | 
-| 3 (CNN) |  2 min 5 s  |  13 min 10 s |  20_586  | [60_000, 1, 28, 28]  |  128  | 5 |
+| Notebook | torch | synapgrad | Model params | Dataset size | Batch size | Epochs |
+|     :---:     |  :---:  |  :---:  | :---:  | :---:  | :---:  | :---:  |
+| basic_mlp.ipynb | 1.5 s | 1.6 s | 337 | [150, 2] | 4 | 50 |
+| mnist_mlp.ipynb | 41 s | 1 min 28 s | 178_710 |  [60_000, 28, 28]  | 64 | 20 | 
+| mnist_cnn.ipynb |  2 min 5 s  |  13 min 10 s |  20_586  | [60_000, 1, 28, 28]  |  128  | 5 |
 
 ## Running tests
 
