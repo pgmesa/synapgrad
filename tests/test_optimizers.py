@@ -68,3 +68,20 @@ def test_Adam():
     opt_t = torch.optim.Adam([param_t], **attrs)
     
     check_optimizer(opt, param, opt_t, param_t)
+    
+    
+def test_AdamW():
+    attrs = {
+        "lr": 0.001,
+        "betas": (0.9, 0.999),
+        "weight_decay": 0.7,
+        "maximize": False
+    }
+    
+    param = Tensor(np.ones((4,4)), requires_grad=True)
+    opt = optim.AdamW([param], **attrs)
+    
+    param_t = torch.tensor(np.ones((4,4)), requires_grad=True)
+    opt_t = torch.optim.AdamW([param_t], **attrs)
+    
+    check_optimizer(opt, param, opt_t, param_t)

@@ -11,10 +11,10 @@ with open("requirements.txt", "r", encoding='utf-8') as fh:
 
 setuptools.setup(
     name='synapgrad',  
-    version='0.5.1',
+    version='0.6.0',
     author="Pablo García Mesa",
     author_email="pgmesa.sm@gmail.com",
-    description="An autograd Tensor-based engine with a deep learning library built on top of it made from scratch",
+    description="A lightweight autograd Tensor-based engine with a deep learning library built on top of it made from scratch",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/pgmesa/synapgrad",
