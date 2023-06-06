@@ -70,6 +70,17 @@ class Module:
         
         self._parameters[name] = parameter
         object.__setattr__(self, name, parameter)
+        
+    def apply(self, fn):
+        """ 
+        Applies fn recursively to every submodule as well as self. 
+        Typical use includes initializing the parameters of a model
+        """
+        self.check_is_initialized()
+        
+        fn(self)
+        for m in self.submodules():
+            m.apply(fn)
     
     def __setattr__(self, __name: str, __value: Any) -> None:
         """

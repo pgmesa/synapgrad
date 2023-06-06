@@ -60,10 +60,20 @@ def tensor(data, requires_grad=False, dtype=None, device=None) -> 'Tensor':
     data = np.array(data).astype(default_type__)
     return Tensor(data, requires_grad=requires_grad, dtype=dtype, device=device)
 
-def ones(shape, dtype=None, requires_grad=False, name=None, device=None):
+def empty(*shape, dtype=None, requires_grad=False, name=None, device=None):
+    """
+    Creates an empty Tensor
+    """
+    if len(shape) == 1 and isinstance(shape[0], (list, tuple)):
+        shape = shape[0]
+    return Tensor(np.empty(shape).astype(default_type__), dtype=dtype, requires_grad=requires_grad, name=name, device=device)
+
+def ones(*shape, dtype=None, requires_grad=False, name=None, device=None):
     """
     Creates a Tensor filled with ones
     """
+    if len(shape) == 1 and isinstance(shape[0], (list, tuple)):
+        shape = shape[0]
     return Tensor(np.ones(shape).astype(default_type__), dtype=dtype, requires_grad=requires_grad, name=name, device=device)
 
 def ones_like(tensor:'Tensor', dtype=None, requires_grad=False, name=None, device=None):
@@ -72,10 +82,12 @@ def ones_like(tensor:'Tensor', dtype=None, requires_grad=False, name=None, devic
     """
     return Tensor(np.ones_like(tensor.data), dtype=dtype, requires_grad=requires_grad, name=name, device=device)
 
-def zeros(shape, dtype=None, requires_grad=False, name=None, device=None):
+def zeros(*shape, dtype=None, requires_grad=False, name=None, device=None):
     """
     Creates a Tensor filled with zeros
     """
+    if len(shape) == 1 and isinstance(shape[0], (list, tuple)):
+        shape = shape[0]
     return Tensor(np.zeros(shape).astype(default_type__), dtype=dtype, requires_grad=requires_grad, name=name, device=device)
 
 def zeros_like(tensor:'Tensor', dtype=None, requires_grad=False, name=None, device=None):
@@ -94,12 +106,16 @@ def rand(*shape, dtype=None, requires_grad=False, name=None, device=None):
     """
     Creates a Tensor filled with values drawn from the uniform distribution
     """
+    if len(shape) == 1 and isinstance(shape[0], (list, tuple)):
+        shape = shape[0]
     return Tensor(np.random.rand(*shape).astype(default_type__), dtype=dtype, requires_grad=requires_grad, name=name, device=device)
 
 def randn(*shape, dtype=None, requires_grad=False, name=None, device=None):
     """
     Creates a Tensor filled with values drawn from the standard Gaussian distribution
     """
+    if len(shape) == 1 and isinstance(shape[0], (list, tuple)):
+        shape = shape[0]
     return Tensor(np.random.randn(*shape).astype(default_type__), dtype=dtype, requires_grad=requires_grad, name=name, device=device)
 
 def normal(loc, scale, *shape, dtype=None, requires_grad=False, name=None, device=None):
@@ -108,11 +124,11 @@ def normal(loc, scale, *shape, dtype=None, requires_grad=False, name=None, devic
     """
     return Tensor(np.random.normal(loc, scale, *shape).astype(default_type__), dtype=dtype, requires_grad=requires_grad, name=name, device=device)
 
-def randint(low, high, *shape,  dtype=None, requires_grad=False, name=None, device=None):
+def randint(low, high, shape:tuple, dtype=None, requires_grad=False, name=None, device=None):
     """
     Creates a Tensor filled with integer values drawn in the range between low and high
     """
-    return Tensor(np.random.randint(low, high, *shape).astype(default_type__), dtype=dtype, requires_grad=requires_grad, name=name, device=device)
+    return Tensor(np.random.randint(low, high, shape).astype(np.int64), dtype=dtype, requires_grad=requires_grad, name=name, device=device)
 
 def eye(dim, dtype=None, requires_grad=False, name=None, device=None):
     """

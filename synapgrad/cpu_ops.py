@@ -294,6 +294,20 @@ def relu_backward(grad:np.ndarray, a:np.ndarray) -> np.ndarray:
     return grad * (a > 0)
 
 
+def leaky_relu_forward(a:np.ndarray, neg_slope:float) -> np.ndarray:
+    return np.maximum(neg_slope * a, a)
+
+def leaky_relu_backward(grad:np.ndarray, a:np.ndarray, neg_slope:float) -> np.ndarray:
+    return grad * ((a > 0) + neg_slope * (a <= 0))
+
+
+def selu_forward(a:np.ndarray, alpha:float, scale:float) -> np.ndarray:
+    return scale * (np.maximum(0, a) + np.minimum(0, alpha * (np.exp(a) - 1)))
+
+def selu_backward(grad:np.ndarray, a:np.ndarray, alpha:float, scale:float) -> np.ndarray:
+    return scale * grad *((a > 0) +  alpha * np.exp(a) * (a <= 0))
+
+
 def tanh_forward(a:np.ndarray) -> np.ndarray:
     return np.tanh(a)
 

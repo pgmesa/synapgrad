@@ -16,9 +16,40 @@ class ReLU(nn.Module):
     """
     
     def forward(self, x:Tensor) -> Tensor:
-        F.relu.__doc__
         return F.relu(x)
-
+    
+    
+class LeakyReLU(nn.Module):
+    """
+    LeakyReLU activation function. 
+    
+    The LeakyReLU activation function is defined as:
+    f(x) = max(0, x) + negative_slope * min(0, x)
+    """
+    
+    def __init__(self, negative_slope:float=0.01) -> None:
+        super().__init__()
+        self.negative_slope = negative_slope
+        
+    def forward(self, x:Tensor) -> Tensor:
+        return F.leaky_relu(x, self.negative_slope)
+    
+    
+class SELU(nn.Module):
+    """
+    SELU activation function.
+    
+    The SELU activation function is defined as:
+    f(x) = scale * (max(0, x) + min(0, alpha*(exp(x)-1))
+    
+    with:
+        - alpha = 1.6732632423543772848170429916717
+        - scale = 1.0507009873554804934193349852946
+    """
+    
+    def forward(self, x:Tensor) -> Tensor:
+        return F.selu(x)
+    
 
 class Tanh(nn.Module):
     """ 

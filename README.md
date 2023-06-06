@@ -49,10 +49,11 @@ z.draw_graph()
 ## Deep learning library
 Built on top of the engine, synapgrad has a deep learning library that implements the following features:
 
-- `Weight initialization`: Xavier Glorot uniform, Xavier Glorot normal, He Kaiming uniform, He Kaiming normal, LeCun uniform
-- `Activations`: ReLU, Tanh, Sigmoid, Softmax, LogSoftmax
+- `Weight initialization`: Xavier Glorot uniform, Xavier Glorot normal, He Kaiming uniform, He Kaiming normal
+- `Activations`: ReLU, LeakyReLU, SELU, Tanh, Sigmoid, Softmax, LogSoftmax
+- `Layers`: Linear, Flatten, Dropout, Unfold, Fold
 - `Convolutions`: MaxPool1d, MaxPool2d, AvgPool1d, AvgPool2d, Conv1d, Conv2d
-- `Layers`: Linear, Unfold, Fold, BatchNorm1d, BatchNorm2d, Flatten, Dropout
+- `Normalizations`: BatchNorm1d, BatchNorm2d
 - `Optimizers`: SGD, Adam
 - `Losses`: MSELoss, NLLLoss, BCELoss, BCEWithLogitsLoss, CrossEntropyLoss
 

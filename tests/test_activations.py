@@ -30,6 +30,14 @@ def check_activation(act, act_t):
 def test_relu():
     check_activation(nn.ReLU(), torch.nn.ReLU())
     
+    
+def test_leaky_relu():
+    check_activation(nn.LeakyReLU(), torch.nn.LeakyReLU())
+    
+    
+def test_selu():
+    check_activation(nn.SELU(), torch.nn.SELU())
+    
 
 def test_tanh():
     check_activation(nn.Tanh(), torch.nn.Tanh())    

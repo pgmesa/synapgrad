@@ -1,14 +1,16 @@
+import math
 import numpy as np
 import synapgrad
 from synapgrad import nn
+from synapgrad.nn.modules import Parameter
 from synapgrad.tensor import Tensor
 from synapgrad.nn import functional as F
-from synapgrad.nn.initializations import init_weights
+from synapgrad.nn import init
 
 
 class Linear(nn.Module):
     
-    def __init__(self, input_size:int, output_size:int, weight_init_method='he_normal', bias=True):
+    def __init__(self, in_features:int, out_features:int, bias=True):
         """ 
         Applies a linear transformation to the incoming data: y = x @ w.T + b. 
         
@@ -18,8 +20,8 @@ class Linear(nn.Module):
             - https://pytorch.org/docs/stable/generated/torch.nn.Linear.html
         
         Args:
-            input_size (int): The number of features in the input tensor.
-            output_size (int): The number of features in the output tensor.
+            in_features (int): The number of features in the input tensor.
+            out_features (int): The number of features in the output tensor.
             weight_init_method (str): The method to use for initializing the weights.
                 Options are 'glorot_normal', 'glorot_uniform', 'he_normal', 'he_uniform', 'lecun_uniform'.
                 Defaults to 'he_normal'.
@@ -28,9 +30,15 @@ class Linear(nn.Module):
         Returns:
             A tensor of shape (batch_size, output_size)
         
+        Variables:
+            - weight (synapgrad.Tensor) - the learnable weights of the module of shape
+                (out_features, in_features). The values are initialized from `U(-sqrt(k), sqrt(k))`
+                where `k = 1/in_features`.
+            - bias (synapgrad.Tensor) - the learnable bias of the module of shape (out_features).
+                If `bias=True`, the values are initialized from `U(-sqrt(k), sqrt(k))` where
+                `k = 1/in_features`.
+        
         Notes:
-            - The weights are initialized using the method specified in `weight_init_method`.
-            - The bias is initialized to zero.
             - The input tensor is expected to have a shape of (batch_size, input_size).
             - The output tensor is expected to have a shape of (batch_size, output_size).
         
@@ -40,36 +48,42 @@ class Linear(nn.Module):
             >>> y = layer(x)
         """
         super().__init__()
-        self.input_size = input_size
-        self.output_size = output_size
-        
-        self.weight_init_method = weight_init_method
-        weight_values = init_weights((output_size, input_size), weight_init_method).astype(np.float32)
-        self.weight = nn.Parameter(weight_values, requires_grad=True, name='weight')
+        self.in_features = in_features
+        self.out_features = out_features
+      
+        self.weight = nn.Parameter(synapgrad.empty((out_features, in_features), dtype=np.float32, requires_grad=True, name='weight'))
         if bias: 
-            bias = synapgrad.zeros((output_size,), dtype=np.float32, requires_grad=True, name='bias')
-            self.bias = nn.Parameter(bias)
-        else: self.bias = None
+            self.bias = nn.Parameter(synapgrad.empty((out_features,), dtype=np.float32, requires_grad=True, name='bias'))
+        else:
+            self.bias = None
+        self.reset_parameters()
+        
+    def reset_parameters(self):
+        """ 
+        Resets the parameters of the layer.
+        """
+        fan_in, _ = init._calculate_fan_in_and_fan_out(self.weight)
+        std = 1. / math.sqrt(float(fan_in)) if fan_in > 0 else 0
+        init.uniform_(self.weight, -std, std)
+        if self.bias is not None:
+            init.uniform_(self.bias, -std, std)
         
     def forward(self, x:Tensor) -> Tensor:
-        assert x.shape[1] == self.input_size, f"Expected input size '{self.input_size}' but received '{x.shape[1]}'"
+        assert x.shape[1] == self.in_features, f"Expected input size '{self.in_features}' but received '{x.shape[1]}'"
         return F.linear(x, self.weight, self.bias)
 
 
 class Neuron(Linear):
 
-    def __init__(self, input_size: int, weight_init_method='he_normal', bias=True):
+    def __init__(self, in_features: int, bias=True):
         """ 
-        Creates a single Neuron layer. It's just a linear layer with output_size = 1
+        Creates a single Neuron layer. It's just a linear layer with out_features = 1
         
         Reference:
             - https://pytorch.org/docs/stable/generated/torch.nn.Linear.html
         
         Args:
             input_size (int): The number of features in the input tensor.
-            weight_init_method (str): The method to use for initializing the weights.
-                Options are 'glorot_normal', 'glorot_uniform', 'he_normal', 'he_uniform', 'lecun_uniform'.
-                Defaults to 'he_normal'.
             bias: Whether to use a bias or not. Defaults to True.
          
         Returns:
@@ -79,7 +93,7 @@ class Neuron(Linear):
             >>> layer = nn.Neuron(input_size=3)
             >>> x = synapgrad.ones((2, 3))
         """
-        super().__init__(input_size, 1, weight_init_method=weight_init_method, bias=bias)
+        super().__init__(in_features, 1, bias=bias)
     
 
 class Flatten(nn.Module):
@@ -365,7 +379,7 @@ class AvgPool2d(nn.Module):
 
 class Conv1d(nn.Module):
     
-    def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0, dilation=1, bias=True, weight_init_method='he_uniform') -> None:
+    def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0, dilation=1, bias=True) -> None:
         """
         Applies 1D Convolution to a batch of N images with C channels (N, C, W).
         
@@ -402,14 +416,22 @@ class Conv1d(nn.Module):
         self.stride = stride
         self.padding = padding
         self.dilation = dilation
-        
-        self.weight_init_method = weight_init_method
-        weight_values = init_weights((out_channels, in_channels, kernel_size), weight_init_method).astype(np.float32)
-        self.weight = nn.Parameter(weight_values, requires_grad=True, name='weight')
+
+        weight = synapgrad.empty((out_channels, in_channels, kernel_size), dtype=np.float32, requires_grad=True, name='weight')
+        self.weight = nn.Parameter(weight)
         if bias: 
-            bias = synapgrad.zeros((out_channels,), dtype=np.float32, requires_grad=True, name='bias')
+            bias = synapgrad.empty((out_channels,), dtype=np.float32, requires_grad=True, name='bias')
             self.bias = nn.Parameter(bias)
-        else: self.bias = None
+        else:
+            self.bias = None
+        self.reset_parameters()
+        
+    def reset_parameters(self) -> None:
+        fan_in, _ = init._calculate_fan_in_and_fan_out(self.weight)
+        bound = 1. / math.sqrt(float(fan_in)) if fan_in > 0 else 0
+        nn.init.uniform_(self.weight, -bound, bound)
+        if self.bias is not None:
+            nn.init.uniform_(self.bias, -bound, bound)
     
     def forward(self, x: Tensor) -> Tensor:
         return F.conv1d(x, self.weight, self.bias, self.stride, self.padding, self.dilation)
@@ -417,7 +439,7 @@ class Conv1d(nn.Module):
 
 class Conv2d(nn.Module):
     
-    def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0, dilation=1, bias=True, weight_init_method='he_uniform') -> None:
+    def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0, dilation=1, bias=True) -> None:
         """
         Applies 2D Convolution to a batch of N images with C channels (N, C, H, W).
         
@@ -434,6 +456,12 @@ class Conv2d(nn.Module):
                 of input. Default: 0
             dilation (int or tuple, optional): controls the spacing between the kernel points. Default: 1
             bias: Whether to use a bias or not. Defaults to True.
+            
+        Variables:
+            - weight (Tensor): the learnable weights of the module of shape (C_out, C_in, kH, kW). The
+                values of these weights are sampled from `U(-sqrt(k), sqrt(k))` where k = 1 / (C_in * kH * kW)
+            - bias (Tensor): the learnable bias of the module of shape (C_out). If bias is True, then the values
+                are initialized sampling from `U(-sqrt(k), sqrt(k))` where k = 1 / (C_in * kH * kW)
         
         Output:
             Tensor of shape (N, C_out, lW, lH).
@@ -460,13 +488,21 @@ class Conv2d(nn.Module):
         self.padding = padding
         self.dilation = dilation
         
-        self.weight_init_method = weight_init_method
-        weight_values = init_weights((out_channels, in_channels, *kernel_size), weight_init_method).astype(np.float32)
-        self.weight = nn.Parameter(weight_values, requires_grad=True, name='weight')
+        weight = synapgrad.empty((out_channels, in_channels, kernel_size[0], kernel_size[1]), dtype=np.float32, requires_grad=True, name='weight')
+        self.weight = nn.Parameter(weight)
         if bias:
-            bias = synapgrad.zeros((out_channels,), dtype=np.float32, requires_grad=True, name='bias') 
+            bias = synapgrad.empty((out_channels,), dtype=np.float32, requires_grad=True, name='bias') 
             self.bias = nn.Parameter(bias)
-        else: self.bias = None
+        else: 
+            self.bias = None
+        self.reset_parameters()
+        
+    def reset_parameters(self) -> None:
+        fan_in, _ = init._calculate_fan_in_and_fan_out(self.weight)
+        bound = 1. / math.sqrt(float(fan_in)) if fan_in > 0 else 0
+        nn.init.uniform_(self.weight, -bound, bound)
+        if self.bias is not None:
+            nn.init.uniform_(self.bias, -bound, bound)
     
     def forward(self, x: Tensor) -> Tensor:
         return F.conv2d(x, self.weight, self.bias, self.stride, self.padding, self.dilation)
@@ -496,14 +532,21 @@ class BatchNorm(nn.Module):
         
         if affine:
             # gamma
-            gamma = synapgrad.ones(num_features, requires_grad=True, dtype=dtype, name="gamma")
+            gamma = synapgrad.empty(num_features, requires_grad=True, dtype=dtype, name="gamma")
             self.weight = nn.Parameter(gamma)
             # beta
-            beta = synapgrad.zeros(num_features, requires_grad=True, dtype=dtype, name="beta")
+            beta = synapgrad.empty(num_features, requires_grad=True, dtype=dtype, name="beta")
             self.bias = nn.Parameter(beta)
+            # Initialize parameters
+            self.reset_parameters()
         else:
             self.weight = None
             self.bias = None
+            
+    def reset_parameters(self):
+        if self.affine:
+            init.ones_(self.weight)
+            init.zeros_(self.bias)
                 
     def forward(self, x: Tensor) -> Tensor:
         if self.momentum is None:
@@ -529,30 +572,6 @@ class BatchNorm(nn.Module):
             
         return F.batch_norm(x, self.weight, self.bias, running_mean, running_var,
                                                 bn_training, exponential_average_factor, self.eps)
-
-        # calculate running estimates
-        if self.training:
-            mean = x.mean(dim=dims)
-            # use biased var in train
-            var_sum = ((x - mean.reshape(view_shape))**2).sum(dim=dims)
-            var = var_sum / n
-            
-            with synapgrad.no_grad():
-                r_mu = (exponential_average_factor * mean.data + (1 - exponential_average_factor) * self.running_mean.data)
-                self.running_mean = synapgrad.tensor(r_mu)
-                
-                unbiased_var = var_sum.data / (n - 1)
-                r_var = (exponential_average_factor * unbiased_var + (1 - exponential_average_factor) * self.running_var.data)
-                self.running_var = synapgrad.tensor(r_var)
-        else:
-            mean = self.running_mean
-            var = self.running_var
-
-        out = (x - mean.reshape(view_shape)) / (var.reshape(view_shape) + self.eps).sqrt()
-        if self.affine:
-            out = out * self.weight.reshape(view_shape) + self.bias.reshape(view_shape)
-
-        return out
 
 
 class BatchNorm1d(BatchNorm):

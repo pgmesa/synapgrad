@@ -47,6 +47,77 @@ def relu(x:Tensor):
     return out
 
 
+def leaky_relu(x:Tensor, negative_slope=0.01):
+    """
+    Leaky ReLU activation function.
+
+    Args:
+        x (Tensor): tensor
+
+    Returns:
+        Tensor: result
+    """
+    if not isinstance(x, Tensor):
+        raise TypeError(f"Expected x to be a Tensor but got {type(x)}")
+    
+    if x.device == Device.CPU:
+        out_data = cpu_ops.leaky_relu_forward(x.data, negative_slope)
+    else:
+        raise RuntimeError(f"{x.device} not supported")
+
+    out = Tensor(out_data, device=x.device, children=(x,), requires_grad=x.requires_grad, operation="LeakyRelu")
+    
+    def backward():
+        grad_output = out.grad
+        if grad_output.device == Device.CPU:
+            a_grad = cpu_ops.leaky_relu_backward(grad_output.data, x.data, negative_slope)
+        else:
+            raise RuntimeError(f"{grad_output.device} not supported")
+        
+        if x.requires_grad: x._grad += a_grad 
+    
+    if out.requires_grad: out.grad_fn = BackwardFunction(backward, out._operation)
+        
+    return out
+
+
+def selu(x:Tensor):
+    """
+    SELU activation function.
+
+    Args:
+        x (Tensor): tensor
+
+    Returns:
+        Tensor: result
+    """
+    if not isinstance(x, Tensor):
+        raise TypeError(f"Expected x to be a Tensor but got {type(x)}")
+    
+    alpha = 1.6732632423543772848170429916717
+    scale = 1.0507009873554804934193349852946
+    
+    if x.device == Device.CPU:
+        out_data = cpu_ops.selu_forward(x.data, alpha, scale)
+    else:
+        raise RuntimeError(f"{x.device} not supported")
+
+    out = Tensor(out_data, device=x.device, children=(x,), requires_grad=x.requires_grad, operation="SELU")
+    
+    def backward():
+        grad_output = out.grad
+        if grad_output.device == Device.CPU:
+            a_grad = cpu_ops.selu_backward(grad_output.data, x.data, alpha, scale)
+        else:
+            raise RuntimeError(f"{grad_output.device} not supported")
+        
+        if x.requires_grad: x._grad += a_grad 
+    
+    if out.requires_grad: out.grad_fn = BackwardFunction(backward, out._operation)
+        
+    return out
+
+
 def tanh(x:Tensor):
     """ 
     Tanh activation function.

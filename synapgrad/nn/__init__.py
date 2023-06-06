@@ -1,6 +1,6 @@
 
 from synapgrad.nn.modules import Module, Sequential, Parameter
-from synapgrad.nn.activations import ReLU, Sigmoid, Tanh, Softmax, LogSoftmax
+from synapgrad.nn.activations import ReLU, LeakyReLU, SELU, Sigmoid, Tanh, Softmax, LogSoftmax
 from synapgrad.nn.losses import (
     Loss, MSELoss, CrossEntropyLoss, NLLLoss, BCELoss, BCEWithLogitsLoss
 )
