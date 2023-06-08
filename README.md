@@ -4,11 +4,14 @@ A lightweight autograd Tensor-based engine with a deep learning library built on
 
 [![Downloads](https://static.pepy.tech/personalized-badge/synapgrad?period=total&units=international_system&left_color=black&right_color=blue&left_text=Downloads)](https://pepy.tech/project/synapgrad)
 
+
 ## Installation
+|      Requirements       |       Version       |    Version used to develop   |
+| :---------------------: | :-----------------: | :--------------------------: |
+|     <img src="https://skillicons.dev/icons?i=python&theme=dark" width="48">     |   Only tested in 3.9  |  3.9.16  |
 ```bash
 pip install synapgrad
 ```
-
 ## Technical Description
 This project implements a completely functional engine for tracking operations between Tensors, by dynamically building a Directed Acyclic Graph (DAG), and an automatic gradient calculation and backpropagation algorithm (reverse-mode autodiff) over this DAG.
 
