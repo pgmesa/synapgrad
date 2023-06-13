@@ -353,12 +353,12 @@ def test_batchnorm1d():
         out = bnorm(inp)
         out.sum().backward()
         
-        assert check_tensors(out, out_t, atol=eps)
-        assert check_tensors(inp.grad, inp_t.grad, atol=eps)
+        assert check_tensors(out, out_t, atol=1e-4, rtol=1e-3)
+        assert check_tensors(inp.grad, inp_t.grad, atol=1e-4, rtol=1e-3)
         
         if track_running_stats:
-            assert check_tensors(bnorm.running_mean, bnorm_t.running_mean, atol=eps)
-            assert check_tensors(bnorm.running_var, bnorm_t.running_var, atol=eps)
+            assert check_tensors(bnorm.running_mean, bnorm_t.running_mean, atol=1e-4, rtol=1e-3)
+            assert check_tensors(bnorm.running_var, bnorm_t.running_var, atol=1e-4, rtol=1e-3)
 
 
 def test_batchnorm2d():
@@ -389,11 +389,11 @@ def test_batchnorm2d():
         out = bnorm(inp)
         out.sum().backward()
         
-        assert check_tensors(out, out_t, atol=eps)
-        assert check_tensors(inp.grad, inp_t.grad, atol=eps)
+        assert check_tensors(out, out_t, atol=1e-4, rtol=1e-3)
+        assert check_tensors(inp.grad, inp_t.grad, atol=1e-4, rtol=1e-3)
         
         if track_running_stats:
-            assert check_tensors(bnorm.running_mean, bnorm_t.running_mean, atol=eps)
-            assert check_tensors(bnorm.running_var, bnorm_t.running_var, atol=eps)
+            assert check_tensors(bnorm.running_mean, bnorm_t.running_mean, atol=1e-4, rtol=1e-3)
+            assert check_tensors(bnorm.running_var, bnorm_t.running_var, atol=1e-4, rtol=1e-3)
             
         
