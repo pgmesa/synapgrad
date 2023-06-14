@@ -12,12 +12,12 @@ pip install synapgrad
 ## Technical Description
 This project implements a completely functional engine for tracking operations between Tensors, by dynamically building a Directed Acyclic Graph (DAG), and an automatic gradient calculation and backpropagation algorithm (reverse-mode autodiff) over this DAG.
 
-Built on top of the engine, the deep learning library implements the most common functions, layers, losses and optimizers in order to create AI models able to solve real problems.
-
-This library mimics Pytorch in a simplified way, but with similar functions and behaviour. 
+Built on top of the engine, the deep learning library implements the most common functions, layers, losses and optimizers in order to create AI models able to solve real problems. This library mimics PyTorch in a simplified way, with the same API style and function names. 
 
 ## Aim of the project
 The objective of this project is to develop a lightweight deep learning library entirely from scratch, without relying on any existing frameworks (such as Keras, PyTorch, TensorFlow, scikit-learn, etc.), using only the `numpy` library.
+
+> At the moment, supporting GPU execution is not within the scope of the project
 
 ## Autograd Engine
 Automatic gradient calculation and backpropagation algorithm
