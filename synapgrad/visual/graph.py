@@ -1,5 +1,5 @@
+
 from synapgrad.utils import pretty_numpy
-from graphviz import Digraph
 
 
 def trace(root):
@@ -21,7 +21,14 @@ def draw(root, format='svg', rankdir='LR', data_length:int=50):
     rankdir: TB (top to bottom graph) | LR (left to right)
     data_length: Number of characters to show in data and grad fields
     """
+    try:
+        from graphviz import Digraph
+    except ModuleNotFoundError:
+        print("[!] 'graphviz' is not installed, run 'pip install graphviz' and check (https://graphviz.org/download/)")
+        return
+    
     assert rankdir in ['LR', 'TB'], "rankdir must be 'LR' or 'TB'"
+    
     nodes, edges = trace(root)
     dot = Digraph(format=format, graph_attr={'rankdir': rankdir})
     

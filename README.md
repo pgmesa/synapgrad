@@ -1,6 +1,6 @@
 #  SynapGrad
 
-A lightweight autograd Tensor-based engine with a deep learning library built on top of it made from scratch
+A lightweight autograd engine with a deep learning library and a Torch-like API, built from scratch.
 
 [![Downloads](https://static.pepy.tech/personalized-badge/synapgrad?period=total&units=international_system&left_color=black&right_color=blue&left_text=Downloads)](https://pepy.tech/project/synapgrad)
 
@@ -24,8 +24,8 @@ Automatic gradient calculation and backpropagation algorithm
 
 ### Requirements
 ```r
-numpy==1.23.5 # Core
-graphviz==0.20.1 # (Optional) Visualize DAG
+numpy>=1.23.5 # Core
+graphviz==0.20.1 # (Optional) Visualize DAG (https://graphviz.org/download/)
 ```
 
 In the `examples/visualize_graph.ipynb` notebook there is an example of how to display the graph that synapgrad creates in the background as operations are chained:
