@@ -20,7 +20,7 @@ def get_conv1d_output_size(input_length:int, kernel_size:int, stride:int, paddin
         int: Output size
     """
     length_padded = input_length + 2 * padding
-    num_windows = int(np.floor((length_padded - dilation * (kernel_size - 1) - 1) / stride + 1))
+    num_windows = int(np.floor((length_padded - dilation * (kernel_size - 1) - 1) / stride + 1).item())
     return num_windows
 
 
