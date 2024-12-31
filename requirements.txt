@@ -3,14 +3,24 @@
 # *********************
 numpy>=1.23.5 # Core
 # graphviz==0.20.1 # (Optional) Visualize graph
-# pytest==7.3.1 # (Optional) To tun the tests
-# *********************************
-# ***** notebook requirements *****
-# *********************************
+
+# ***********************
+# ***** Train Utils *****
+# ***********************
 # pkbar==0.5
 # matplotlib==3.7.0
-# ipykernel==6.19.2
 # scikit-learn==1.2.1
+
+# *********************************
+# ***** Notebook Requirements *****
+# *********************************
+# ipykernel==6.19.2
 # torchvision==0.13.1
 # # **** Also required to run the tests *****
 # torch==1.12.1 # Install following the instructions in https://pytorch.org/
+
+# *********************
+# ***** Run Tests *****
+# *********************
+# pytest==7.3.1 # (Optional) To tun the tests
+# torch

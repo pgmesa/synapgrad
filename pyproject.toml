@@ -4,8 +4,8 @@ build-backend = "flit_core.buildapi"
 
 [project]
 name = "synapgrad"
-version = "0.7.0"
-description = "A lightweight autograd engine with a deep learning library and a Torch-like API, built from scratch"
+version = "1.0.0"
+description = "A lightweight autograd engine with a deep learning library and a Torch-like API"
 readme = "README.md"
 requires-python = ">=3.9"
 license = {text = "MIT"}
@@ -14,7 +14,7 @@ authors = [
 ]
 
 dependencies = [
-    "numpy>=1.23.5"
+    "numpy>=1.23.5",
 ]
 
 classifiers = [
@@ -22,11 +22,20 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
-    "Topic :: Software Development",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Scientific/Engineering :: Mathematics",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
-    "Topic :: Scientific/Engineering :: Machine Learning",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
     "Operating System :: OS Independent",
-    "License :: OSI Approved :: MIT License"
+    "License :: OSI Approved :: MIT License",
+]
+
+[project.optional-dependencies]
+train = [
+    "pkbar>=0.5",
+    "matplotlib>=3.7.0",
+    "scikit-learn>=1.2.1"
 ]
 
 [project.urls]
