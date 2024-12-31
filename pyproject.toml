@@ -4,7 +4,7 @@ build-backend = "flit_core.buildapi"
 
 [project]
 name = "synapgrad"
-version = "1.0.0"
+version = "1.0.1"
 description = "A lightweight autograd engine with a deep learning library and a Torch-like API"
 readme = "README.md"
 requires-python = ">=3.9"
