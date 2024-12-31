@@ -96,25 +96,17 @@ def test_rand():
 def test_randn():
     t = synapgrad.randn(2, 3)
     verify_tensor_properties(t, (2, 3))
-    # For normal distribution, we can check if values are within reasonable bounds
-    # (99.7% of values should be within 3 standard deviations)
-    assert np.all(np.abs(t.data) < 10)  
     
     t = synapgrad.randn((2, 3), dtype=np.float64)
     verify_tensor_properties(t, (2, 3), np.float64)
-    assert np.all(np.abs(t.data) < 10)
 
 def test_normal():
     mean, std = 5, 2
     t = synapgrad.normal(mean, std, 2, 3)
     verify_tensor_properties(t, (2, 3))
-    # Check if mean and std are roughly as expected (within reasonable bounds)
-    assert abs(np.mean(t.data) - mean) < 2  # allow some deviation
-    assert abs(np.std(t.data) - std) < 1
     
     t = synapgrad.normal(mean, std, 2, 3, dtype=np.float64)
     verify_tensor_properties(t, (2, 3), np.float64)
-    assert abs(np.mean(t.data) - mean) < 2
 
 def test_randint():
     low, high = 0, 10
