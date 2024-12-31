@@ -108,7 +108,7 @@ def rand(*shape, dtype=None, requires_grad=False, name=None, device=None):
     """
     if len(shape) == 1 and isinstance(shape[0], (list, tuple)):
         shape = shape[0]
-    return Tensor(np.random.rand(*shape, dtype=default_type__), dtype=dtype, requires_grad=requires_grad, name=name, device=device)
+    return Tensor(np.random.rand(*shape).astype(dtype=default_type__), dtype=dtype, requires_grad=requires_grad, name=name, device=device)
 
 def randn(*shape, dtype=None, requires_grad=False, name=None, device=None):
     """
@@ -116,13 +116,13 @@ def randn(*shape, dtype=None, requires_grad=False, name=None, device=None):
     """
     if len(shape) == 1 and isinstance(shape[0], (list, tuple)):
         shape = shape[0]
-    return Tensor(np.random.randn(*shape, dtype=default_type__), dtype=dtype, requires_grad=requires_grad, name=name, device=device)
+    return Tensor(np.random.randn(*shape).astype(dtype=default_type__), dtype=dtype, requires_grad=requires_grad, name=name, device=device)
 
 def normal(loc, scale, *shape, dtype=None, requires_grad=False, name=None, device=None):
     """
     Creates a Tensor filled with values drawn from a custom Gaussian distribution
     """
-    return Tensor(np.random.normal(loc, scale, *shape, dtype=default_type__), dtype=dtype, requires_grad=requires_grad, name=name, device=device)
+    return Tensor(np.random.normal(loc, scale, shape).astype(dtype=default_type__), dtype=dtype, requires_grad=requires_grad, name=name, device=device)
 
 def randint(low, high, shape:tuple, dtype=None, requires_grad=False, name=None, device=None):
     """
