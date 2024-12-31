@@ -139,7 +139,7 @@ class Trainer:
         
         def record_metrics(dictionary, metrics:list[tuple]):
             for (k,v) in metrics:
-                assert type(v) is float or type(v) is np.float_, f"Metric value recorded is not 'float' but '{type(v)}'"
+                assert np.issubdtype(type(v), np.floating), f"Metric value recorded is not 'float' but '{type(v)}'"
                 if dictionary.get(k, False): dictionary[k].append(v)
                 else: dictionary[k] = [v]
                 

@@ -5,7 +5,7 @@ A lightweight autograd engine with a deep learning library and a Torch-like API,
 [![Downloads](https://static.pepy.tech/personalized-badge/synapgrad?period=total&units=international_system&left_color=black&right_color=blue&left_text=Downloads)](https://pepy.tech/project/synapgrad)
 
 ## Installation
-_Python ≥ `3.9` (developed in `3.9.16`)_
+_Python ≥ `3.9`_
 ```bash 
 pip install synapgrad
 ```
