@@ -4,42 +4,55 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "synapgrad"
-version = "1.0.1"
+version = "1.0.2"
 description = "A lightweight autograd engine with a deep learning library and a Torch-like API"
 readme = "README.md"
 requires-python = ">=3.9"
 license = {text = "MIT"}
+urls = {Homepage = "https://github.com/pgmesa/synapgrad"}
+keywords = ["Autograd", "Tensor", "Machine Learning", "Deep Learning", "Python"]
 authors = [
     {name = "Pablo García Mesa", email = "pgmesa.sm@gmail.com"}
 ]
 
 dependencies = [
-    "numpy>=1.23.5",
+    "numpy>=1.23.0,<3.0.0",
 ]
 
 classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    
+    "Intended Audience :: Developers",
+    "Intended Audience :: Education",
+    "Intended Audience :: Science/Research",
+
+    "License :: OSI Approved :: MIT License",
+    
+    "Operating System :: OS Independent",
+    
+    "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
-    "Topic :: Software Development :: Libraries :: Python Modules",
+    
+    "Topic :: Scientific/Engineering",
     "Topic :: Scientific/Engineering :: Mathematics",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
-    "Intended Audience :: Developers",
-    "Intended Audience :: Science/Research",
-    "Operating System :: OS Independent",
-    "License :: OSI Approved :: MIT License",
+    "Topic :: Software Development",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 
 [project.optional-dependencies]
 train = [
-    "pkbar>=0.5",
-    "matplotlib>=3.7.0",
-    "scikit-learn>=1.2.1"
+    "pkbar==0.5",
+    "matplotlib>=3.0.0,<4.0.0",
+    "scikit-learn>=1.2.1,<2.0.0"
 ]
-
-[project.urls]
-Homepage = "https://github.com/pgmesa/synapgrad"
 
 [tool.setuptools]
 packages = { find = { where = ["."], include = ["synapgrad", "synapgrad.*"]} }
+
+[tool.test]
+framework = "pytest"

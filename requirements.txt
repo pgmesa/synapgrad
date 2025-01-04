@@ -1,26 +1,12 @@
-# *********************
-# ***** synapgrad *****
-# *********************
-numpy>=1.23.5 # Core
+# ***** SynapGrad *****
+numpy>=1.23.0,<3.0.0 # Core
 # graphviz==0.20.1 # (Optional) Visualize graph
+# -- Train Utils
+pkbar==0.5
+matplotlib>=3.0.0,<4.0.0
+scikit-learn>=1.2.1,<2.0.0
 
-# ***********************
-# ***** Train Utils *****
-# ***********************
-# pkbar==0.5
-# matplotlib==3.7.0
-# scikit-learn==1.2.1
-
-# *********************************
-# ***** Notebook Requirements *****
-# *********************************
-# ipykernel==6.19.2
-# torchvision==0.13.1
-# # **** Also required to run the tests *****
-# torch==1.12.1 # Install following the instructions in https://pytorch.org/
-
-# *********************
-# ***** Run Tests *****
-# *********************
-# pytest==7.3.1 # (Optional) To tun the tests
-# torch
+# ***** Notebook Requirements and tests *****
+torch>=1.12.1,<3.0.0
+torchvision>=0.13.1
+pytest>=8.0.0,<9.0.0
