@@ -24,8 +24,8 @@ Automatic gradient calculation and backpropagation algorithm
 
 ### Requirements
 ```r
-numpy>=1.23.5 # Core
-graphviz>=0.20.1 # (Optional) Visualize DAG (https://graphviz.org/download/)
+numpy>=1.23.0,<3.0.0 # Core
+graphviz==0.20.1 # (Optional) Visualize DAG (https://graphviz.org/download/)
 ```
 
 In the `examples/visualize_graph.ipynb` notebook there is an example of how to display the graph that synapgrad creates in the background as operations are chained:
@@ -71,9 +71,9 @@ pip install synapgrad[train]
 
 Additionally to run the notebooks in `/examples` you will need to install:
 ```r
-torchvision
+torchvision>=0.13.1
 # **** torch required only if you want to use torch engine instead of synapgrad's *****
-torch>=1.12.1 # Install following the instructions in https://pytorch.org/
+torch>=1.12.1,<3.0.0 # Install following the instructions in https://pytorch.org/
 ```
 
 ### Comparisons with PyTorch
@@ -89,8 +89,7 @@ To measure the efficiency of synapgrad, all three examples were compared to PyTo
 
 To run the unit tests you will have to install Pytest and PyTorch, which is used to check whether the gradients are calculated correctly
 ```r
-pytest==7.3.1
-torch>=1.12.1 # Install following the instructions in https://pytorch.org/
+pytest>=8.0.0,<9.0.0
 ```
 
 Run all the tests:
