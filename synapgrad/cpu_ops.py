@@ -599,6 +599,6 @@ def batch_norm_backward(grad, x, gamma, beta, track_running_stats, training, eps
         dL_davg = (-1.0 / np.sqrt(variance + eps) * dL_dxi_hat).sum(normed_dims, keepdims=True) + (dL_dvar * (-2.0 * (x - mean)).sum(normed_dims, keepdims=True) / n)
         dL_dxi = (dL_dxi_hat / np.sqrt(variance + eps)) + (2.0 * dL_dvar * (x - mean) / n) + (dL_davg / n)
     else:
-        dL_dxi = dL_dxi_hat
+        dL_dxi = dL_dxi_hat / np.sqrt(variance + eps)
     
     return dL_dxi, dL_dgamma, dL_dbeta

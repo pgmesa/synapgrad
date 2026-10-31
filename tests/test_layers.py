@@ -342,7 +342,7 @@ def test_batchnorm1d():
             bnorm_t.eval()
         inp_t = torch.tensor(l.copy(), requires_grad=True)
         out_t = bnorm_t(inp_t)
-        out_t.sum().backward()
+        (out_t**3).sum().backward()
 
         inp = Tensor(l.copy(), requires_grad=True)
         bnorm = nn.BatchNorm1d(
@@ -351,7 +351,7 @@ def test_batchnorm1d():
         if not training:
             bnorm.eval()
         out = bnorm(inp)
-        out.sum().backward()
+        (out**3).sum().backward()
         
         assert check_tensors(out, out_t, atol=1e-4, rtol=1e-3)
         assert check_tensors(inp.grad, inp_t.grad, atol=1e-4, rtol=1e-3)
@@ -378,7 +378,7 @@ def test_batchnorm2d():
             bnorm_t.eval()
         inp_t = torch.tensor(l.copy(), requires_grad=True)
         out_t = bnorm_t(inp_t)
-        out_t.sum().backward()
+        (out_t**3).sum().backward()
 
         inp = Tensor(l.copy(), requires_grad=True)
         bnorm = nn.BatchNorm2d(
@@ -387,7 +387,7 @@ def test_batchnorm2d():
         if not training:
             bnorm.eval()
         out = bnorm(inp)
-        out.sum().backward()
+        (out**3).sum().backward()
         
         assert check_tensors(out, out_t, atol=1e-4, rtol=1e-3)
         assert check_tensors(inp.grad, inp_t.grad, atol=1e-4, rtol=1e-3)
@@ -397,3 +397,27 @@ def test_batchnorm2d():
             assert check_tensors(bnorm.running_var, bnorm_t.running_var, atol=1e-4, rtol=1e-3)
             
         
+
+def test_batchnorm2d_eval_with_running_stats():
+    l = np.random.randn(8, 3, 5, 5).astype(np.float32) * 2 + 1
+
+    bnorm_t = torch.nn.BatchNorm2d(3)
+    bnorm = nn.BatchNorm2d(3)
+    bnorm_t(torch.tensor(l.copy()))
+    bnorm(Tensor(l.copy()))
+    bnorm_t.eval()
+    bnorm.eval()
+
+    l = np.random.randn(8, 3, 5, 5).astype(np.float32) * 2 + 1
+    inp_t = torch.tensor(l.copy(), requires_grad=True)
+    out_t = bnorm_t(inp_t)
+    (out_t**3).sum().backward()
+
+    inp = Tensor(l.copy(), requires_grad=True)
+    out = bnorm(inp)
+    (out**3).sum().backward()
+
+    assert check_tensors(out, out_t, atol=1e-4, rtol=1e-3)
+    assert check_tensors(inp.grad, inp_t.grad, atol=1e-4, rtol=1e-3)
+    assert check_tensors(bnorm.weight.grad, bnorm_t.weight.grad, atol=1e-4, rtol=1e-3)
+    assert check_tensors(bnorm.bias.grad, bnorm_t.bias.grad, atol=1e-4, rtol=1e-3)
