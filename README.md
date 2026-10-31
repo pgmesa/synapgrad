@@ -77,13 +77,13 @@ torch>=1.12.1,<3.0.0 # Install following the instructions in https://pytorch.org
 ```
 
 ### Comparisons with PyTorch
-To measure the efficiency of synapgrad, all three examples were compared to PyTorch. All training sessions were conducted on a laptop with an Intel Core i7 10th generation processor and 16 GB of RAM.
+To measure the efficiency of synapgrad, all three examples were compared to PyTorch 2.14. All training sessions were conducted on a Ryzen 7 9700X (8 cores). The times are those of `trainer.fit`, training plus the validation pass of every epoch.
 
 | Notebook | torch | synapgrad | Model params | Dataset size | Batch size | Epochs |
 |     :---:     |  :---:  |  :---:  | :---:  | :---:  | :---:  | :---:  |
-| basic_mlp.ipynb | 1.5 s | 1.6 s | 337 | [150, 2] | 4 | 50 |
-| mnist_mlp.ipynb | 41 s | 1 min 28 s | 178_710 |  [60_000, 28, 28]  | 64 | 20 | 
-| mnist_cnn.ipynb |  2 min 5 s  |  13 min 10 s |  20_586  | [60_000, 1, 28, 28]  |  128  | 5 |
+| basic_mlp.ipynb | 1.4 s | 0.26 s | 337 | [150, 2] | 4 | 50 |
+| mnist_mlp.ipynb | 4.5 s | 9.7 s | 178_110 |  [48_000, 28, 28]  | 64 | 10 | 
+| mnist_cnn.ipynb |  37.8 s  |  4 min 55 s |  20_538  | [48_000, 1, 28, 28]  |  128  | 5 |
 
 ## Running tests
 
