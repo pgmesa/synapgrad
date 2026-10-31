@@ -1,7 +1,7 @@
 
-import pkbar
 import numpy as np
 import matplotlib.pyplot as plt
+from tqdm.auto import tqdm
 
 from sklearn.metrics import (
     accuracy_score, roc_auc_score, confusion_matrix, classification_report
@@ -149,9 +149,9 @@ class Trainer:
         for epoch in range(epochs):
             ############ TRAIN ############
             self.model.train()
-            kbar = pkbar.Kbar(target=len(train_loader), epoch=epoch, num_epochs=epochs, width=32, always_stateful=False)
+            pbar = tqdm(total=len(train_loader), desc=f"Epoch {epoch + 1}/{epochs}", leave=True)
             if on_train_epoch is not None: on_train_epoch(self.model, train_loader)
-            train_metrics = self.__train(train_loader, kbar)
+            train_metrics = self.__train(train_loader, pbar)
             record_metrics(self.history, train_metrics)
             ########### Validation ##########
             if validation_loader is not None:
@@ -161,11 +161,12 @@ class Trainer:
                 record_metrics(self.history, val_metrics)
                 # ===================================================================
             else: val_metrics = []
-            kbar.add(1, values=train_metrics + val_metrics)
+            pbar.set_postfix({k: f"{v:.4f}" for k, v in train_metrics + val_metrics})
+            pbar.close()
             
         return self.history
     
-    def __train(self, train_loader, kbar:pkbar.Kbar) -> tuple:
+    def __train(self, train_loader, pbar: tqdm) -> tuple:
         """ Train model for one epoch """
         self.model.train()
         epoch_train_loss = 0
@@ -183,7 +184,8 @@ class Trainer:
             # ================= Update Train Metrics Info ==================
             epoch_train_loss += train_loss.item()
             train_metrics = [("loss", train_loss.item())] + metrics
-            kbar.update(i, values=train_metrics)
+            pbar.update(1)
+            pbar.set_postfix({k: f"{v:.4f}" for k, v in train_metrics})
             # ==============================================================
         train_loss = epoch_train_loss / (i + 1)
         epoch_metrics = self.evaluator.compute() if self.evaluator != None else []

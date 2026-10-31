@@ -2,7 +2,7 @@
 numpy>=1.23.0,<3.0.0 # Core
 # graphviz==0.20.1 # (Optional) Visualize graph
 # -- Train Utils
-pkbar==0.5
+tqdm>=4.0.0,<5.0.0
 matplotlib>=3.0.0,<4.0.0
 scikit-learn>=1.2.1,<2.0.0
 
