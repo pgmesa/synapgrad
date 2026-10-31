@@ -380,9 +380,11 @@ def nll_loss_backward(grad: np.ndarray, y_pred: np.ndarray, y_true: np.ndarray) 
 
 
 def bce_loss_forward(y_pred: np.ndarray, y_true: np.ndarray) -> np.ndarray:
-    loss = - (y_true * np.log(y_pred + epsilon) + (1 - y_true) * np.log(1 - y_pred + epsilon))
-    # For compatibility with pytorch (returns 100 when y_pred=0 and y_true=1; vice versa)
-    loss = np.where(loss == -np.log(epsilon), 100, loss) 
+    # As pytorch, each log is clamped to -100, so y_pred=0 with y_true=1 costs 100 (and vice versa)
+    with np.errstate(divide='ignore'):
+        log_pred = np.maximum(np.log(y_pred), -100)
+        log_one_minus_pred = np.maximum(np.log(1 - y_pred), -100)
+    loss = - (y_true * log_pred + (1 - y_true) * log_one_minus_pred)
     return loss
 
 def bce_loss_backward(grad: np.ndarray, y_pred: np.ndarray, y_true: np.ndarray) -> np.ndarray:
